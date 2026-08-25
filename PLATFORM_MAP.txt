@@ -1,0 +1,20 @@
+gocha platform map (Aug 2026)
+
+PLANNED DOMAIN
+- gocha.ai (certificate and nginx vhost pending; see deploy/nginx/gocha.ai.conf.template)
+
+CONTABO (212.47.68.106, shared with Rydit)
+- Laravel API shell: /var/www/html/gocha (app_gocha deploy target)
+- Rydit paths unchanged; see rydit repo PLATFORM_MAP.txt
+
+MOBILE
+- React Native source: mobile/gocha-app (not on Contabo; store builds from developer machine or CI)
+- Mobile-first shell with safe-area layout; branding tokens ship later
+
+STACK (API)
+- Laravel 10, PHP 8.3 FPM, MariaDB (database not provisioned for gocha yet)
+- nginx reverse proxy (same host as Rydit)
+
+SECRETS
+- Infisical project gocha (slug gocha-ppe-o)
+- scripts/infisical-pull.sh wraps export with retry

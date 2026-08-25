@@ -1,0 +1,41 @@
+---
+description: Before acting, apply matching rules from the rulebook repo
+alwaysApply: true
+---
+
+# Rulebook check
+
+Treat every user prompt as if it began with: ensure that the prompt below follows the guidelines, rules, and templates stipulated in the rulebook repo.
+
+Before planning or editing:
+
+1. Identify which rulebook rules, templates, or workflows apply to this prompt.
+2. Read those files under `standards/` before building. Do not improvise process when a standard exists.
+3. If the task adds or changes an app, a service in a cluster, or chrome, auth, alerts, instrumentation, or shared database access, read `standards/development/shared-app-library.md` before editing.
+4. If the task adds or changes layout, columns, scroll regions, split panels, or sidebars, read `standards/ui/layout-stability.md` before editing.
+5. If the task adds or changes a live list, inbox, poll, or background refresh, read `standards/data-query/live-lists-and-polling.md` and `standards/ui/loading-states.md` before editing.
+6. If the task adds or changes a list, table, form, filter, or new entity rows staff manage, read `standards/ui/list-and-record-detail.md` and `standards/ui/association-fields.md` before editing.
+7. If the task adds, removes, renames, or disables users, or builds user pickers, rosters, assignment pools, or reports that list people, read `standards/auth/user-identity-propagation.md` before editing. Read `standards/auth/authentication.md` and `standards/auth/authorization.md` when changing membership or access.
+8. If the task adds or changes a cron, import, pipeline, webhook processor, queue worker, or outbound HTTP to an external API, read `standards/workflows/outbound-http-timeouts.md`, `standards/workflows/single-flight-scheduled-jobs.md`, and `standards/workflows/pipeline-health-and-watchdogs.md` before editing. Read `standards/notifications/alerts.md` when adding or changing operational alerts or watchdogs.
+9. If the owner pasted or attached an image or binary file for the repo, read `standards/development/chat-supplied-files.md` and give the GitHub upload link in the same turn.
+10. If the task commits, pushes, deploys, or restarts a live service, read `standards/development/ship-live-and-test.md` before editing. Do not end the job until post-deploy smoke passes on URLs in this repo's `Smoke checks` section.
+11. If none apply, continue using this repo's `.cursor/rules/` and project docs.
+
+When you report completed work, end with a Rulebook note. This one line is required even when other rules cap length or forbid conclusions. Missing the note means the check did not run.
+
+- If a rulebook file applied: `Rulebook: <path>: <one clause on what you did to follow it>`. Name every applied file.
+- If none applied: `Rulebook: none applied.`
+
+Do not claim a file was followed unless you actually read it this session.
+
+Rulebook: https://github.com/nateadmin/personal-playbook
+
+Look for that repo in the workspace first (often `personal-playbook` or `repos/personal-playbook`). If it is not already in the workspace, clone it once per session (not every turn):
+
+```bash
+git clone --depth 1 https://github.com/nateadmin/personal-playbook.git /tmp/personal-playbook
+```
+
+If `/tmp/personal-playbook` already exists, `git -C /tmp/personal-playbook pull --ff-only`. Read only the files that match this task. Do not dump the whole playbook into the reply.
+
+If clone fails (missing repo or no access), say so once, then follow this repo's rules and docs. Do not skip the check because the task looks small.

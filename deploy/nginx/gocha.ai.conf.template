@@ -1,0 +1,49 @@
+# gocha.ai — nginx site template (not active until DNS + certbot)
+
+# After gocha.ai points to 212.47.68.106:
+# 1. Copy to /etc/nginx/sites-available/gocha.ai on Contabo
+# 2. ln -s /etc/nginx/sites-available/gocha.ai /etc/nginx/sites-enabled/
+# 3. certbot --nginx -d gocha.ai -d www.gocha.ai
+# 4. nginx -t && systemctl reload nginx
+
+server {
+    listen 80;
+    server_name gocha.ai www.gocha.ai;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name gocha.ai www.gocha.ai;
+
+    root /var/www/html/gocha/public;
+    index index.php index.html;
+
+    client_max_body_size 100M;
+
+    ssl_certificate /etc/letsencrypt/live/gocha.ai/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/gocha.ai/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    add_header X-Content-Type-Options "nosniff";
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
