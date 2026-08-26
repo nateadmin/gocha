@@ -130,6 +130,38 @@ class AuthOtpTest extends TestCase
             ->assertJsonPath('code', 'EMAIL_NOT_FOUND');
     }
 
+    public function test_signin_resumes_incomplete_onboarding(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'resume@example.com',
+            'onboarding_completed_at' => null,
+            'display_name' => 'Partial Neo',
+        ]);
+
+        $code = '654321';
+        LoginOtp::query()->create([
+            'channel' => 'email',
+            'identifier' => $user->email,
+            'code_hash' => Hash::make($code),
+            'attempts' => 0,
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $this
+            ->withHeaders([
+                'Origin' => 'http://localhost',
+                'Referer' => 'http://localhost',
+            ])
+            ->postJson('/api/auth/otp/verify', [
+                'email' => $user->email,
+                'code' => $code,
+                'mode' => 'signin',
+            ])
+            ->assertOk()
+            ->assertJsonPath('user.needsOnboarding', true)
+            ->assertJsonPath('user.displayName', 'Partial Neo');
+    }
+
     public function test_closed_membership_blocks_signup(): void
     {
         config(['gocha.auth.closed_membership' => true]);

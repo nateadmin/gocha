@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -26,12 +26,29 @@ export function OnboardingScreen() {
   const [status, setStatus] = useState(user?.status ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
-  const [discoverable, setDiscoverable] = useState(false);
+  const [discoverable, setDiscoverable] = useState(user?.discoverable ?? false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl ?? null);
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null);
   const [pendingFilename, setPendingFilename] = useState('avatar.png');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const fallbackName =
+      user.displayName && user.displayName !== 'Gocha user' ? user.displayName : '';
+    setDisplayName(fallbackName);
+    setStatus(user.status ?? '');
+    setBio(user.bio ?? '');
+    setPhone(user.phone?.replace(/^\++/, '') ?? '');
+    setDiscoverable(user.discoverable);
+    if (!pendingAvatar && user.avatarUrl) {
+      setAvatarPreview(user.avatarUrl);
+    }
+  }, [user, pendingAvatar]);
 
   async function pickAvatar() {
     if (Platform.OS !== 'web' || typeof document === 'undefined') {
@@ -92,7 +109,11 @@ export function OnboardingScreen() {
         style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content}>
           <BrandText variant="title">Set up your profile</BrandText>
-          <BrandText muted>Tell people who you are on Gocha.</BrandText>
+          <BrandText muted>
+            {user?.needsOnboarding
+              ? 'Finish your profile to start using Gocha. Your progress is saved when you continue.'
+              : 'Tell people who you are on Gocha.'}
+          </BrandText>
 
           <Pressable onPress={pickAvatar} style={styles.avatarRow}>
             {avatarPreview ? (

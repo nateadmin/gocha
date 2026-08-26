@@ -32,7 +32,17 @@ const AccountsContext = createContext<AccountsContextValue | null>(null);
 
 export function AccountsProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<StoredAccount[]>(() => readStoredAccounts());
-  const [activeAccountId, setActiveAccountId] = useState<number | null>(() => readActiveAccountId());
+  const [activeAccountId, setActiveAccountId] = useState<number | null>(() => {
+    const storedAccounts = readStoredAccounts();
+    const id = readActiveAccountId();
+    if (id === null) {
+      setActiveDeviceToken(null);
+      return null;
+    }
+    const match = storedAccounts.find((entry) => entry.userId === id);
+    setActiveDeviceToken(match?.deviceToken ?? null);
+    return id;
+  });
   const [isAddingAccount, setIsAddingAccount] = useState(false);
 
   const applyActiveToken = useCallback((userId: number | null, list: StoredAccount[]) => {
@@ -61,25 +71,38 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     setActiveDeviceToken(account.deviceToken);
   }, []);
 
-  const switchAccount = useCallback((userId: number) => {
-    setActiveAccountId(userId);
-    writeActiveAccountId(userId);
-  }, []);
+  const switchAccount = useCallback(
+    (userId: number) => {
+      setActiveAccountId(userId);
+      writeActiveAccountId(userId);
+      const match = accounts.find((entry) => entry.userId === userId);
+      setActiveDeviceToken(match?.deviceToken ?? null);
+    },
+    [accounts],
+  );
 
-  const removeAccount = useCallback((userId: number) => {
-    setAccounts((prev) => {
-      const next = prev.filter((entry) => entry.userId !== userId);
-      writeStoredAccounts(next);
-      return next;
-    });
-
-    if (activeAccountId === userId) {
+  const removeAccount = useCallback(
+    (userId: number) => {
       const remaining = accounts.filter((entry) => entry.userId !== userId);
-      const nextActive = remaining[0]?.userId ?? null;
-      setActiveAccountId(nextActive);
-      writeActiveAccountId(nextActive);
-    }
-  }, [activeAccountId, accounts]);
+      setAccounts(() => {
+        writeStoredAccounts(remaining);
+        return remaining;
+      });
+
+      if (activeAccountId === userId) {
+        const nextActive = remaining[0]?.userId ?? null;
+        setActiveAccountId(nextActive);
+        writeActiveAccountId(nextActive);
+        if (nextActive === null) {
+          setActiveDeviceToken(null);
+        } else {
+          const match = remaining.find((entry) => entry.userId === nextActive);
+          setActiveDeviceToken(match?.deviceToken ?? null);
+        }
+      }
+    },
+    [activeAccountId, accounts],
+  );
 
   const beginAddAccount = useCallback(() => setIsAddingAccount(true), []);
   const cancelAddAccount = useCallback(() => setIsAddingAccount(false), []);

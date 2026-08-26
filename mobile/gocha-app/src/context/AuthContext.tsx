@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -12,6 +13,7 @@ import {
   ApiError,
   completeOnboarding,
   fetchCurrentUser,
+  getActiveDeviceToken,
   logout as apiLogout,
   requestOtp,
   uploadAvatar,
@@ -47,36 +49,52 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const {
-    accounts,
     activeAccountId,
     isAddingAccount,
     registerAccount,
     removeAccount,
-    switchAccount,
   } = useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasBootstrapped = useRef(false);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const nextUser = await fetchCurrentUser();
-      setUser(nextUser);
-      setError(null);
-      if (!nextUser && activeAccountId !== null) {
-        removeAccount(activeAccountId);
+  const refresh = useCallback(
+    async (options?: { background?: boolean }) => {
+      const background = options?.background ?? false;
+      if (!background) {
+        setLoading(true);
       }
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not load your session.');
-    } finally {
-      setLoading(false);
-    }
-  }, [activeAccountId, removeAccount]);
+
+      try {
+        const hadToken = getActiveDeviceToken();
+        const nextUser = await fetchCurrentUser();
+        setUser(nextUser);
+        setError(null);
+
+        if (!nextUser && hadToken && activeAccountId !== null) {
+          removeAccount(activeAccountId);
+        }
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Could not load your session.');
+      } finally {
+        if (!background) {
+          setLoading(false);
+        }
+      }
+    },
+    [activeAccountId, removeAccount],
+  );
 
   useEffect(() => {
-    refresh();
-  }, [refresh, activeAccountId]);
+    if (!hasBootstrapped.current) {
+      hasBootstrapped.current = true;
+      refresh({ background: false });
+      return;
+    }
+
+    refresh({ background: true });
+  }, [activeAccountId, refresh]);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -139,7 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       clearError,
-      refresh,
+      refresh: () => refresh({ background: false }),
       verifyWithOtp,
       requestAuthCode,
       finishOnboarding,
@@ -160,13 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  const shouldShowAuth = !user && (accounts.length === 0 || isAddingAccount);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {shouldShowAuth ? children : children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {
@@ -180,14 +192,19 @@ export function useAuth(): AuthContextValue {
 export function useAuthGate(): {
   user: AuthUser | null;
   loading: boolean;
-  showAuthFlow: boolean;
+  appPhase: 'auth' | 'onboarding' | 'main';
 } {
   const { user, loading } = useAuth();
-  const { isAddingAccount } = useAccounts();
+
+  const appPhase = !user
+    ? 'auth'
+    : user.needsOnboarding
+      ? 'onboarding'
+      : 'main';
 
   return {
     user,
     loading,
-    showAuthFlow: isAddingAccount || !user,
+    appPhase,
   };
 }

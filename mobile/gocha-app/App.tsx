@@ -15,7 +15,7 @@ import { useBrandFonts } from './src/theme/fonts';
 function AppShell() {
   const { ready } = useBrandFonts();
   const { theme } = useGochaTheme();
-  const { user, loading, showAuthFlow } = useAuthGate();
+  const { loading, appPhase } = useAuthGate();
   const splashReady = useSplashGate(ready && !loading);
 
   const navTheme =
@@ -48,16 +48,16 @@ function AppShell() {
   }
 
   let content: ReactNode;
-  if (!user || showAuthFlow) {
+  if (appPhase === 'auth') {
     content = <AuthNavigator />;
-  } else if (user.needsOnboarding) {
+  } else if (appPhase === 'onboarding') {
     content = <OnboardingScreen />;
   } else {
     content = <RootNavigator />;
   }
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} key={appPhase}>
       {content}
     </NavigationContainer>
   );
