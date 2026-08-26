@@ -1,0 +1,16 @@
+# Temporary Gotcha mobile web preview (static Vite build).
+# Served on Contabo at http://212.47.68.106:8843/ until gocha.ai is live.
+
+server {
+    listen 8843;
+    listen [::]:8843;
+    server_name _;
+    root /var/www/html/gocha-preview;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+}

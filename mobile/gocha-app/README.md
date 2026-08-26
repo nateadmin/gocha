@@ -32,7 +32,9 @@ npm run web
 
 Open http://localhost:5173. Logo asset: `assets/branding/Logo.jpeg`.
 
-Hosted preview (no local setup): https://nateadmin.github.io/gocha/ (published from `gh-pages` on push).
+Hosted preview (no local setup): http://212.47.68.106:8843/
+
+GitHub Pages (optional): enable Pages from branch `gh-pages` in repo settings, then https://nateadmin.github.io/gocha/
 
 Android emulator:
 
