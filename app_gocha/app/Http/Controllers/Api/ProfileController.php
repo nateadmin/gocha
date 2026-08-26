@@ -129,7 +129,7 @@ class ProfileController extends Controller
         $extension = strtolower($file->extension() ?: 'png');
         $this->avatars->storeUpload(
             $request->user(),
-            $file->get(),
+            $file->getContent(),
             $extension,
         );
 

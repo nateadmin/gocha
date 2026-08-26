@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { ApiError } from '../../api/client';
+import { formatApiError } from '../../api/formatApiError';
 import { SettingsToggleRow } from '../../components/app/SettingsToggleRow';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
@@ -62,10 +63,6 @@ export function OnboardingScreen() {
     setLoading(true);
     setError(null);
     try {
-      if (pendingAvatar) {
-        await uploadProfileAvatar(pendingAvatar, pendingFilename);
-      }
-
       await finishOnboarding({
         displayName: trimmedName,
         status: status.trim() || undefined,
@@ -73,8 +70,16 @@ export function OnboardingScreen() {
         phone: phone.trim() || undefined,
         discoverable,
       });
+
+      if (pendingAvatar) {
+        try {
+          await uploadProfileAvatar(pendingAvatar, pendingFilename);
+        } catch {
+          // Profile is already saved; avatar can be retried later.
+        }
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not save your profile.');
+      setError(formatApiError(err, 'Could not save your profile.'));
     } finally {
       setLoading(false);
     }

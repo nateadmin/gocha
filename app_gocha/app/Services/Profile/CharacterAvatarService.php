@@ -12,17 +12,21 @@ class CharacterAvatarService
     {
         $path = 'avatars/'.$user->id.'-'.Str::uuid().'.svg';
         $svg = $this->buildCharacterSvg($user->email ?: (string) $user->id);
-        Storage::disk('public')->put($path, $svg);
+        $disk = Storage::disk('public');
+        $disk->makeDirectory('avatars');
+        $disk->put($path, $svg);
         $user->forceFill(['avatar_path' => $path])->save();
     }
 
     public function storeUpload(User $user, string $binary, string $extension): string
     {
         $path = 'avatars/'.$user->id.'-'.Str::uuid().'.'.$extension;
-        Storage::disk('public')->put($path, $binary);
+        $disk = Storage::disk('public');
+        $disk->makeDirectory('avatars');
+        $disk->put($path, $binary);
 
         if ($user->avatar_path) {
-            Storage::disk('public')->delete($user->avatar_path);
+            $disk->delete($user->avatar_path);
         }
 
         $user->forceFill(['avatar_path' => $path])->save();

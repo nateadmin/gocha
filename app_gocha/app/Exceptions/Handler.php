@@ -116,6 +116,10 @@ class Handler extends ExceptionHandler
                 : 'The request could not be completed. Check the input and try again.',
         };
 
+        if ($status >= 500) {
+            report($e);
+        }
+
         return response()->json([
             'code' => $code,
             'message' => $message,

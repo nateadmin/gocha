@@ -166,6 +166,28 @@ class AuthOtpTest extends TestCase
             ->assertJsonPath('user.needsOnboarding', false);
     }
 
+    public function test_avatar_upload_stores_image(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'avatar@example.com',
+            'avatar_path' => 'avatars/old.svg',
+        ]);
+
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+
+        $response = $this->actingAs($user)->post('/api/profile/avatar', [
+            'avatar' => \Illuminate\Http\UploadedFile::fake()->createWithContent('avatar.png', $png),
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('user.avatarUrl', fn ($url) => str_contains($url, '/storage/avatars/'));
+
+        $user->refresh();
+        $this->assertNotSame('avatars/old.svg', $user->avatar_path);
+        $this->assertTrue(\Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar_path));
+    }
+
     public function test_search_returns_only_discoverable_users(): void
     {
         User::factory()->create([
