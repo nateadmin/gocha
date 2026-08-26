@@ -3,6 +3,8 @@
 namespace App\Exceptions;
 
 use App\Support\CorrelationId;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,6 +64,26 @@ class Handler extends ExceptionHandler
                 'retryable' => true,
                 'timestamp' => now()->toIso8601String(),
             ], 422);
+        }
+
+        if ($e instanceof AuthenticationException) {
+            return response()->json([
+                'code' => 'UNAUTHENTICATED',
+                'message' => 'Sign in required.',
+                'correlationId' => CorrelationId::current(),
+                'retryable' => false,
+                'timestamp' => now()->toIso8601String(),
+            ], 401);
+        }
+
+        if ($e instanceof AuthorizationException) {
+            return response()->json([
+                'code' => 'FORBIDDEN',
+                'message' => 'You do not have permission to perform this action.',
+                'correlationId' => CorrelationId::current(),
+                'retryable' => false,
+                'timestamp' => now()->toIso8601String(),
+            ], 403);
         }
 
         if ($e instanceof ValidationException) {

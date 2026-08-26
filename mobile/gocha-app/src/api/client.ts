@@ -109,7 +109,7 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
     const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.me);
     return payload.user;
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
+    if (error instanceof ApiError && (error.status === 401 || error.body.code === 'UNAUTHENTICATED')) {
       return null;
     }
     throw error;

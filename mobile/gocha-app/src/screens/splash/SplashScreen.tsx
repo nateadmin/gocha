@@ -28,3 +28,11 @@ export function useSplashGate(ready: boolean, minDurationMs = MIN_SPLASH_MS): bo
 
   return ready && minElapsed;
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
