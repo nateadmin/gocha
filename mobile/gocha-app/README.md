@@ -32,7 +32,7 @@ npm run web
 
 Open http://localhost:5173. Logo asset: `assets/branding/Logo.jpeg`.
 
-Hosted preview: https://gocha.ai/app/ (also http://212.47.68.106:8843/ legacy port).
+Hosted preview: https://gocha.ai/
 
 Android emulator:
 

@@ -18,7 +18,8 @@ Planned production hostname: `gocha.ai` (live: nginx + Let’s Encrypt on Contab
 
 - API health: https://gocha.ai/api/health
 - API version: https://gocha.ai/api/version
-- Mobile web shell: https://gocha.ai/app/
+- Mobile web shell: https://gocha.ai/
+- API meta: https://gocha.ai/api/meta
 
 ## Server (Contabo)
 
@@ -66,7 +67,7 @@ After DNS + nginx for `gocha.ai`:
 
 - GET `https://gocha.ai/api/health` → 200 JSON `status: ok`
 - GET `https://gocha.ai/api/version` → 200, `version` equals `origin/main` HEAD after deploy
-- GET `https://gocha.ai/` → 200 JSON service descriptor
+- GET `https://gocha.ai/` → 200 mobile web shell (HTML)
 
 ### Log check
 

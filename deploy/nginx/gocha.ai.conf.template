@@ -1,36 +1,30 @@
-# gocha.ai — nginx site template (not active until DNS + certbot)
-
-# After gocha.ai points to 212.47.68.106:
-# 1. Copy to /etc/nginx/sites-available/gocha.ai on Contabo
-# 2. ln -s /etc/nginx/sites-available/gocha.ai /etc/nginx/sites-enabled/
-# 3. certbot --nginx -d gocha.ai -d www.gocha.ai
-# 4. nginx -t && systemctl reload nginx
+# gocha.ai — SPA at /, Laravel API under /api (certbot manages SSL listen directives).
 
 server {
-    listen 80;
-    server_name gocha.ai www.gocha.ai;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
     server_name gocha.ai www.gocha.ai;
 
     root /var/www/html/gocha/public;
-    index index.php index.html;
+    index index.html index.php;
 
     client_max_body_size 100M;
-
-    ssl_certificate /etc/letsencrypt/live/gocha.ai/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/gocha.ai/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     add_header X-Content-Type-Options "nosniff";
     charset utf-8;
 
-    location / {
+    location ^~ /api {
         try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /app {
+        return 301 /;
+    }
+
+    location ^~ /app/ {
+        return 301 /;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
     }
 
     location = /favicon.ico { access_log off; log_not_found off; }
@@ -46,4 +40,24 @@ server {
     location ~ /\.(?!well-known).* {
         deny all;
     }
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/gocha.ai/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/gocha.ai/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
+server {
+    if ($host = www.gocha.ai) {
+        return 301 https://$host$request_uri;
+    }
+
+    if ($host = gocha.ai) {
+        return 301 https://$host$request_uri;
+    }
+
+    listen 80;
+    server_name gocha.ai www.gocha.ai;
+    return 404;
 }
