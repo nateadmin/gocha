@@ -1,0 +1,314 @@
+import { useMemo, useState } from 'react';
+import {
+  ScrollView,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  StyleSheet,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Ionicons from '@expo/vector-icons/Ionicons';
+
+import { BusinessCard } from '../../components/business';
+import {
+  aiOrderSuggestions,
+  businessCategories,
+  businesses,
+} from '../../data/mock';
+import { neonShadowStyle, useGochaTheme } from '../../theme';
+import type { BusinessesStackParamList } from '../../navigation/types';
+
+export function BusinessesScreen() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<BusinessesStackParamList>>();
+  const { theme } = useGochaTheme();
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('all');
+  const [aiPrompt, setAiPrompt] = useState('');
+
+  const filtered = useMemo(() => {
+    return businesses.filter((b) => {
+      const matchesCategory = category === 'all' || b.category === category;
+      const q = query.trim().toLowerCase();
+      const matchesQuery =
+        !q ||
+        b.name.toLowerCase().includes(q) ||
+        b.tags.some((t) => t.includes(q));
+      return matchesCategory && matchesQuery;
+    });
+  }, [category, query]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View style={styles.header}>
+        <Text
+          style={{
+            color: theme.colors.cardForeground,
+            fontFamily: theme.typography.serif,
+            fontSize: 28,
+          }}>
+          Businesses
+        </Text>
+        <Pressable
+          style={[
+            styles.locationPill,
+            {
+              backgroundColor: theme.colors.muted,
+              borderRadius: theme.radii.pill,
+            },
+          ]}>
+          <Ionicons name="location" size={16} color={theme.colors.primary} />
+          <Text
+            style={{
+              color: theme.colors.cardForeground,
+              fontFamily: theme.typography.sans,
+              fontSize: 13,
+            }}>
+            Current Location
+          </Text>
+          <Ionicons name="chevron-down" size={16} color={theme.colors.primary} />
+        </Pressable>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View
+          style={[
+            styles.search,
+            {
+              backgroundColor: theme.colors.muted,
+              borderRadius: theme.radii.pill,
+            },
+          ]}>
+          <Ionicons name="search" size={18} color={theme.colors.mutedForeground} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search restaurants, stores, services..."
+            placeholderTextColor={theme.colors.mutedForeground}
+            style={{
+              flex: 1,
+              fontFamily: theme.typography.sans,
+              color: theme.colors.cardForeground,
+              fontSize: 15,
+            }}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.aiCard,
+            {
+              backgroundColor: theme.colors.muted,
+              borderRadius: theme.radii.card,
+              borderColor: theme.colors.border,
+            },
+          ]}>
+          <View style={styles.aiTitle}>
+            <Ionicons name="sparkles" size={18} color={theme.colors.primary} />
+            <Text
+              style={{
+                color: theme.colors.cardForeground,
+                fontFamily: theme.typography.sans,
+                fontSize: 17,
+                fontWeight: '600',
+              }}>
+              AI Order Assistant
+            </Text>
+          </View>
+          <Text
+            style={{
+              color: theme.colors.mutedForeground,
+              fontFamily: theme.typography.sans,
+              fontSize: 14,
+            }}>
+            Tell Gocha what you need — it finds the best option and prepares your
+            request.
+          </Text>
+          <View style={styles.aiInputRow}>
+            <TextInput
+              value={aiPrompt}
+              onChangeText={setAiPrompt}
+              placeholder="e.g. Order me lunch, get my usual coffee..."
+              placeholderTextColor={theme.colors.mutedForeground}
+              multiline
+              style={[
+                styles.aiInput,
+                {
+                  backgroundColor: theme.colors.card,
+                  borderRadius: theme.radii.card,
+                  color: theme.colors.cardForeground,
+                  fontFamily: theme.typography.sans,
+                },
+              ]}
+            />
+            <Pressable
+              style={[
+                styles.sendBtn,
+                {
+                  backgroundColor: theme.colors.secondary,
+                  borderRadius: theme.radii.pill,
+                },
+                neonShadowStyle(theme),
+              ]}>
+              <Ionicons
+                name="send"
+                size={18}
+                color={theme.colors.secondaryForeground}
+              />
+            </Pressable>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.suggestionRow}>
+              {aiOrderSuggestions.map((s) => (
+                <Pressable
+                  key={s}
+                  onPress={() => setAiPrompt(s)}
+                  style={[
+                    styles.suggestion,
+                    {
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.radii.pill,
+                    },
+                  ]}>
+                  <Text
+                    style={{
+                      color: theme.colors.cardForeground,
+                      fontFamily: theme.typography.sans,
+                      fontSize: 13,
+                    }}>
+                    {s}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.categories}>
+            {businessCategories.map((cat) => {
+              const active = cat.id === category;
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => setCategory(cat.id)}
+                  style={[
+                    styles.categoryChip,
+                    {
+                      backgroundColor: active
+                        ? theme.colors.primary
+                        : theme.colors.card,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.radii.pill,
+                    },
+                  ]}>
+                  <Text
+                    style={{
+                      color: active
+                        ? theme.colors.primaryForeground
+                        : theme.colors.cardForeground,
+                      fontFamily: theme.typography.sans,
+                      fontSize: 13,
+                    }}>
+                    {cat.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        {filtered.map((business) => (
+          <BusinessCard
+            key={business.id}
+            business={business}
+            onPress={() =>
+              navigation.navigate('BusinessDetail', { businessId: business.id })
+            }
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  locationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  scroll: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    minHeight: 44,
+    marginBottom: 12,
+  },
+  aiCard: {
+    padding: 14,
+    borderWidth: 1,
+    gap: 10,
+    marginBottom: 12,
+  },
+  aiTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  aiInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-end',
+  },
+  aiInput: {
+    flex: 1,
+    minHeight: 72,
+    padding: 12,
+    fontSize: 14,
+    textAlignVertical: 'top',
+  },
+  sendBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  suggestion: {
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  categories: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  categoryChip: {
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+});

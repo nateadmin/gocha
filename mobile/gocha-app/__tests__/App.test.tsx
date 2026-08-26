@@ -6,6 +6,8 @@ jest.mock('expo-font', () => ({
   useFonts: () => [true],
 }));
 
+jest.mock('@expo/vector-icons/Ionicons', () => 'Ionicons');
+
 jest.mock('../src/theme/fonts', () => ({
   useBrandFonts: () => ({ ready: true }),
   brandFontFamilies: {},

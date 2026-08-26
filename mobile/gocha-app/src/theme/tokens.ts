@@ -58,10 +58,18 @@ export interface ThemeSpacing {
   stack: number;
 }
 
+export interface ThemeRadii {
+  sharp: number;
+  card: number;
+  pill: number;
+  avatar: number;
+}
+
 export interface GochaTheme {
   mode: ThemeMode;
   colors: ThemeColors;
   radius: number;
+  radii: ThemeRadii;
   shadow: ThemeShadow;
   typography: ThemeTypography;
   spacing: ThemeSpacing;
@@ -152,10 +160,18 @@ const spacing: ThemeSpacing = {
   stack: 12,
 };
 
+const radii: ThemeRadii = {
+  sharp: 0,
+  card: 14,
+  pill: 999,
+  avatar: 999,
+};
+
 export const lightTheme: GochaTheme = {
   mode: 'light',
   colors: lightColors,
   radius: 0,
+  radii,
   shadow: {
     color: PRIMARY,
     offsetX: 0,
@@ -172,6 +188,7 @@ export const darkTheme: GochaTheme = {
   mode: 'dark',
   colors: darkColors,
   radius: 0,
+  radii,
   shadow: {
     color: PRIMARY,
     offsetX: 0,
