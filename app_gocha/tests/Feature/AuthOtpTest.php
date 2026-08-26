@@ -76,7 +76,8 @@ class AuthOtpTest extends TestCase
         $code = '123456';
 
         LoginOtp::query()->create([
-            'email' => $email,
+            'channel' => 'email',
+            'identifier' => $email,
             'code_hash' => Hash::make($code),
             'attempts' => 0,
             'expires_at' => now()->addMinutes(10),
@@ -108,7 +109,8 @@ class AuthOtpTest extends TestCase
         $code = '123456';
 
         LoginOtp::query()->create([
-            'email' => $email,
+            'channel' => 'email',
+            'identifier' => $email,
             'code_hash' => Hash::make($code),
             'attempts' => 0,
             'expires_at' => now()->addMinutes(10),

@@ -19,6 +19,7 @@ import {
   type AuthUser,
   type OtpAuthMode,
 } from '../api/client';
+import { useAccounts } from './AccountsContext';
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -45,6 +46,14 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const {
+    accounts,
+    activeAccountId,
+    isAddingAccount,
+    registerAccount,
+    removeAccount,
+    switchAccount,
+  } = useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+  }, [refresh, activeAccountId]);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -73,11 +82,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { resendAvailableInSeconds: payload.resendAvailableInSeconds };
   }, []);
 
-  const verifyWithOtp = useCallback(async (email: string, code: string, mode: OtpAuthMode) => {
-    const nextUser = await verifyOtp(email, code, mode);
-    setUser(nextUser);
-    setError(null);
-  }, []);
+  const verifyWithOtp = useCallback(
+    async (email: string, code: string, mode: OtpAuthMode) => {
+      const payload = await verifyOtp(email, code, mode);
+      registerAccount({
+        userId: payload.account.id,
+        label: payload.account.label,
+        displayName: payload.account.displayName,
+        avatarUrl: payload.account.avatarUrl,
+        deviceToken: payload.deviceToken,
+        primaryLoginChannel: payload.account.primaryLoginChannel,
+      });
+      setUser(payload.user);
+      setError(null);
+    },
+    [registerAccount],
+  );
 
   const finishOnboarding = useCallback(
     async (input: {
@@ -99,9 +119,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await apiLogout();
+    try {
+      await apiLogout();
+    } catch {
+      // Removing local account even if remote logout fails.
+    }
+    if (user) {
+      removeAccount(user.id);
+    }
     setUser(null);
-  }, []);
+  }, [removeAccount, user]);
 
   const value = useMemo(
     () => ({
@@ -130,7 +157,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const shouldShowAuth = !user && (accounts.length === 0 || isAddingAccount);
+
+  return (
+    <AuthContext.Provider value={value}>
+      {shouldShowAuth ? children : children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {
@@ -139,4 +172,19 @@ export function useAuth(): AuthContextValue {
     throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
+}
+
+export function useAuthGate(): {
+  user: AuthUser | null;
+  loading: boolean;
+  showAuthFlow: boolean;
+} {
+  const { user, loading } = useAuth();
+  const { accounts, isAddingAccount } = useAccounts();
+
+  return {
+    user,
+    loading,
+    showAuthFlow: isAddingAccount || (!user && accounts.length === 0),
+  };
 }

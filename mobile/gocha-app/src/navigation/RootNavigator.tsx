@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { CatchUpScreen } from '../screens/catchup/CatchUpScreen';
 import { CallsScreen } from '../screens/calls/CallsScreen';
-import { SettingsScreen } from '../screens/settings/SettingsScreen';
+import { SettingsStackNavigator } from './SettingsStackNavigator';
 import { ChatsStackNavigator } from './ChatsStackNavigator';
 import { DiscoverStackNavigator } from './DiscoverStackNavigator';
 import { MainTabBar } from './MainTabBar';
@@ -48,7 +48,7 @@ export function RootNavigator() {
         })}
       />
       <Tab.Screen name="CallsTab" component={CallsScreen} />
-      <Tab.Screen name="SettingsTab" component={SettingsScreen} />
+      <Tab.Screen name="SettingsTab" component={SettingsStackNavigator} />
     </Tab.Navigator>
   );
 }

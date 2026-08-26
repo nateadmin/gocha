@@ -13,6 +13,14 @@ jest.mock('../src/theme/fonts', () => ({
   brandFontFamilies: {},
 }));
 
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: false,
+    status: 401,
+    json: async () => ({ code: 'UNAUTHENTICATED', message: 'Sign in required.' }),
+  } as Response),
+) as jest.Mock;
+
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import App from '../App';

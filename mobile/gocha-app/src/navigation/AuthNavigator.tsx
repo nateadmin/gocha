@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { OtpAuthMode } from '../../api/client';
+import { useAccounts } from '../context/AccountsContext';
 import { AuthWelcomeScreen } from '../screens/auth/AuthWelcomeScreen';
 import { EmailScreen } from '../screens/auth/EmailScreen';
 import { OtpScreen } from '../screens/auth/OtpScreen';
@@ -8,9 +9,25 @@ import { OtpScreen } from '../screens/auth/OtpScreen';
 type Step = 'welcome' | 'email' | 'otp';
 
 export function AuthNavigator() {
+  const { isAddingAccount, cancelAddAccount } = useAccounts();
   const [step, setStep] = useState<Step>('welcome');
   const [mode, setMode] = useState<OtpAuthMode>('signin');
   const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAddingAccount) {
+      setStep('email');
+      setMode('signup');
+    }
+  }, [isAddingAccount]);
+
+  function handleAuthBack() {
+    if (isAddingAccount) {
+      cancelAddAccount();
+      return;
+    }
+    setStep('welcome');
+  }
 
   if (step === 'otp' && email) {
     return (
@@ -33,7 +50,7 @@ export function AuthNavigator() {
         onSwitchMode={() => {
           setMode(mode === 'signin' ? 'signup' : 'signin');
         }}
-        onBack={() => setStep('welcome')}
+        onBack={handleAuthBack}
       />
     );
   }

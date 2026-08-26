@@ -5,14 +5,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { SectionLabel, SettingsToggleRow } from '../../components/app';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootTabParamList } from '../../navigation/types';
+import type { SettingsStackParamList } from '../../navigation/types';
 import { brandLogoSource } from '../../branding/logo';
 import { useAuth } from '../../context/AuthContext';
 import { useGochaTheme } from '../../theme';
 
 export function SettingsScreen() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootTabParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const { theme } = useGochaTheme();
   const { user, signOut } = useAuth();
   const [readReceipts, setReadReceipts] = useState(true);
@@ -64,7 +63,7 @@ export function SettingsScreen() {
               fontSize: 18,
               fontWeight: '600',
             }}>
-            {user?.displayName ?? 'Gocha user'}
+            {user?.chatDisplayName ?? user?.displayName ?? 'Gocha user'}
           </Text>
           <Text
             style={{
@@ -72,8 +71,13 @@ export function SettingsScreen() {
               fontFamily: theme.typography.sans,
               fontSize: 14,
             }}>
-            {user?.email ?? ''}
+            {user?.email ?? user?.phone ?? ''}
           </Text>
+          {user?.effectiveVerificationStatus === 'verified' ? (
+            <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans, fontSize: 13, marginTop: 4 }}>
+              Verified
+            </Text>
+          ) : null}
           {user?.status ? (
             <Text
               style={{
@@ -99,6 +103,38 @@ export function SettingsScreen() {
             borderRadius: theme.radii.card,
           },
         ]}>
+        <Pressable onPress={() => navigation.navigate('Accounts')} style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Accounts
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable onPress={() => navigation.navigate('ProfileMode')} style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Chat profile ({user?.profileMode ?? 'personal'})
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable onPress={() => navigation.navigate('SubmitBusiness')} style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Submit business listing
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        {user?.isAdmin ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+            <Pressable onPress={() => navigation.navigate('AdminReview')} style={styles.linkRow}>
+              <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+                Admin review queue
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+            </Pressable>
+          </>
+        ) : null}
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable onPress={() => signOut()} style={styles.signOutRow}>
           <Text
             style={{
@@ -123,7 +159,9 @@ export function SettingsScreen() {
         ]}>
         <Pressable
           onPress={() =>
-            navigation.navigate('ChatsTab', { screen: 'ChatLabelsSettings' } as never)
+            navigation.getParent()?.navigate('ChatsTab' as never, {
+              screen: 'ChatLabelsSettings',
+            } as never)
           }
           style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
@@ -134,7 +172,7 @@ export function SettingsScreen() {
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable
           onPress={() =>
-            navigation.navigate('ChatsTab', { screen: 'HiddenChats' } as never)
+            navigation.getParent()?.navigate('ChatsTab' as never, { screen: 'HiddenChats' } as never)
           }
           style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
@@ -145,7 +183,7 @@ export function SettingsScreen() {
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable
           onPress={() =>
-            navigation.navigate('ChatsTab', { screen: 'ChatListsSettings' } as never)
+            navigation.getParent()?.navigate('ChatsTab' as never, { screen: 'ChatListsSettings' } as never)
           }
           style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>

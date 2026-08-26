@@ -1,15 +1,45 @@
 import { API_BASE_URL, API_PATHS } from '../config/api';
 
+export type BusinessListingSummary = {
+  id: number;
+  slug: string;
+  name: string;
+  category: string | null;
+  status: string;
+  verificationStatus: string;
+  isVerified: boolean;
+  chatEnabled: boolean;
+  chatUserId: number;
+};
+
 export type AuthUser = {
   id: number;
-  email: string;
+  email: string | null;
+  phone: string | null;
+  primaryLoginChannel: string;
   displayName: string;
+  chatDisplayName: string;
   status: string | null;
   bio: string | null;
-  phone: string | null;
   avatarUrl: string | null;
   discoverable: boolean;
   needsOnboarding: boolean;
+  isAdmin: boolean;
+  userVerificationStatus: string;
+  effectiveVerificationStatus: string;
+  profileMode: 'personal' | 'business';
+  businessChatName: string | null;
+  businessChatWebsite: string | null;
+  activeBusinessListingId: number | null;
+  activeBusinessListing: BusinessListingSummary | null;
+};
+
+export type AccountSwitcherEntry = {
+  id: number;
+  label: string;
+  displayName: string;
+  avatarUrl: string | null;
+  primaryLoginChannel: string;
 };
 
 export type ApiErrorBody = {
@@ -29,6 +59,17 @@ export class ApiError extends Error {
   }
 }
 
+let activeDeviceToken: string | null = null;
+let csrfPrimed = false;
+
+export function setActiveDeviceToken(token: string | null): void {
+  activeDeviceToken = token;
+}
+
+export function getActiveDeviceToken(): string | null {
+  return activeDeviceToken;
+}
+
 function readCookie(name: string): string | null {
   if (typeof document === 'undefined') {
     return null;
@@ -37,8 +78,6 @@ function readCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
-
-let csrfPrimed = false;
 
 async function ensureCsrfCookie(): Promise<void> {
   if (csrfPrimed) {
@@ -90,6 +129,10 @@ export async function apiRequest<T>(
     headers['Content-Type'] = 'application/json';
   }
 
+  if (activeDeviceToken) {
+    headers.Authorization = `Bearer ${activeDeviceToken}`;
+  }
+
   const xsrf = readCookie('XSRF-TOKEN');
   if (xsrf) {
     headers['X-XSRF-TOKEN'] = xsrf;
@@ -118,6 +161,12 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
 
 export type OtpAuthMode = 'signin' | 'signup';
 
+export type OtpVerifyResult = {
+  user: AuthUser;
+  deviceToken: string;
+  account: AccountSwitcherEntry;
+};
+
 export async function requestOtp(
   email: string,
   mode: OtpAuthMode,
@@ -135,12 +184,11 @@ export async function verifyOtp(
   email: string,
   code: string,
   mode: OtpAuthMode,
-): Promise<AuthUser> {
-  const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.otpVerify, {
+): Promise<OtpVerifyResult> {
+  return apiRequest(API_PATHS.otpVerify, {
     method: 'POST',
     body: JSON.stringify({ email, code, mode }),
   });
-  return payload.user;
 }
 
 export async function logout(): Promise<void> {
@@ -162,6 +210,30 @@ export async function completeOnboarding(input: {
   return payload.user;
 }
 
+export async function updateProfileContact(input: {
+  email?: string;
+  phone?: string;
+}): Promise<AuthUser> {
+  const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.contact, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return payload.user;
+}
+
+export async function updateProfileMode(input: {
+  profileMode: 'personal' | 'business';
+  businessChatName?: string;
+  businessChatWebsite?: string;
+  activeBusinessListingId?: number | null;
+}): Promise<AuthUser> {
+  const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.profileMode, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return payload.user;
+}
+
 export async function uploadAvatar(file: Blob, filename = 'avatar.png'): Promise<AuthUser> {
   const form = new FormData();
   form.append('avatar', file, filename);
@@ -171,4 +243,73 @@ export async function uploadAvatar(file: Blob, filename = 'avatar.png'): Promise
     body: form,
   });
   return payload.user;
+}
+
+export type PublicBusinessListing = {
+  id: number;
+  slug: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  address: string | null;
+  website: string | null;
+  verificationStatus: string;
+  isVerified: boolean;
+  chatEnabled: boolean;
+  chatUserId: number;
+  ownerUserId: number;
+};
+
+export type OwnerBusinessListing = PublicBusinessListing & {
+  status: string;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+};
+
+export async function fetchPublicBusinesses(): Promise<PublicBusinessListing[]> {
+  const payload = await apiRequest<{ listings: PublicBusinessListing[] }>(API_PATHS.businesses);
+  return payload.listings;
+}
+
+export async function fetchMyBusinessListings(): Promise<OwnerBusinessListing[]> {
+  const payload = await apiRequest<{ listings: OwnerBusinessListing[] }>(API_PATHS.businessesMine);
+  return payload.listings;
+}
+
+export async function submitBusinessListing(input: {
+  name: string;
+  category?: string;
+  description?: string;
+  address?: string;
+  website?: string;
+}): Promise<OwnerBusinessListing> {
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(API_PATHS.businesses, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return payload.listing;
+}
+
+export async function approveBusinessListing(id: number): Promise<OwnerBusinessListing> {
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.adminBusinessListings}/${id}/approve`,
+    { method: 'POST' },
+  );
+  return payload.listing;
+}
+
+export async function rejectBusinessListing(id: number, reason: string): Promise<OwnerBusinessListing> {
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.adminBusinessListings}/${id}/reject`,
+    { method: 'POST', body: JSON.stringify({ reason }) },
+  );
+  return payload.listing;
+}
+
+export async function fetchPendingBusinessListings(): Promise<OwnerBusinessListing[]> {
+  const payload = await apiRequest<{ listings: OwnerBusinessListing[] }>(
+    `${API_PATHS.adminBusinessListings}?status=pending_review`,
+  );
+  return payload.listings;
 }

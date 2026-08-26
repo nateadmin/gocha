@@ -8,6 +8,7 @@ use App\Models\LoginOtp;
 use App\Models\User;
 use App\Services\Mail\ResendMailer;
 use App\Services\Profile\CharacterAvatarService;
+use App\Support\AccountChannel;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -17,62 +18,99 @@ class OtpAuthService
     public function __construct(
         private readonly ResendMailer $mailer,
         private readonly CharacterAvatarService $avatars,
+        private readonly AccountIdentifierService $identifiers,
     ) {}
 
-    public function requestCode(string $email, string $mode = 'signin'): array
+    public function requestCode(string $channel, string $identifier, string $mode = 'signin'): array
     {
-        $email = Str::lower(trim($email));
-        $userExists = User::query()->where('email', $email)->exists();
+        $channel = Str::lower(trim($channel));
+        $identifier = $this->identifiers->normalize($channel, $identifier);
+
+        if ($channel === AccountChannel::PHONE) {
+            throw new OtpRequestException(
+                'SMS_NOT_CONFIGURED',
+                'Phone sign-in is coming soon. Use email for now.',
+            );
+        }
+
+        $userExists = $this->findUserByChannel($channel, $identifier) !== null;
         $closed = (bool) config('gocha.auth.closed_membership', false);
 
         if ($mode === 'signin') {
             if (! $userExists) {
                 throw new OtpRequestException(
-                    'EMAIL_NOT_FOUND',
-                    'No Gocha account exists for this email. Sign up or check the address.',
+                    $channel === AccountChannel::EMAIL ? 'EMAIL_NOT_FOUND' : 'PHONE_NOT_FOUND',
+                    $channel === AccountChannel::EMAIL
+                        ? 'No Gocha account exists for this email. Sign up or check the address.'
+                        : 'No Gocha account exists for this phone number. Sign up or check the number.',
                 );
             }
         } elseif ($mode === 'signup') {
             if ($userExists) {
                 throw new OtpRequestException(
-                    'EMAIL_ALREADY_REGISTERED',
-                    'An account already exists for this email. Sign in instead.',
+                    $channel === AccountChannel::EMAIL ? 'EMAIL_ALREADY_REGISTERED' : 'PHONE_ALREADY_REGISTERED',
+                    $channel === AccountChannel::EMAIL
+                        ? 'An account already exists for this email. Sign in instead.'
+                        : 'An account already exists for this phone number. Sign in instead.',
                 );
             }
             if ($closed) {
                 throw new OtpRequestException(
                     'SIGNUP_CLOSED',
-                    'Sign-up is not open for new emails right now.',
+                    'Sign-up is not open for new accounts right now.',
                 );
             }
         }
 
-        $cooldownKey = $this->cooldownKey($email);
+        $cooldownKey = $this->cooldownKey($channel, $identifier);
         if (Cache::has($cooldownKey)) {
-            return $this->cooldownPayload($email, $mode);
+            return $this->cooldownPayload($channel, $identifier, $mode);
         }
 
         $code = $this->generateCode();
-        LoginOtp::query()->where('email', $email)->delete();
+        LoginOtp::query()
+            ->where('channel', $channel)
+            ->where('identifier', $identifier)
+            ->delete();
 
         LoginOtp::query()->create([
-            'email' => $email,
+            'channel' => $channel,
+            'identifier' => $identifier,
             'code_hash' => Hash::make($code),
             'attempts' => 0,
             'expires_at' => now()->addMinutes((int) config('gocha.auth.otp_ttl_minutes', 10)),
         ]);
 
-        Cache::put($cooldownKey, true, now()->addSeconds((int) config('gocha.auth.otp_resend_cooldown_seconds', 60)));
+        Cache::put(
+            $cooldownKey,
+            true,
+            now()->addSeconds((int) config('gocha.auth.otp_resend_cooldown_seconds', 60)),
+        );
 
-        $this->mailer->sendLoginCode($email, $code);
+        if ($channel === AccountChannel::EMAIL) {
+            $this->mailer->sendLoginCode($identifier, $code);
+        }
 
-        return $this->cooldownPayload($email, $mode);
+        return $this->cooldownPayload($channel, $identifier, $mode);
     }
 
-    public function verifyCode(string $email, string $code, string $mode = 'signin'): User
+    public function verifyCode(string $channel, string $identifier, string $code, string $mode = 'signin'): User
     {
-        $email = Str::lower(trim($email));
-        $otp = LoginOtp::query()->where('email', $email)->latest()->first();
+        $channel = Str::lower(trim($channel));
+        $identifier = $this->identifiers->normalize($channel, $identifier);
+
+        if ($channel === AccountChannel::PHONE) {
+            throw new OtpVerificationException(
+                'SMS_NOT_CONFIGURED',
+                'Phone sign-in is coming soon. Use email for now.',
+            );
+        }
+
+        $otp = LoginOtp::query()
+            ->where('channel', $channel)
+            ->where('identifier', $identifier)
+            ->latest()
+            ->first();
 
         if (! $otp || $otp->isConsumed() || $otp->isExpired()) {
             throw new OtpVerificationException('OTP_EXPIRED', 'This code has expired. Request a new one.');
@@ -89,29 +127,37 @@ class OtpAuthService
         }
 
         $otp->forceFill(['consumed_at' => now()])->save();
-        LoginOtp::query()->where('email', $email)->where('id', '!=', $otp->id)->delete();
+        LoginOtp::query()
+            ->where('channel', $channel)
+            ->where('identifier', $identifier)
+            ->where('id', '!=', $otp->id)
+            ->delete();
 
         if ($mode === 'signup') {
-            if (User::query()->where('email', $email)->exists()) {
+            if ($this->findUserByChannel($channel, $identifier)) {
                 throw new OtpVerificationException(
-                    'EMAIL_ALREADY_REGISTERED',
-                    'An account already exists for this email. Sign in instead.',
+                    $channel === AccountChannel::EMAIL ? 'EMAIL_ALREADY_REGISTERED' : 'PHONE_ALREADY_REGISTERED',
+                    $channel === AccountChannel::EMAIL
+                        ? 'An account already exists for this email. Sign in instead.'
+                        : 'An account already exists for this phone number. Sign in instead.',
                 );
             }
 
-            $user = User::query()->create([
-                'email' => $email,
-                'name' => Str::before($email, '@'),
-                'password' => Str::password(32),
-            ]);
+            $user = $this->createUserForChannel($channel, $identifier);
         } else {
-            $user = User::query()->where('email', $email)->first();
+            $user = $this->findUserByChannel($channel, $identifier);
             if (! $user) {
                 throw new OtpVerificationException(
-                    'EMAIL_NOT_FOUND',
-                    'No Gocha account exists for this email. Sign up or check the address.',
+                    $channel === AccountChannel::EMAIL ? 'EMAIL_NOT_FOUND' : 'PHONE_NOT_FOUND',
+                    $channel === AccountChannel::EMAIL
+                        ? 'No Gocha account exists for this email. Sign up or check the address.'
+                        : 'No Gocha account exists for this phone number. Sign up or check the number.',
                 );
             }
+        }
+
+        if ($channel === AccountChannel::EMAIL) {
+            $user->forceFill(['email_verified_at' => now()])->save();
         }
 
         if (! $user->avatar_path) {
@@ -121,23 +167,51 @@ class OtpAuthService
         return $user->fresh();
     }
 
+    private function findUserByChannel(string $channel, string $identifier): ?User
+    {
+        if ($channel === AccountChannel::EMAIL) {
+            return User::query()->where('email', $identifier)->first();
+        }
+
+        return User::query()->where('phone', $identifier)->first();
+    }
+
+    private function createUserForChannel(string $channel, string $identifier): User
+    {
+        $attributes = [
+            'password' => Str::password(32),
+            'primary_login_channel' => $channel,
+        ];
+
+        if ($channel === AccountChannel::EMAIL) {
+            $attributes['email'] = $identifier;
+            $attributes['name'] = Str::before($identifier, '@');
+            $attributes['email_verified_at'] = now();
+        } else {
+            $attributes['phone'] = $identifier;
+            $attributes['name'] = 'Gocha user';
+            $attributes['phone_verified_at'] = now();
+        }
+
+        return User::query()->create($attributes);
+    }
+
     private function generateCode(): string
     {
         return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     }
 
-    private function cooldownKey(string $email): string
+    private function cooldownKey(string $channel, string $identifier): string
     {
-        return 'gocha:otp:cooldown:'.hash('sha256', $email);
+        return 'gocha:otp:cooldown:'.hash('sha256', $channel.':'.$identifier);
     }
 
-    private function cooldownPayload(string $email, string $mode): array
+    private function cooldownPayload(string $channel, string $identifier, string $mode): array
     {
-        $cooldownKey = $this->cooldownKey($email);
-        $retryAfter = 0;
-        if (Cache::has($cooldownKey)) {
-            $retryAfter = (int) config('gocha.auth.otp_resend_cooldown_seconds', 60);
-        }
+        $cooldownKey = $this->cooldownKey($channel, $identifier);
+        $retryAfter = Cache::has($cooldownKey)
+            ? (int) config('gocha.auth.otp_resend_cooldown_seconds', 60)
+            : 0;
 
         $message = $mode === 'signup'
             ? config('gocha.auth.otp_signup_request_message')

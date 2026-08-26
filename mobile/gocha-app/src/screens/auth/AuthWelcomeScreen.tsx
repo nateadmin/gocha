@@ -20,6 +20,9 @@ export function AuthWelcomeScreen({ onSignIn, onSignUp }: Props) {
         <BrandText muted style={styles.subtitle}>
           Connect. Catch up. Discover.
         </BrandText>
+        <BrandText muted style={styles.note}>
+          Sign in with email today. Phone sign-in is coming when SMS is enabled.
+        </BrandText>
 
         <View style={styles.actions}>
           <CtaButton label="Sign up" onPress={onSignUp} />
@@ -43,8 +46,13 @@ const styles = StyleSheet.create({
     fontSize: 40,
   },
   subtitle: {
-    marginBottom: 32,
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  note: {
+    marginBottom: 24,
+    textAlign: 'center',
+    fontSize: 13,
   },
   actions: {
     width: '100%',

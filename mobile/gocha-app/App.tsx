@@ -2,11 +2,12 @@ import type { ReactNode } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AccountsProvider } from './src/context/AccountsContext';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
 import { SplashScreen, useSplashGate } from './src/screens/splash/SplashScreen';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { AuthProvider, useAuthGate } from './src/context/AuthContext';
 import { ChatProvider } from './src/chat/ChatContext';
 import { ThemeProvider, useGochaTheme } from './src/theme';
 import { useBrandFonts } from './src/theme/fonts';
@@ -14,7 +15,7 @@ import { useBrandFonts } from './src/theme/fonts';
 function AppShell() {
   const { ready } = useBrandFonts();
   const { theme } = useGochaTheme();
-  const { user, loading } = useAuth();
+  const { user, loading, showAuthFlow } = useAuthGate();
   const splashReady = useSplashGate(ready && !loading);
 
   const navTheme =
@@ -47,8 +48,10 @@ function AppShell() {
   }
 
   let content: ReactNode;
-  if (!user) {
+  if (showAuthFlow) {
     content = <AuthNavigator />;
+  } else if (!user) {
+    content = <SplashScreen />;
   } else if (user.needsOnboarding) {
     content = <OnboardingScreen />;
   } else {
@@ -66,11 +69,13 @@ function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider initialMode="dark">
-        <AuthProvider>
-          <ChatProvider>
-            <AppShell />
-          </ChatProvider>
-        </AuthProvider>
+        <AccountsProvider>
+          <AuthProvider>
+            <ChatProvider>
+              <AppShell />
+            </ChatProvider>
+          </AuthProvider>
+        </AccountsProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

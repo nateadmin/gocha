@@ -29,10 +29,12 @@ class RouteServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('otp-request', function (Request $request) {
-            $email = strtolower((string) $request->input('email', ''));
+            $channel = strtolower((string) $request->input('channel', 'email'));
+            $identifier = strtolower((string) $request->input('identifier', $request->input('email', '')));
+            $key = $identifier !== '' ? $channel.':'.$identifier : $request->ip();
 
             return [
-                Limit::perMinute(5)->by($email ?: $request->ip()),
+                Limit::perMinute(5)->by($key),
                 Limit::perMinute(20)->by($request->ip()),
             ];
         });

@@ -3,19 +3,28 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BusinessListing;
 use App\Models\User;
+use App\Services\Business\BusinessListingService;
 use App\Services\Profile\CharacterAvatarService;
+use App\Support\ProfileMode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
-    public function __construct(private readonly CharacterAvatarService $avatars) {}
+    public function __construct(
+        private readonly CharacterAvatarService $avatars,
+        private readonly BusinessListingService $businesses,
+    ) {}
 
     public function me(Request $request): JsonResponse
     {
+        $user = $request->user()->load('activeBusinessListing');
+
         return response()->json([
-            'user' => $request->user()->toAuthPayload(),
+            'user' => $user->toAuthPayload(),
         ]);
     }
 
@@ -35,13 +44,78 @@ class ProfileController extends Controller
             'name' => $validated['displayName'],
             'status' => $validated['status'] ?? null,
             'bio' => $validated['bio'] ?? null,
-            'phone' => $validated['phone'] ?? null,
             'discoverable' => $validated['discoverable'] ?? false,
             'onboarding_completed_at' => now(),
         ])->save();
 
+        if (! empty($validated['phone'])) {
+            $this->businesses->attachContactPhone($user, $validated['phone']);
+        }
+
         return response()->json([
-            'user' => $user->fresh()->toAuthPayload(),
+            'user' => $user->fresh()->load('activeBusinessListing')->toAuthPayload(),
+        ]);
+    }
+
+    public function updateContact(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['sometimes', 'email:rfc', 'max:255'],
+            'phone' => ['sometimes', 'string', 'max:32'],
+        ]);
+
+        $user = $request->user();
+
+        if (isset($validated['email'])) {
+            $this->businesses->attachContactEmail($user, $validated['email']);
+        }
+
+        if (isset($validated['phone'])) {
+            $this->businesses->attachContactPhone($user, $validated['phone']);
+        }
+
+        return response()->json([
+            'user' => $user->fresh()->load('activeBusinessListing')->toAuthPayload(),
+        ]);
+    }
+
+    public function updateProfileMode(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'profileMode' => ['required', 'string', Rule::in(ProfileMode::all())],
+            'businessChatName' => ['nullable', 'string', 'max:120'],
+            'businessChatWebsite' => ['nullable', 'string', 'max:255', 'url'],
+            'activeBusinessListingId' => ['nullable', 'integer', 'exists:business_listings,id'],
+        ]);
+
+        $user = $request->user();
+
+        if (
+            $validated['profileMode'] === ProfileMode::BUSINESS
+            && isset($validated['activeBusinessListingId'])
+        ) {
+            $ownsListing = BusinessListing::query()
+                ->where('id', $validated['activeBusinessListingId'])
+                ->where('owner_user_id', $user->id)
+                ->exists();
+
+            if (! $ownsListing) {
+                return response()->json([
+                    'code' => 'FORBIDDEN',
+                    'message' => 'You can only use your own business listings in business chat mode.',
+                ], 403);
+            }
+        }
+
+        $user->forceFill([
+            'profile_mode' => $validated['profileMode'],
+            'business_chat_name' => $validated['businessChatName'] ?? null,
+            'business_chat_website' => $validated['businessChatWebsite'] ?? null,
+            'active_business_listing_id' => $validated['activeBusinessListingId'] ?? null,
+        ])->save();
+
+        return response()->json([
+            'user' => $user->fresh()->load('activeBusinessListing')->toAuthPayload(),
         ]);
     }
 
@@ -60,7 +134,7 @@ class ProfileController extends Controller
         );
 
         return response()->json([
-            'user' => $request->user()->fresh()->toAuthPayload(),
+            'user' => $request->user()->fresh()->load('activeBusinessListing')->toAuthPayload(),
         ]);
     }
 
