@@ -2,7 +2,7 @@
 
 Rulebook: https://github.com/nateadmin/personal-playbook
 
-Product roadmap: `PRODUCT_ROADMAP.md` (Gotcha phased plan). Align new work to the current build before adding scope.
+Product roadmap: `PRODUCT_ROADMAP.md` (Gocha phased plan). Align new work to the current build before adding scope.
 
 ## Layout
 

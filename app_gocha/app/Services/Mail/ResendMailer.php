@@ -25,7 +25,7 @@ class ResendMailer
         $from = config('gocha.resend.from');
 
         $html = <<<HTML
-<p>Your Gotcha sign-in code is:</p>
+<p>Your Gocha sign-in code is:</p>
 <p style="font-size:28px;font-weight:600;">{$code}</p>
 <p>This code expires in {$ttl} minutes.</p>
 <p>If you did not request this code, you can ignore this email.</p>
@@ -45,7 +45,7 @@ HTML;
             'json' => [
                 'from' => $from,
                 'to' => [$to],
-                'subject' => 'Your Gotcha sign-in code',
+                'subject' => 'Your Gocha sign-in code',
                 'html' => $html,
             ],
         ]);

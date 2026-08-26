@@ -29,7 +29,7 @@ class OtpAuthService
             if (! $userExists) {
                 throw new OtpRequestException(
                     'EMAIL_NOT_FOUND',
-                    'No Gotcha account exists for this email. Sign up or check the address.',
+                    'No Gocha account exists for this email. Sign up or check the address.',
                 );
             }
         } elseif ($mode === 'signup') {
@@ -109,7 +109,7 @@ class OtpAuthService
             if (! $user) {
                 throw new OtpVerificationException(
                     'EMAIL_NOT_FOUND',
-                    'No Gotcha account exists for this email. Sign up or check the address.',
+                    'No Gocha account exists for this email. Sign up or check the address.',
                 );
             }
         }

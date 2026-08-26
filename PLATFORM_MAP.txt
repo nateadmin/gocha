@@ -1,7 +1,7 @@
 gocha platform map (Aug 2026)
 
 PRODUCT ROADMAP
-- Phased plan: PRODUCT_ROADMAP.md (Gotcha messaging → commerce → Collective → long-term phone)
+- Phased plan: PRODUCT_ROADMAP.md (Gocha messaging → commerce → Collective → long-term phone)
 
 PLANNED DOMAIN
 - gocha.ai (live on Contabo 212.47.68.106; API + web shell at /app/)
@@ -10,7 +10,7 @@ CONTABO (212.47.68.106, shared with Rydit)
 - Laravel API shell: /var/www/html/gocha (app_gocha deploy target)
 - Rydit: Build 2 connector candidate (transport/commerce APIs); see rydit repo PLATFORM_MAP.txt
 
-MOBILE (Gotcha app)
+MOBILE (Gocha app)
 - React Native: mobile/gocha-app — Chats, Catch Up, Discover (Around Me + Businesses), Calls, Settings
 - Mock data until Build 1/2 APIs ship; see PRODUCT_ROADMAP.md
 

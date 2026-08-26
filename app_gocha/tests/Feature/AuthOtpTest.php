@@ -152,7 +152,7 @@ class AuthOtpTest extends TestCase
         $response = $this->actingAs($user)->postJson('/api/profile/onboarding', [
             'displayName' => 'Neon Rider',
             'status' => 'Online',
-            'bio' => 'Building Gotcha.',
+            'bio' => 'Building Gocha.',
             'phone' => '+15551234567',
             'discoverable' => true,
         ]);

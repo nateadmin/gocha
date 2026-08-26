@@ -44,7 +44,7 @@ class User extends Authenticatable
 
     public function publicDisplayName(): string
     {
-        return $this->display_name ?: $this->name ?: 'Gotcha user';
+        return $this->display_name ?: $this->name ?: 'Gocha user';
     }
 
     public function avatarUrl(): ?string

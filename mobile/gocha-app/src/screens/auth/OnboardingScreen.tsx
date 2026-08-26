@@ -87,7 +87,7 @@ export function OnboardingScreen() {
         style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content}>
           <BrandText variant="title">Set up your profile</BrandText>
-          <BrandText muted>Tell people who you are on Gotcha.</BrandText>
+          <BrandText muted>Tell people who you are on Gocha.</BrandText>
 
           <Pressable onPress={pickAvatar} style={styles.avatarRow}>
             {avatarPreview ? (

@@ -16,7 +16,7 @@ export function AuthWelcomeScreen({ onSignIn, onSignUp }: Props) {
     <ScreenContainer edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.content}>
         <BrandLogo size={88} />
-        <BrandText variant="display" style={styles.title}>Gotcha</BrandText>
+        <BrandText variant="display" style={styles.title}>Gocha</BrandText>
         <BrandText muted style={styles.subtitle}>
           Connect. Catch up. Discover.
         </BrandText>

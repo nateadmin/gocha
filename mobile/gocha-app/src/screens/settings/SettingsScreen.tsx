@@ -64,7 +64,7 @@ export function SettingsScreen() {
               fontSize: 18,
               fontWeight: '600',
             }}>
-            {user?.displayName ?? 'Gotcha user'}
+            {user?.displayName ?? 'Gocha user'}
           </Text>
           <Text
             style={{
@@ -229,7 +229,7 @@ export function SettingsScreen() {
           onValueChange={setAiSummaries}
         />
       </View>
-      <SectionLabel>GOTCHA COLLECTIVE (BUILD 3)</SectionLabel>
+      <SectionLabel>GOCHA COLLECTIVE (BUILD 3)</SectionLabel>
       <View
         style={[
           styles.card,

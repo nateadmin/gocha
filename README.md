@@ -1,6 +1,6 @@
-# gocha (Gotcha)
+# gocha (Gocha)
 
-Gotcha is a mobile-first super-app: messaging, AI Catch Up, local communities (Around Me), business commerce, and integrations (e.g. Rydit). See `PRODUCT_ROADMAP.md` for phased builds.
+Gocha is a mobile-first super-app: messaging, AI Catch Up, local communities (Around Me), business commerce, and integrations (e.g. Rydit). See `PRODUCT_ROADMAP.md` for phased builds.
 
 Development rules live in the personal-playbook repo.
 

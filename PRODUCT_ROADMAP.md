@@ -1,8 +1,8 @@
-# Gotcha product roadmap alignment
+# Gocha product roadmap alignment
 
-Source: Gotcha Product Roadmap (product PDF in repo uploads). Product name: Gotcha. Repo, domain, and package use `gocha`.
+Source: Gocha Product Roadmap (product PDF in repo uploads). Product name: Gocha. Repo, domain, and package use `gocha`.
 
-## Phase 1 — Gotcha Messaging App
+## Phase 1 — Gocha Messaging App
 
 ### Build 1 — Core messaging and community
 
@@ -31,11 +31,11 @@ Source: Gotcha Product Roadmap (product PDF in repo uploads). Product name: Gotc
 
 | Roadmap item | Repo status | Where |
 | --- | --- | --- |
-| Gotcha Collective account link | Stub | Settings Collective section |
+| Gocha Collective account link | Stub | Settings Collective section |
 | Member discounts in app | Not built | Build 3 |
 | Proprietary AI vs third-party | Not built | Replace Catch Up provider in Build 3 |
 
-## Phase 2 — Gotcha Collective
+## Phase 2 — Gocha Collective
 
 Standalone website + email offers first; app linkage in Build 3. Not started in this repo.
 

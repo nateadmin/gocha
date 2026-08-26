@@ -67,7 +67,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
           <BrandText muted style={styles.subtitle}>
             {isSignUp
               ? 'Enter your email. We will send a verification code.'
-              : 'Enter the email for your existing Gotcha account.'}
+              : 'Enter the email for your existing Gocha account.'}
           </BrandText>
 
           <BrandInput
@@ -96,7 +96,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
             <BrandText muted style={{ textAlign: 'center' }}>
               {isSignUp
                 ? 'Already have an account? Sign in'
-                : 'New to Gotcha? Sign up'}
+                : 'New to Gocha? Sign up'}
             </BrandText>
           </Pressable>
 

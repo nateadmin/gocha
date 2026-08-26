@@ -11,7 +11,7 @@ type Props = {
 export function BrandLogo({
   size = 56,
   style,
-  accessibilityLabel = 'Gotcha logo',
+  accessibilityLabel = 'Gocha logo',
 }: Props) {
   return (
     <Image

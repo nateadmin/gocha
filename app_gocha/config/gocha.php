@@ -16,7 +16,7 @@ return [
 
     'resend' => [
         'api_key' => env('RESEND_API_KEY'),
-        'from' => env('RESEND_FROM', 'Gotcha <noreply@gocha.ai>'),
-        'from_name' => env('RESEND_FROM_NAME', 'Gotcha'),
+        'from' => env('RESEND_FROM', 'Gocha <noreply@gocha.ai>'),
+        'from_name' => env('RESEND_FROM_NAME', 'Gocha'),
     ],
 ];

@@ -234,7 +234,7 @@ export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
 export const STICKER_PACKS = [
   {
     id: 'gotcha',
-    name: 'Gotcha',
+    name: 'Gocha',
     stickers: ['rocket', 'star', 'fire', 'party', 'heart', 'thumbs', 'wave', 'cool'],
   },
   {

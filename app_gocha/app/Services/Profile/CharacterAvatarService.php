@@ -43,7 +43,7 @@ class CharacterAvatarService
             : '<line x1="78" y1="102" x2="122" y2="102" stroke="'.$accent.'" stroke-width="6" stroke-linecap="round"/>';
 
         return <<<SVG
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Gotcha character avatar">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Gocha character avatar">
   <rect width="200" height="200" rx="32" fill="{$primary}"/>
   <rect x="36" y="40" width="128" height="120" rx="28" fill="#1a1b2e"/>
   <circle cx="78" cy="{$eyeY}" r="10" fill="{$accent}"/>
