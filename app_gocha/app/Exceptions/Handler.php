@@ -6,6 +6,7 @@ use App\Support\CorrelationId;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -19,6 +20,7 @@ class Handler extends ExceptionHandler
         'current_password',
         'password',
         'password_confirmation',
+        'code',
     ];
 
     /**
@@ -42,6 +44,27 @@ class Handler extends ExceptionHandler
 
     private function renderJson(Request $request, Throwable $e): JsonResponse
     {
+        if ($e instanceof OtpVerificationException) {
+            return response()->json([
+                'code' => $e->errorCode,
+                'message' => $e->getMessage(),
+                'correlationId' => CorrelationId::current(),
+                'retryable' => true,
+                'timestamp' => now()->toIso8601String(),
+            ], 422);
+        }
+
+        if ($e instanceof ValidationException) {
+            return response()->json([
+                'code' => 'VALIDATION_ERROR',
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+                'correlationId' => CorrelationId::current(),
+                'retryable' => false,
+                'timestamp' => now()->toIso8601String(),
+            ], 422);
+        }
+
         $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
         $code = match ($status) {
             401 => 'UNAUTHENTICATED',
@@ -53,6 +76,7 @@ class Handler extends ExceptionHandler
         };
 
         $message = match ($status) {
+            401 => 'Sign in required.',
             404 => 'The requested API route was not found.',
             429 => 'Too many requests. Wait and try again.',
             default => $status >= 500

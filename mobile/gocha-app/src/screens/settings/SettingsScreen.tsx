@@ -4,11 +4,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { SectionLabel, SettingsToggleRow } from '../../components/app';
 import { brandLogoSource } from '../../branding/logo';
-import { userProfile } from '../../data/mock';
+import { useAuth } from '../../context/AuthContext';
 import { useGochaTheme } from '../../theme';
 
 export function SettingsScreen() {
   const { theme } = useGochaTheme();
+  const { user, signOut } = useAuth();
   const [readReceipts, setReadReceipts] = useState(true);
   const [lastSeen, setLastSeen] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -40,8 +41,8 @@ export function SettingsScreen() {
           },
         ]}>
         <Image
-          accessibilityLabel="Gotcha logo"
-          source={brandLogoSource}
+          accessibilityLabel="Profile avatar"
+          source={user?.avatarUrl ? { uri: user.avatarUrl } : brandLogoSource}
           style={[
             styles.profileAvatar,
             {
@@ -58,7 +59,7 @@ export function SettingsScreen() {
               fontSize: 18,
               fontWeight: '600',
             }}>
-            {userProfile.name}
+            {user?.displayName ?? 'Gotcha user'}
           </Text>
           <Text
             style={{
@@ -66,20 +67,44 @@ export function SettingsScreen() {
               fontFamily: theme.typography.sans,
               fontSize: 14,
             }}>
-            {userProfile.email}
+            {user?.email ?? ''}
           </Text>
-          <Text
-            style={{
-              color: theme.colors.secondary,
-              fontFamily: theme.typography.sans,
-              fontSize: 14,
-              marginTop: 4,
-            }}>
-            Edit profile
-          </Text>
+          {user?.status ? (
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.typography.sans,
+                fontSize: 14,
+                marginTop: 4,
+              }}>
+              {user.status}
+            </Text>
+          ) : null}
         </View>
         <Ionicons name="chevron-forward" size={20} color={theme.colors.mutedForeground} />
       </Pressable>
+
+      <SectionLabel>ACCOUNT</SectionLabel>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <Pressable onPress={() => signOut()} style={styles.signOutRow}>
+          <Text
+            style={{
+              color: theme.colors.destructive,
+              fontFamily: theme.typography.sans,
+              fontSize: theme.typography.body,
+            }}>
+            Sign out
+          </Text>
+        </Pressable>
+      </View>
 
       <SectionLabel>PRIVACY</SectionLabel>
       <View
@@ -205,5 +230,8 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
+  },
+  signOutRow: {
+    paddingVertical: 14,
   },
 });

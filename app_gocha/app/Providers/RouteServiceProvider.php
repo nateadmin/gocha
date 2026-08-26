@@ -28,6 +28,19 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('otp-request', function (Request $request) {
+            $email = strtolower((string) $request->input('email', ''));
+
+            return [
+                Limit::perMinute(5)->by($email ?: $request->ip()),
+                Limit::perMinute(20)->by($request->ip()),
+            ];
+        });
+
+        RateLimiter::for('otp-verify', function (Request $request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

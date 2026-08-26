@@ -41,6 +41,8 @@ if ! grep -q '^APP_KEY=base64:' .env; then
   php artisan key:generate --force
 fi
 grep -q '^APP_BUILD_SHA=' .env && sed -i "s/^APP_BUILD_SHA=.*/APP_BUILD_SHA=$COMMIT_SHA/" .env || echo "APP_BUILD_SHA=$COMMIT_SHA" >> .env
+php artisan migrate --force
+php artisan storage:link || true
 php artisan config:cache
 php artisan route:cache
 chown -R www-data:www-data storage bootstrap/cache
