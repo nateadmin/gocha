@@ -12,7 +12,13 @@ Development rules live in the personal-playbook repo.
 - `deploy/nginx/gocha.ai.conf.template` — nginx vhost for when DNS is ready
 - `PLATFORM_MAP.txt` — server and stack map
 
-Planned production hostname: `gocha.ai` (nginx + certbot tomorrow).
+Planned production hostname: `gocha.ai` (live: nginx + Let’s Encrypt on Contabo).
+
+## Live URLs
+
+- API health: https://gocha.ai/api/health
+- API version: https://gocha.ai/api/version
+- Mobile web shell: https://gocha.ai/app/
 
 ## Server (Contabo)
 

@@ -4,7 +4,7 @@ PRODUCT ROADMAP
 - Phased plan: PRODUCT_ROADMAP.md (Gotcha messaging → commerce → Collective → long-term phone)
 
 PLANNED DOMAIN
-- gocha.ai (certificate and nginx vhost pending; see deploy/nginx/gocha.ai.conf.template)
+- gocha.ai (live on Contabo 212.47.68.106; API + web shell at /app/)
 
 CONTABO (212.47.68.106, shared with Rydit)
 - Laravel API shell: /var/www/html/gocha (app_gocha deploy target)
