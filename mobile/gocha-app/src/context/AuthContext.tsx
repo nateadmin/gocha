@@ -17,6 +17,7 @@ import {
   uploadAvatar,
   verifyOtp,
   type AuthUser,
+  type OtpAuthMode,
 } from '../api/client';
 
 type AuthContextValue = {
@@ -25,8 +26,11 @@ type AuthContextValue = {
   error: string | null;
   clearError: () => void;
   refresh: () => Promise<void>;
-  signInWithOtp: (email: string, code: string) => Promise<void>;
-  requestLoginCode: (email: string) => Promise<{ resendAvailableInSeconds: number }>;
+  verifyWithOtp: (email: string, code: string, mode: OtpAuthMode) => Promise<void>;
+  requestAuthCode: (
+    email: string,
+    mode: OtpAuthMode,
+  ) => Promise<{ resendAvailableInSeconds: number }>;
   finishOnboarding: (input: {
     displayName: string;
     status?: string;
@@ -64,13 +68,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearError = useCallback(() => setError(null), []);
 
-  const requestLoginCode = useCallback(async (email: string) => {
-    const payload = await requestOtp(email);
+  const requestAuthCode = useCallback(async (email: string, mode: OtpAuthMode) => {
+    const payload = await requestOtp(email, mode);
     return { resendAvailableInSeconds: payload.resendAvailableInSeconds };
   }, []);
 
-  const signInWithOtp = useCallback(async (email: string, code: string) => {
-    const nextUser = await verifyOtp(email, code);
+  const verifyWithOtp = useCallback(async (email: string, code: string, mode: OtpAuthMode) => {
+    const nextUser = await verifyOtp(email, code, mode);
     setUser(nextUser);
     setError(null);
   }, []);
@@ -106,8 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       clearError,
       refresh,
-      signInWithOtp,
-      requestLoginCode,
+      verifyWithOtp,
+      requestAuthCode,
       finishOnboarding,
       uploadProfileAvatar,
       signOut,
@@ -118,8 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       clearError,
       refresh,
-      signInWithOtp,
-      requestLoginCode,
+      verifyWithOtp,
+      requestAuthCode,
       finishOnboarding,
       uploadProfileAvatar,
       signOut,

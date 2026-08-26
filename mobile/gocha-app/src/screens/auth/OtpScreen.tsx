@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 
-import { ApiError } from '../../api/client';
+import { ApiError, type OtpAuthMode } from '../../api/client';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
@@ -17,12 +17,13 @@ import { useGochaTheme } from '../../theme';
 
 type Props = {
   email: string;
+  mode: OtpAuthMode;
   onBack: () => void;
 };
 
-export function OtpScreen({ email, onBack }: Props) {
+export function OtpScreen({ email, mode, onBack }: Props) {
   const { theme } = useGochaTheme();
-  const { signInWithOtp, requestLoginCode } = useAuth();
+  const { verifyWithOtp, requestAuthCode } = useAuth();
   const inputRef = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,7 @@ export function OtpScreen({ email, onBack }: Props) {
     setLoading(true);
     setError(null);
     try {
-      await signInWithOtp(email, digits);
+      await verifyWithOtp(email, digits, mode);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not verify the code.');
     } finally {
@@ -66,7 +67,7 @@ export function OtpScreen({ email, onBack }: Props) {
 
     setError(null);
     try {
-      const payload = await requestLoginCode(email);
+      const payload = await requestAuthCode(email, mode);
       setCooldown(payload.resendAvailableInSeconds || 60);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not resend the code.');
@@ -88,7 +89,11 @@ export function OtpScreen({ email, onBack }: Props) {
         style={styles.flex}>
         <View style={styles.content}>
           <BrandText variant="title">Enter your code</BrandText>
-          <BrandText muted>We sent a code to {email}</BrandText>
+          <BrandText muted>
+            {mode === 'signup'
+              ? `Verification code sent to ${email}`
+              : `Sign-in code sent to ${email}`}
+          </BrandText>
 
           <TextInput
             ref={inputRef}

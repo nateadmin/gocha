@@ -42,7 +42,13 @@ export function ChatFilterBar({ onManageLists, onOpenHidden }: Props) {
           return (
             <Pressable
               key={filter.id}
-              onPress={() => setActiveFilter(filter.id)}
+              onPress={() => {
+                if (filter.id === 'hidden') {
+                  onOpenHidden?.();
+                  return;
+                }
+                setActiveFilter(filter.id);
+              }}
               onLongPress={() => {
                 if (filter.id.startsWith('list:')) onManageLists?.();
               }}

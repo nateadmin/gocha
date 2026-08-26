@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Exceptions\OtpRequestException;
 use App\Exceptions\OtpVerificationException;
 use App\Models\LoginOtp;
 use App\Models\User;
@@ -18,19 +19,37 @@ class OtpAuthService
         private readonly CharacterAvatarService $avatars,
     ) {}
 
-    public function requestCode(string $email): array
+    public function requestCode(string $email, string $mode = 'signin'): array
     {
         $email = Str::lower(trim($email));
         $userExists = User::query()->where('email', $email)->exists();
         $closed = (bool) config('gocha.auth.closed_membership', false);
 
-        if ($closed && ! $userExists) {
-            return $this->cooldownPayload($email);
+        if ($mode === 'signin') {
+            if (! $userExists) {
+                throw new OtpRequestException(
+                    'EMAIL_NOT_FOUND',
+                    'No Gotcha account exists for this email. Sign up or check the address.',
+                );
+            }
+        } elseif ($mode === 'signup') {
+            if ($userExists) {
+                throw new OtpRequestException(
+                    'EMAIL_ALREADY_REGISTERED',
+                    'An account already exists for this email. Sign in instead.',
+                );
+            }
+            if ($closed) {
+                throw new OtpRequestException(
+                    'SIGNUP_CLOSED',
+                    'Sign-up is not open for new emails right now.',
+                );
+            }
         }
 
         $cooldownKey = $this->cooldownKey($email);
         if (Cache::has($cooldownKey)) {
-            return $this->cooldownPayload($email);
+            return $this->cooldownPayload($email, $mode);
         }
 
         $code = $this->generateCode();
@@ -47,10 +66,10 @@ class OtpAuthService
 
         $this->mailer->sendLoginCode($email, $code);
 
-        return $this->cooldownPayload($email);
+        return $this->cooldownPayload($email, $mode);
     }
 
-    public function verifyCode(string $email, string $code): User
+    public function verifyCode(string $email, string $code, string $mode = 'signin'): User
     {
         $email = Str::lower(trim($email));
         $otp = LoginOtp::query()->where('email', $email)->latest()->first();
@@ -72,13 +91,28 @@ class OtpAuthService
         $otp->forceFill(['consumed_at' => now()])->save();
         LoginOtp::query()->where('email', $email)->where('id', '!=', $otp->id)->delete();
 
-        $user = User::query()->firstOrCreate(
-            ['email' => $email],
-            [
+        if ($mode === 'signup') {
+            if (User::query()->where('email', $email)->exists()) {
+                throw new OtpVerificationException(
+                    'EMAIL_ALREADY_REGISTERED',
+                    'An account already exists for this email. Sign in instead.',
+                );
+            }
+
+            $user = User::query()->create([
+                'email' => $email,
                 'name' => Str::before($email, '@'),
                 'password' => Str::password(32),
-            ],
-        );
+            ]);
+        } else {
+            $user = User::query()->where('email', $email)->first();
+            if (! $user) {
+                throw new OtpVerificationException(
+                    'EMAIL_NOT_FOUND',
+                    'No Gotcha account exists for this email. Sign up or check the address.',
+                );
+            }
+        }
 
         if (! $user->avatar_path) {
             $this->avatars->assignDefault($user);
@@ -97,7 +131,7 @@ class OtpAuthService
         return 'gocha:otp:cooldown:'.hash('sha256', $email);
     }
 
-    private function cooldownPayload(string $email): array
+    private function cooldownPayload(string $email, string $mode): array
     {
         $cooldownKey = $this->cooldownKey($email);
         $retryAfter = 0;
@@ -105,8 +139,12 @@ class OtpAuthService
             $retryAfter = (int) config('gocha.auth.otp_resend_cooldown_seconds', 60);
         }
 
+        $message = $mode === 'signup'
+            ? config('gocha.auth.otp_signup_request_message')
+            : config('gocha.auth.otp_signin_request_message');
+
         return [
-            'message' => config('gocha.auth.otp_request_message'),
+            'message' => $message,
             'resendAvailableInSeconds' => $retryAfter,
         ];
     }

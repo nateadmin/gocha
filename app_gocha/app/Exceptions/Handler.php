@@ -44,6 +44,16 @@ class Handler extends ExceptionHandler
 
     private function renderJson(Request $request, Throwable $e): JsonResponse
     {
+        if ($e instanceof OtpRequestException) {
+            return response()->json([
+                'code' => $e->errorCode,
+                'message' => $e->getMessage(),
+                'correlationId' => CorrelationId::current(),
+                'retryable' => false,
+                'timestamp' => now()->toIso8601String(),
+            ], 422);
+        }
+
         if ($e instanceof OtpVerificationException) {
             return response()->json([
                 'code' => $e->errorCode,

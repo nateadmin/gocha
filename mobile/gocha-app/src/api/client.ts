@@ -116,20 +116,29 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
   }
 }
 
-export async function requestOtp(email: string): Promise<{
+export type OtpAuthMode = 'signin' | 'signup';
+
+export async function requestOtp(
+  email: string,
+  mode: OtpAuthMode,
+): Promise<{
   message: string;
   resendAvailableInSeconds: number;
 }> {
   return apiRequest(API_PATHS.otpRequest, {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, mode }),
   });
 }
 
-export async function verifyOtp(email: string, code: string): Promise<AuthUser> {
+export async function verifyOtp(
+  email: string,
+  code: string,
+  mode: OtpAuthMode,
+): Promise<AuthUser> {
   const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.otpVerify, {
     method: 'POST',
-    body: JSON.stringify({ email, code }),
+    body: JSON.stringify({ email, code, mode }),
   });
   return payload.user;
 }

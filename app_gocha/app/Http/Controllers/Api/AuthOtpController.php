@@ -17,9 +17,10 @@ class AuthOtpController extends Controller
     {
         $validated = $request->validate([
             'email' => ['required', 'email:rfc', 'max:255'],
+            'mode' => ['required', 'string', 'in:signin,signup'],
         ]);
 
-        $payload = $this->otpAuth->requestCode($validated['email']);
+        $payload = $this->otpAuth->requestCode($validated['email'], $validated['mode']);
 
         return response()->json($payload);
     }
@@ -29,10 +30,15 @@ class AuthOtpController extends Controller
         $validated = $request->validate([
             'email' => ['required', 'email:rfc', 'max:255'],
             'code' => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
+            'mode' => ['required', 'string', 'in:signin,signup'],
         ]);
 
         try {
-            $user = $this->otpAuth->verifyCode($validated['email'], $validated['code']);
+            $user = $this->otpAuth->verifyCode(
+                $validated['email'],
+                $validated['code'],
+                $validated['mode'],
+            );
         } catch (OtpVerificationException $e) {
             throw $e;
         }

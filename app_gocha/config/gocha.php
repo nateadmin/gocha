@@ -10,6 +10,8 @@ return [
         'otp_max_attempts' => 5,
         'otp_resend_cooldown_seconds' => 60,
         'otp_request_message' => 'If your email is registered, a code has been sent.',
+        'otp_signin_request_message' => 'A sign-in code has been sent to your email.',
+        'otp_signup_request_message' => 'A verification code has been sent to your email.',
     ],
 
     'resend' => [

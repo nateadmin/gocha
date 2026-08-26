@@ -27,9 +27,8 @@ export function ChatsScreen() {
 
   const listData = useMemo(() => {
     if (chat.activeFilter === 'archived') return chat.archivedChats;
-    if (chat.activeFilter === 'hidden') return chat.hiddenChats;
     return chat.filteredChats;
-  }, [chat.activeFilter, chat.archivedChats, chat.filteredChats, chat.hiddenChats]);
+  }, [chat.activeFilter, chat.archivedChats, chat.filteredChats]);
 
   const filtered = listData.filter((item) => {
     const q = query.trim().toLowerCase();
