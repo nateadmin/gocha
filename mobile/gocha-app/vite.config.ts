@@ -27,6 +27,10 @@ export default defineConfig({
       'react-native': rnWebRoot,
       'expo-font': path.resolve(projectRoot, 'web/stubs/expo-font.ts'),
       '@expo/vector-icons/Ionicons': path.resolve(projectRoot, 'web/Ionicons.tsx'),
+      [path.resolve(projectRoot, 'src/theme/fonts.ts')]: path.resolve(
+        projectRoot,
+        'src/theme/fonts.web.ts',
+      ),
     },
     extensions: [
       '.web.tsx',

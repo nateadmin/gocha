@@ -64,12 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nextUser = await fetchCurrentUser();
       setUser(nextUser);
       setError(null);
+      if (!nextUser && activeAccountId !== null) {
+        removeAccount(activeAccountId);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load your session.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeAccountId, removeAccount]);
 
   useEffect(() => {
     refresh();
@@ -180,11 +183,11 @@ export function useAuthGate(): {
   showAuthFlow: boolean;
 } {
   const { user, loading } = useAuth();
-  const { accounts, isAddingAccount } = useAccounts();
+  const { isAddingAccount } = useAccounts();
 
   return {
     user,
     loading,
-    showAuthFlow: isAddingAccount || (!user && accounts.length === 0),
+    showAuthFlow: isAddingAccount || !user,
   };
 }

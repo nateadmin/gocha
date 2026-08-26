@@ -48,10 +48,8 @@ function AppShell() {
   }
 
   let content: ReactNode;
-  if (showAuthFlow) {
+  if (!user || showAuthFlow) {
     content = <AuthNavigator />;
-  } else if (!user) {
-    content = <SplashScreen />;
   } else if (user.needsOnboarding) {
     content = <OnboardingScreen />;
   } else {
