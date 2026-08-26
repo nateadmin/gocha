@@ -4,7 +4,7 @@ React Native mobile-first super-app shell: Chats, Catch Up (AI briefing), Busine
 
 ## Brand
 
-Neon Cyber tokens in `src/theme/tokens.ts`. Primary `#1B00D8`. Default theme: dark.
+Neon Cyber color tokens in `src/theme/tokens.ts`. Primary `#1B00D8`, dark default. System UI fonts (San Francisco / Roboto).
 
 ## Navigation
 

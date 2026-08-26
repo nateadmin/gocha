@@ -26,10 +26,7 @@ export default defineConfig({
     alias: {
       'react-native': rnWebRoot,
       'expo-font': path.resolve(projectRoot, 'web/stubs/expo-font.ts'),
-      '@expo/vector-icons/Ionicons': path.resolve(
-        projectRoot,
-        'web/stubs/Ionicons.tsx',
-      ),
+      '@expo/vector-icons/Ionicons': path.resolve(projectRoot, 'web/Ionicons.tsx'),
     },
     extensions: [
       '.web.tsx',
@@ -53,7 +50,7 @@ export default defineConfig({
     open: false,
   },
   optimizeDeps: {
-    include: ['react-native-web'],
+    include: ['react-native-web', '@expo/vector-icons'],
     esbuildOptions: {
       resolveExtensions: [
         '.web.js',
@@ -69,11 +66,6 @@ export default defineConfig({
         '.js': 'jsx',
       },
     },
-  },
-  esbuild: {
-    jsx: 'automatic',
-    include: [/node_modules\/@expo\/vector-icons\/.*\.js$/],
-    loader: 'jsx',
   },
   build: {
     outDir: path.resolve(projectRoot, 'web/dist'),

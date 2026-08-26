@@ -144,6 +144,13 @@ export const radii: ThemeRadii = {
   avatar: 999,
 };
 
+export {
+  uiMonoFamily,
+  uiSansFamily,
+  webUiMonoFamily,
+  webUiSansFamily,
+} from './typographyFamilies';
+
 export function neonShadowStyle(theme: GochaTheme) {
   const { shadow } = theme;
   return {

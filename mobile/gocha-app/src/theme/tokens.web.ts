@@ -1,5 +1,5 @@
 /**
- * Web preview tokens (Google Fonts CSS family names from web/index.html).
+ * Web preview tokens (system UI font stack).
  */
 import {
   darkColors,
@@ -8,6 +8,8 @@ import {
   PRIMARY,
   radii,
   spacing,
+  webUiMonoFamily,
+  webUiSansFamily,
   type GochaTheme,
   type ThemeMode,
   type ThemeTypography,
@@ -30,22 +32,11 @@ export {
   spacing,
 } from './palette';
 
-const webLightTypography: ThemeTypography = {
-  sans: 'Rajdhani',
-  serif: 'Rajdhani',
-  mono: 'Fira Code',
-  letterSpacing: 0.1 * 16,
-  title: 28,
-  body: 16,
-  caption: 13,
-  label: 12,
-};
-
-const webDarkTypography: ThemeTypography = {
-  sans: 'Rajdhani',
-  serif: 'Orbitron',
-  mono: 'Fira Code',
-  letterSpacing: 0.15 * 16,
+const webTypography: ThemeTypography = {
+  sans: webUiSansFamily,
+  serif: webUiSansFamily,
+  mono: webUiMonoFamily,
+  letterSpacing: 0,
   title: 28,
   body: 16,
   caption: 13,
@@ -65,7 +56,7 @@ export const lightTheme: GochaTheme = {
     spread: 2,
     opacity: 0.25,
   },
-  typography: webLightTypography,
+  typography: webTypography,
   spacing,
 };
 
@@ -82,7 +73,7 @@ export const darkTheme: GochaTheme = {
     spread: 4,
     opacity: 0.6,
   },
-  typography: webDarkTypography,
+  typography: webTypography,
   spacing,
 };
 
