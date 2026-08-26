@@ -25,6 +25,7 @@ echo "Publishing static shell to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH"
 rsync -az -e "ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
   --exclude 'index.php' \
   --exclude '.htaccess' \
+  --exclude 'favicon.ico' \
   "$APP_DIR/web/dist/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/"
 
 echo "Live: https://gocha.ai/"
