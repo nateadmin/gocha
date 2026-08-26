@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconButton, SearchField } from '../../components/app';
 import { BrandLogo } from '../../components/brand';
@@ -20,6 +21,7 @@ export function ChatsScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ChatsStackParamList, 'ChatsList'>>();
   const { theme } = useGochaTheme();
+  const insets = useSafeAreaInsets();
   const chat = useChat();
   const [query, setQuery] = useState('');
   const [contextChat, setContextChat] = useState<ChatRecord | null>(null);
@@ -129,7 +131,7 @@ export function ChatsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <BrandLogo size={56} />
         <View style={styles.headerActions}>
           <IconButton
@@ -251,7 +253,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 8,
     paddingBottom: 8,
   },
   headerActions: { flexDirection: 'row', gap: 8 },

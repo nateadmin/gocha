@@ -1,5 +1,3 @@
-import { View, StyleSheet } from 'react-native';
-
 import { ChatListItem } from './ChatListItem';
 import { SwipeableRow, swipeIconFor, swipeLabelFor } from './SwipeableRow';
 import { useChat } from '../../chat/ChatContext';
@@ -23,20 +21,12 @@ export function SwipeableChatListItem({ chat, selected, onPress, onLongPress }: 
       leftIcon={swipeIconFor(preferences.swipeLeft)}
       onSwipeRight={() => applySwipeAction(chat.id, preferences.swipeRight)}
       onSwipeLeft={() => applySwipeAction(chat.id, preferences.swipeLeft)}>
-      <View style={styles.rowBg}>
-        <ChatListItem
-          chat={chat}
-          selected={selected}
-          onPress={onPress}
-          onLongPress={onLongPress}
-        />
-      </View>
+      <ChatListItem
+        chat={chat}
+        selected={selected}
+        onPress={onPress}
+        onLongPress={onLongPress}
+      />
     </SwipeableRow>
   );
 }
-
-const styles = StyleSheet.create({
-  rowBg: {
-    backgroundColor: 'transparent',
-  },
-});

@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import {
   Animated,
   PanResponder,
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -14,6 +15,7 @@ import type { SwipeAction } from '../../chat/types';
 
 const SWIPE_THRESHOLD = 72;
 const MAX_SWIPE = 96;
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 type Props = {
   children: ReactNode;
@@ -37,6 +39,11 @@ export function SwipeableRow({
   style,
 }: Props) {
   const { theme } = useGochaTheme();
+
+  if (Platform.OS === 'web') {
+    return <View style={style}>{children}</View>;
+  }
+
   const translateX = useRef(new Animated.Value(0)).current;
 
   const panResponder = useRef(
@@ -55,19 +62,22 @@ export function SwipeableRow({
         }
         Animated.spring(translateX, {
           toValue: 0,
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
           bounciness: 8,
         }).start();
       },
       onPanResponderTerminate: () => {
-        Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }).start();
       },
     }),
   ).current;
 
   return (
     <View style={[styles.wrap, style]}>
-      <View style={styles.actions}>
+      <View style={styles.actions} pointerEvents="none">
         <View style={[styles.action, { backgroundColor: theme.colors.secondary }]}>
           <Ionicons name={rightIcon} size={18} color={theme.colors.secondaryForeground} />
           <Text style={[styles.actionText, { color: theme.colors.secondaryForeground }]}>
@@ -82,7 +92,10 @@ export function SwipeableRow({
         </View>
       </View>
       <Animated.View
-        style={{ transform: [{ translateX }] }}
+        style={[
+          styles.foreground,
+          { backgroundColor: theme.colors.card, transform: [{ translateX }] },
+        ]}
         {...panResponder.panHandlers}>
         {children}
       </Animated.View>
@@ -126,7 +139,7 @@ export function swipeIconFor(action: SwipeAction): keyof typeof Ionicons.glyphMa
 
 const styles = StyleSheet.create({
   wrap: {
-    position: 'relative',
+    overflow: 'hidden',
   },
   actions: {
     ...StyleSheet.absoluteFillObject,
@@ -134,6 +147,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 12,
+  },
+  foreground: {
+    width: '100%',
   },
   action: {
     flexDirection: 'row',

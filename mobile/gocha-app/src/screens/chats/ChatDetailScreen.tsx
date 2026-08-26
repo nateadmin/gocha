@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar } from '../../components/app';
@@ -18,12 +20,15 @@ import type { ActionSheetItem } from '../../components/chat/ActionSheet';
 import { useChat } from '../../chat/ChatContext';
 import type { ChatMessage } from '../../chat/types';
 import { useGochaTheme } from '../../theme';
-import type { ChatsStackParamList } from '../../navigation/types';
+import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 
 export function ChatDetailScreen() {
   const navigation = useNavigation();
+  const tabNavigation =
+    navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
   const route = useRoute<RouteProp<ChatsStackParamList, 'ChatDetail'>>();
   const { theme } = useGochaTheme();
+  const insets = useSafeAreaInsets();
   const chatApi = useChat();
   const chat = chatApi.getChat(route.params.chatId);
   const messages = chatApi.messagesFor(route.params.chatId);
@@ -33,6 +38,27 @@ export function ChatDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [messageMenu, setMessageMenu] = useState<ChatMessage | null>(null);
+
+  useLayoutEffect(() => {
+    if (!tabNavigation) {
+      return;
+    }
+
+    tabNavigation.setOptions({
+      tabBarStyle: {
+        display: 'none',
+        height: 0,
+        minHeight: 0,
+        overflow: 'hidden',
+        opacity: 0,
+        pointerEvents: 'none',
+      },
+    });
+
+    return () => {
+      tabNavigation.setOptions({ tabBarStyle: undefined });
+    };
+  }, [tabNavigation]);
 
   if (!chat) {
     return null;
@@ -148,6 +174,7 @@ export function ChatDetailScreen() {
           {
             backgroundColor: theme.colors.card,
             borderBottomColor: theme.colors.border,
+            paddingTop: insets.top + 6,
           },
         ]}>
         <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
@@ -297,7 +324,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerText: { flex: 1 },

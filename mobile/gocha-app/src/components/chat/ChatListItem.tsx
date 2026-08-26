@@ -21,14 +21,14 @@ export function ChatListItem({ chat, selected, onPress, onLongPress }: Props) {
     ? labels.filter((label) => chat.labelIds.includes(label.id))
     : [];
 
+  const rowBackground =
+    selected ? theme.colors.muted : theme.colors.card;
+
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
-      style={[
-        styles.row,
-        selected && { backgroundColor: theme.colors.muted },
-      ]}>
+      style={[styles.row, { backgroundColor: rowBackground }]}>
       <Avatar
         label={chat.avatarLabel}
         color={chat.avatarColor}

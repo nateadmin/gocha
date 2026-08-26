@@ -22,7 +22,14 @@ function discoverTabBarStyle(route: { name: string; key: string; params?: object
 function chatsTabBarStyle(route: { name: string; key: string; params?: object }) {
   const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatsList';
   if (routeName !== 'ChatsList') {
-    return { display: 'none' } as const;
+    return {
+      display: 'none',
+      height: 0,
+      minHeight: 0,
+      overflow: 'hidden',
+      opacity: 0,
+      pointerEvents: 'none',
+    } as const;
   }
   return undefined;
 }
