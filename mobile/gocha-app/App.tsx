@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import type { ReactNode } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthNavigator } from './src/navigation/AuthNavigator';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
+import { SplashScreen, useSplashGate } from './src/screens/splash/SplashScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useGochaTheme } from './src/theme';
 import { useBrandFonts } from './src/theme/fonts';
@@ -14,6 +14,7 @@ function AppShell() {
   const { ready } = useBrandFonts();
   const { theme } = useGochaTheme();
   const { user, loading } = useAuth();
+  const splashReady = useSplashGate(ready && !loading);
 
   const navTheme =
     theme.mode === 'dark'
@@ -40,16 +41,11 @@ function AppShell() {
           },
         };
 
-  if (!ready || loading) {
-    return (
-      <View
-        style={[styles.boot, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator color={theme.colors.primary} />
-      </View>
-    );
+  if (!splashReady) {
+    return <SplashScreen />;
   }
 
-  let content: React.ReactNode;
+  let content: ReactNode;
   if (!user) {
     content = <AuthNavigator />;
   } else if (user.needsOnboarding) {
@@ -76,13 +72,5 @@ function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  boot: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
 
 export default App;

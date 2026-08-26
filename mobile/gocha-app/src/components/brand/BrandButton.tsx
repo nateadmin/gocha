@@ -3,9 +3,9 @@ import {
   Text,
   type PressableProps,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 
+import { UniversalLoader } from '../app/UniversalLoader';
 import { neonShadowStyle, useGochaTheme } from '../../theme';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'destructive';
@@ -79,7 +79,7 @@ export function BrandButton({
       ]}
       {...props}>
       {loading ? (
-        <ActivityIndicator color={palette.textColor} />
+        <UniversalLoader size={0.28} />
       ) : (
         <Text
           style={{
