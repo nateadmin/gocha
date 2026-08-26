@@ -3,11 +3,16 @@ import { Image, Pressable, ScrollView, Text, View, StyleSheet } from 'react-nati
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { SectionLabel, SettingsToggleRow } from '../../components/app';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootTabParamList } from '../../navigation/types';
 import { brandLogoSource } from '../../branding/logo';
 import { useAuth } from '../../context/AuthContext';
 import { useGochaTheme } from '../../theme';
 
 export function SettingsScreen() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootTabParamList>>();
   const { theme } = useGochaTheme();
   const { user, signOut } = useAuth();
   const [readReceipts, setReadReceipts] = useState(true);
@@ -103,6 +108,50 @@ export function SettingsScreen() {
             }}>
             Sign out
           </Text>
+        </Pressable>
+      </View>
+
+      <SectionLabel>CHATS</SectionLabel>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <Pressable
+          onPress={() =>
+            navigation.navigate('ChatsTab', { screen: 'ChatLabelsSettings' } as never)
+          }
+          style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Labels, lists & swipe gestures
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable
+          onPress={() =>
+            navigation.navigate('ChatsTab', { screen: 'HiddenChats' } as never)
+          }
+          style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Hidden chats
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable
+          onPress={() =>
+            navigation.navigate('ChatsTab', { screen: 'ChatListsSettings' } as never)
+          }
+          style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Manage chat lists
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
       </View>
 
@@ -232,6 +281,12 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   signOutRow: {
+    paddingVertical: 14,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 14,
   },
 });

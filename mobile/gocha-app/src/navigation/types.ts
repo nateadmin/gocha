@@ -9,6 +9,11 @@ export type RootTabParamList = {
 export type ChatsStackParamList = {
   ChatsList: undefined;
   ChatDetail: { chatId: string };
+  ChatInfo: { chatId: string };
+  ChatLock: { chatId: string };
+  ChatListsSettings: undefined;
+  ChatLabelsSettings: undefined;
+  HiddenChats: undefined;
 };
 
 export type DiscoverStackParamList = {

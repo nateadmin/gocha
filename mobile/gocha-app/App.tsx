@@ -7,6 +7,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
 import { SplashScreen, useSplashGate } from './src/screens/splash/SplashScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { ChatProvider } from './src/chat/ChatContext';
 import { ThemeProvider, useGochaTheme } from './src/theme';
 import { useBrandFonts } from './src/theme/fonts';
 
@@ -66,7 +67,9 @@ function App() {
     <SafeAreaProvider>
       <ThemeProvider initialMode="dark">
         <AuthProvider>
-          <AppShell />
+          <ChatProvider>
+            <AppShell />
+          </ChatProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

@@ -21,7 +21,7 @@ function discoverTabBarStyle(route: { name: string; key: string; params?: object
 
 function chatsTabBarStyle(route: { name: string; key: string; params?: object }) {
   const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatsList';
-  if (routeName === 'ChatDetail') {
+  if (routeName !== 'ChatsList') {
     return { display: 'none' } as const;
   }
   return undefined;

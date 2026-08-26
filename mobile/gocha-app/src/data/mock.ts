@@ -1,24 +1,5 @@
-export type ChatMessage = {
-  id: string;
-  text: string;
-  sentAt: string;
-  isOutgoing: boolean;
-  status?: 'sent' | 'delivered' | 'read';
-};
-
-export type ChatSummary = {
-  id: string;
-  name: string;
-  avatarLabel: string;
-  avatarColor: string;
-  preview: string;
-  dateLabel: string;
-  unreadCount?: number;
-  pinned?: boolean;
-  isGroup?: boolean;
-  groupCount?: number;
-  isBusiness?: boolean;
-};
+/** @deprecated Use src/chat/types and ChatContext instead */
+export type { ChatMessage, ChatRecord as ChatSummary } from '../chat/types';
 
 export type CommunityGroup = {
   id: string;
@@ -99,107 +80,6 @@ export const userProfile: UserProfile = {
   name: 'Gocha',
   email: 'gocha.admin@gmail.com',
   avatarLabel: 'G',
-};
-
-export const chatSummaries: ChatSummary[] = [
-  {
-    id: 'bella-napoli-chat',
-    name: 'Bella Napoli',
-    avatarLabel: 'BN',
-    avatarColor: '#c45c26',
-    preview: 'Your order is being prepared',
-    dateLabel: '8/8/26',
-    isBusiness: true,
-  },
-  {
-    id: 'liam',
-    name: 'Liam Becker',
-    avatarLabel: 'LB',
-    avatarColor: '#5b8def',
-    preview: 'Anytime! Ship it 🚀',
-    dateLabel: '8/8/26',
-    pinned: true,
-  },
-  {
-    id: 'design-team',
-    name: 'Design Team',
-    avatarLabel: 'DT',
-    avatarColor: '#7c6cf0',
-    preview: 'Final mockups are in the shared folder 👍',
-    dateLabel: '8/7/26',
-    unreadCount: 4,
-    pinned: true,
-    isGroup: true,
-    groupCount: 4,
-  },
-  {
-    id: 'sofia',
-    name: 'Sofia Martinez',
-    avatarLabel: 'SM',
-    avatarColor: '#e07a5f',
-    preview: 'Can you review the deck before tomorrow?',
-    dateLabel: '8/6/26',
-    unreadCount: 2,
-  },
-  {
-    id: 'weekend-trip',
-    name: 'Weekend Trip',
-    avatarLabel: 'WT',
-    avatarColor: '#3d9a8b',
-    preview: 'Who is bringing snacks for Saturday? 🏔️',
-    dateLabel: '8/5/26',
-    unreadCount: 3,
-    isGroup: true,
-    groupCount: 6,
-  },
-  {
-    id: 'noah',
-    name: 'Noah Park',
-    avatarLabel: 'NP',
-    avatarColor: '#f4a261',
-    preview: 'Game night Friday?',
-    dateLabel: '8/4/26',
-  },
-  {
-    id: 'aria',
-    name: 'Aria Chen',
-    avatarLabel: 'AC',
-    avatarColor: '#9b5de5',
-    preview: "Loved the demo. Let's sync next week 🎉",
-    dateLabel: '8/3/26',
-  },
-];
-
-export const chatMessages: Record<string, ChatMessage[]> = {
-  liam: [
-    {
-      id: '1',
-      text: 'Thanks for the review 🙏',
-      sentAt: '2:14 AM',
-      isOutgoing: false,
-    },
-    {
-      id: '2',
-      text: 'Anytime! Ship it 🚀',
-      sentAt: '2:14 AM',
-      isOutgoing: true,
-      status: 'read',
-    },
-  ],
-  sofia: [
-    {
-      id: '1',
-      text: 'Can you review the deck before tomorrow?',
-      sentAt: '9:02 AM',
-      isOutgoing: false,
-    },
-    {
-      id: '2',
-      text: 'Coffee at 10am still works?',
-      sentAt: '9:03 AM',
-      isOutgoing: false,
-    },
-  ],
 };
 
 export const briefingText =
@@ -371,10 +251,6 @@ export const calls: CallEntry[] = [
     timeLabel: 'Aug 7, 11:20 AM',
   },
 ];
-
-export function getChatById(id: string): ChatSummary | undefined {
-  return chatSummaries.find((c) => c.id === id);
-}
 
 export function getBusinessById(id: string): Business | undefined {
   return businesses.find((b) => b.id === id);
