@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { SectionLabel, SettingsToggleRow } from '../../components/app';
+import { brandLogoSource } from '../../branding/logo';
 import { userProfile } from '../../data/mock';
 import { useGochaTheme } from '../../theme';
 
@@ -38,24 +39,17 @@ export function SettingsScreen() {
             borderRadius: theme.radii.card,
           },
         ]}>
-        <View
+        <Image
+          accessibilityLabel="Gotcha logo"
+          source={brandLogoSource}
           style={[
             styles.profileAvatar,
             {
-              backgroundColor: theme.colors.muted,
               borderRadius: theme.radii.avatar,
+              backgroundColor: theme.colors.muted,
             },
-          ]}>
-          <Text
-            style={{
-              color: theme.colors.primary,
-              fontFamily: theme.typography.sans,
-              fontSize: 22,
-              fontWeight: '600',
-            }}>
-            {userProfile.avatarLabel}
-          </Text>
-        </View>
+          ]}
+        />
         <View style={{ flex: 1 }}>
           <Text
             style={{
@@ -202,8 +196,7 @@ const styles = StyleSheet.create({
   profileAvatar: {
     width: 56,
     height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
+    resizeMode: 'contain',
   },
   card: {
     paddingHorizontal: 14,

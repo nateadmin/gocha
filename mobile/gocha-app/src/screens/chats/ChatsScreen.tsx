@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { FlatList, Image, View, StyleSheet } from 'react-native';
+import { FlatList, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { IconButton, SearchField } from '../../components/app';
+import { BrandLogo } from '../../components/brand';
 import { ChatListItem } from '../../components/chat';
 import { chatSummaries } from '../../data/mock';
 import { useGochaTheme } from '../../theme';
@@ -27,11 +28,7 @@ export function ChatsScreen() {
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
-        <Image
-          source={require('../../../assets/branding/logo.jpg')}
-          style={styles.logo}
-          accessibilityLabel="gocha"
-        />
+        <BrandLogo size={56} />
         <View style={styles.headerActions}>
           <IconButton icon="radio-button-on" accessibilityLabel="Status updates" />
           <IconButton icon="camera-outline" />
@@ -72,11 +69,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
-  },
-  logo: {
-    width: 56,
-    height: 56,
-    resizeMode: 'contain',
   },
   headerActions: {
     flexDirection: 'row',

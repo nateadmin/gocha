@@ -1,5 +1,5 @@
 /**
- * Neon Cyber brand tokens (native: expo-google-fonts family names).
+ * Web preview tokens (Google Fonts CSS family names from web/index.html).
  */
 import {
   darkColors,
@@ -30,10 +30,10 @@ export {
   spacing,
 } from './palette';
 
-const lightTypography: ThemeTypography = {
-  sans: 'Rajdhani_600SemiBold',
-  serif: 'Rajdhani_600SemiBold',
-  mono: 'FiraCode_400Regular',
+const webLightTypography: ThemeTypography = {
+  sans: 'Rajdhani',
+  serif: 'Rajdhani',
+  mono: 'Fira Code',
   letterSpacing: 0.1 * 16,
   title: 28,
   body: 16,
@@ -41,10 +41,10 @@ const lightTypography: ThemeTypography = {
   label: 12,
 };
 
-const darkTypography: ThemeTypography = {
-  sans: 'Rajdhani_600SemiBold',
-  serif: 'Orbitron_400Regular',
-  mono: 'FiraCode_400Regular',
+const webDarkTypography: ThemeTypography = {
+  sans: 'Rajdhani',
+  serif: 'Orbitron',
+  mono: 'Fira Code',
   letterSpacing: 0.15 * 16,
   title: 28,
   body: 16,
@@ -65,7 +65,7 @@ export const lightTheme: GochaTheme = {
     spread: 2,
     opacity: 0.25,
   },
-  typography: lightTypography,
+  typography: webLightTypography,
   spacing,
 };
 
@@ -82,7 +82,7 @@ export const darkTheme: GochaTheme = {
     spread: 4,
     opacity: 0.6,
   },
-  typography: darkTypography,
+  typography: webDarkTypography,
   spacing,
 };
 
