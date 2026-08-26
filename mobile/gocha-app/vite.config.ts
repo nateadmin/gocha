@@ -4,15 +4,32 @@ import react from '@vitejs/plugin-react';
 
 const projectRoot = __dirname;
 const rnWebRoot = path.resolve(projectRoot, 'node_modules/react-native-web');
+const base = process.env.VITE_BASE_PATH || '/';
 
 export default defineConfig({
-  root: path.resolve(projectRoot, 'web'),
+  base,
+  root: projectRoot,
   publicDir: path.resolve(projectRoot, 'assets/branding'),
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        babelrc: false,
+        configFile: false,
+        presets: [
+          ['@babel/preset-typescript', { isTSX: true, allExtensions: true }],
+          ['@babel/preset-react', { runtime: 'automatic' }],
+        ],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       'react-native': rnWebRoot,
       'expo-font': path.resolve(projectRoot, 'web/stubs/expo-font.ts'),
+      '@expo/vector-icons/Ionicons': path.resolve(
+        projectRoot,
+        'web/stubs/Ionicons.tsx',
+      ),
     },
     extensions: [
       '.web.tsx',
@@ -33,6 +50,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    open: false,
   },
   optimizeDeps: {
     include: ['react-native-web'],
@@ -50,6 +68,18 @@ export default defineConfig({
       loader: {
         '.js': 'jsx',
       },
+    },
+  },
+  esbuild: {
+    jsx: 'automatic',
+    include: [/node_modules\/@expo\/vector-icons\/.*\.js$/],
+    loader: 'jsx',
+  },
+  build: {
+    outDir: path.resolve(projectRoot, 'web/dist'),
+    emptyOutDir: true,
+    rollupOptions: {
+      input: path.resolve(projectRoot, 'web/index.html'),
     },
   },
 });

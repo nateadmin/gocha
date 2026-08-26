@@ -32,6 +32,8 @@ npm run web
 
 Open http://localhost:5173. Logo asset: `assets/branding/Logo.jpeg`.
 
+Hosted preview (no local setup): https://nateadmin.github.io/gocha/ (published from `gh-pages` on push).
+
 Android emulator:
 
 ```bash
