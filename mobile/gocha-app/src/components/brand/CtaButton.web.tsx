@@ -2,6 +2,8 @@ import type { CSSProperties } from 'react';
 import styled from 'styled-components';
 
 import { UniversalLoader } from '../app/UniversalLoader';
+import { useGochaTheme } from '../../theme';
+import { brandFontFamilies } from '../../theme/fonts';
 
 type Props = {
   label: string;
@@ -18,10 +20,13 @@ export function CtaButton({
   fullWidth = true,
   onPress,
 }: Props) {
+  const { theme } = useGochaTheme();
   const isDisabled = disabled || loading;
 
   return (
     <StyledWrapper
+      $fontFamily={brandFontFamilies.cta}
+      $fontSize={theme.typography.body}
       style={
         fullWidth
           ? ({ width: '100%' } as CSSProperties)
@@ -40,7 +45,7 @@ export function CtaButton({
   );
 }
 
-const StyledWrapper = styled.div`
+const StyledWrapper = styled.div<{ $fontFamily: string; $fontSize: number }>`
   button {
     align-items: center;
     background-image: linear-gradient(144deg, #af40ff, #5b42f3 50%, #00ddeb);
@@ -50,9 +55,11 @@ const StyledWrapper = styled.div`
     box-sizing: border-box;
     color: #ffffff;
     display: flex;
-    font-size: 18px;
+    font-family: ${(p) => p.$fontFamily};
+    font-size: ${(p) => p.$fontSize}px;
+    font-weight: 600;
     justify-content: center;
-    line-height: 1em;
+    line-height: 1.25;
     max-width: 100%;
     min-width: 140px;
     padding: 3px;
@@ -64,7 +71,6 @@ const StyledWrapper = styled.div`
     cursor: pointer;
     transition: all 0.3s;
     width: 100%;
-    font-family: inherit;
   }
 
   button:disabled {
@@ -89,6 +95,10 @@ const StyledWrapper = styled.div`
     justify-content: center;
     min-height: 48px;
     box-sizing: border-box;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
   }
 
   button:hover:not(:disabled) span.text {

@@ -1,4 +1,8 @@
+import { useFonts } from 'expo-font';
+import { Rajdhani_600SemiBold } from '@expo-google-fonts/rajdhani';
+
 import {
+  nativeCtaFamily,
   uiMonoFamily,
   uiSansFamily,
 } from './typographyFamilies';
@@ -6,9 +10,13 @@ import {
 export const brandFontFamilies = {
   uiSans: uiSansFamily,
   uiMono: uiMonoFamily,
+  cta: nativeCtaFamily,
 } as const;
 
-/** System fonts need no async loading. */
 export function useBrandFonts(): { ready: boolean } {
-  return { ready: true };
+  const [loaded] = useFonts({
+    Rajdhani_600SemiBold,
+  });
+
+  return { ready: loaded };
 }

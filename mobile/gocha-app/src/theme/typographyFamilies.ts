@@ -19,3 +19,9 @@ export const webUiSansFamily =
 
 export const webUiMonoFamily =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+
+/** Rajdhani for primary CTA labels (Neon Cyber UI accent). */
+export const nativeCtaFamily = 'Rajdhani_600SemiBold';
+
+export const webCtaFamily =
+  'Rajdhani, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';

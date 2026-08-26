@@ -8,6 +8,7 @@ import {
 
 import { UniversalLoader } from '../app/UniversalLoader';
 import { useGochaTheme } from '../../theme';
+import { brandFontFamilies } from '../../theme/fonts';
 
 const INNER_BG = 'rgb(5, 6, 45)';
 const GRADIENT_EDGE = '#5b42f3';
@@ -57,9 +58,9 @@ export function CtaButton({
             <Text
               style={{
                 color: '#ffffff',
-                fontFamily: theme.typography.sans,
-                fontSize: 18,
-                lineHeight: 18,
+                fontFamily: brandFontFamilies.cta,
+                fontSize: theme.typography.body,
+                lineHeight: 20,
                 letterSpacing: theme.typography.letterSpacing,
                 textAlign: 'center',
               }}>
