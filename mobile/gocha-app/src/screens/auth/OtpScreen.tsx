@@ -27,7 +27,8 @@ export function OtpScreen({ email, mode, onBack }: Props) {
   const inputRef = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showFormatError, setShowFormatError] = useState(false);
   const [cooldown, setCooldown] = useState(60);
 
   useEffect(() => {
@@ -42,22 +43,34 @@ export function OtpScreen({ email, mode, onBack }: Props) {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  async function handleVerify() {
-    const digits = code.replace(/\D/g, '');
+  async function verifyCode(digits: string) {
     if (digits.length !== 6) {
-      setError('Enter the 6-digit code.');
       return;
     }
 
     setLoading(true);
-    setError(null);
+    setSubmitError(null);
     try {
       await verifyWithOtp(email, digits, mode);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not verify the code.');
+      setSubmitError(
+        err instanceof ApiError ? err.message : 'Could not verify the code.',
+      );
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleVerifyPress() {
+    const digits = code.replace(/\D/g, '');
+    if (digits.length !== 6) {
+      setShowFormatError(true);
+      setSubmitError(null);
+      return;
+    }
+
+    setShowFormatError(false);
+    verifyCode(digits);
   }
 
   async function handleResend() {
@@ -65,22 +78,32 @@ export function OtpScreen({ email, mode, onBack }: Props) {
       return;
     }
 
-    setError(null);
+    setSubmitError(null);
+    setShowFormatError(false);
     try {
       const payload = await requestAuthCode(email, mode);
       setCooldown(payload.resendAvailableInSeconds || 60);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not resend the code.');
+      setSubmitError(
+        err instanceof ApiError ? err.message : 'Could not resend the code.',
+      );
     }
   }
 
   function handleCodeChange(value: string) {
     const digits = value.replace(/\D/g, '').slice(0, 6);
     setCode(digits);
+    setSubmitError(null);
+    setShowFormatError(false);
+
     if (digits.length === 6) {
-      handleVerify();
+      verifyCode(digits);
     }
   }
+
+  const errorMessage = showFormatError
+    ? 'Enter the 6-digit code.'
+    : submitError;
 
   return (
     <ScreenContainer edges={['top', 'left', 'right', 'bottom']}>
@@ -114,11 +137,13 @@ export function OtpScreen({ email, mode, onBack }: Props) {
             ]}
           />
 
-          {error ? (
-            <BrandText style={{ color: theme.colors.destructive }}>{error}</BrandText>
+          {errorMessage ? (
+            <BrandText style={{ color: theme.colors.destructive }}>
+              {errorMessage}
+            </BrandText>
           ) : null}
 
-          <CtaButton label="Verify" loading={loading} onPress={handleVerify} />
+          <CtaButton label="Verify" loading={loading} onPress={handleVerifyPress} />
 
           <Pressable onPress={handleResend} disabled={cooldown > 0}>
             <BrandText
