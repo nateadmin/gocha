@@ -31,9 +31,9 @@ SSH: key-only via Infisical secret `CONTABO_PRIVATE_SSH_KEY` (user `root` today;
 
 ## Infisical
 
-Project: `gocha` (slug `gocha-ppe-o`). Environments: Development, Staging, Production.
+Project: `Rydit / Gocha` (id `e8bb8347-d16d-4614-930a-94912a2b354e`). Environments: Development, Staging, Production.
 
-Production bootstrap secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_KEY`, `SERVER_HOST`, `SERVER_APP_PATH`, `SERVER_SSH_USER`.
+Production secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_KEY`, `RESEND_API_KEY`, `SERVER_HOST`, `SERVER_APP_PATH`, `SERVER_SSH_USER`.
 
 Infisical API host: `https://app.infisical.com` (not `api.infisical.com`).
 

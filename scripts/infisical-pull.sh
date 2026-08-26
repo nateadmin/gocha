@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Pull secrets from Infisical into the environment. See personal-playbook secrets-management and alerts.
-PROJECT_ID="${INFISICAL_PROJECT_ID:-6746d0ff-a323-4493-a257-de1f626d95e1}"
+PROJECT_ID="${INFISICAL_PROJECT_ID:-e8bb8347-d16d-4614-930a-94912a2b354e}"
 ENVIRONMENT="${INFISICAL_ENVIRONMENT:-prod}"
 INFISICAL_HOST="${INFISICAL_HOST:-https://app.infisical.com}"
 SECRET_PATH="${INFISICAL_SECRET_PATH:-/}"
