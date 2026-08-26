@@ -10,6 +10,11 @@ import { neonShadowStyle, useGochaTheme } from '../../theme';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'destructive';
 
+/**
+ * Standard button for secondary actions. Use CtaButton for large primary CTAs
+ * (sign up, create business, join flows).
+ */
+
 type Props = Omit<PressableProps, 'children'> & {
   label: string;
   variant?: Variant;

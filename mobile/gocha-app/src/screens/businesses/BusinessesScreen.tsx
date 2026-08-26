@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { BusinessCard } from '../../components/business';
+import { CtaButton } from '../../components/brand';
 import {
   aiOrderSuggestions,
   businessCategories,
@@ -80,6 +81,10 @@ export function BusinessesScreen({ embedded = false }: Props) {
       ) : null}
 
       <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.listBusinessCta}>
+          <CtaButton label="List your business" onPress={() => {}} />
+        </View>
+
         {embedded ? (
           <Pressable
             style={[
@@ -286,6 +291,9 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 16,
     paddingBottom: 32,
+  },
+  listBusinessCta: {
+    marginBottom: 16,
   },
   search: {
     flexDirection: 'row',

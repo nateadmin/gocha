@@ -2,7 +2,7 @@ import { ScrollView, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar } from '../../components/app';
-import { BrandBadge, BrandButton } from '../../components/brand';
+import { BrandBadge, CtaButton } from '../../components/brand';
 import { discoverableGroups } from '../../data/mock';
 import { useGochaTheme } from '../../theme';
 
@@ -81,7 +81,7 @@ export function AroundMeScreen() {
               <BrandBadge key={tag} label={tag} />
             ))}
           </View>
-          <BrandButton label="Request to join" variant="primary" />
+          <CtaButton label="Request to join" />
         </View>
       ))}
 

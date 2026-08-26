@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View, StyleSheet } from 'react-native';
 
 import { ApiError } from '../../api/client';
-import { BrandButton } from '../../components/brand/BrandButton';
+import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandLogo } from '../../components/brand/BrandLogo';
 import { BrandText } from '../../components/brand/BrandText';
@@ -68,7 +68,7 @@ export function EmailScreen({ onCodeSent }: Props) {
             </BrandText>
           ) : null}
 
-          <BrandButton label="Send code" loading={loading} onPress={handleContinue} />
+          <CtaButton label="Send code" loading={loading} onPress={handleContinue} />
         </View>
       </KeyboardAvoidingView>
     </ScreenContainer>

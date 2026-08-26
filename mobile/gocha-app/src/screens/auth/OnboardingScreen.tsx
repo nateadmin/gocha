@@ -11,7 +11,7 @@ import {
 
 import { ApiError } from '../../api/client';
 import { SettingsToggleRow } from '../../components/app/SettingsToggleRow';
-import { BrandButton } from '../../components/brand/BrandButton';
+import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
@@ -157,7 +157,7 @@ export function OnboardingScreen() {
             <BrandText style={{ color: theme.colors.destructive }}>{error}</BrandText>
           ) : null}
 
-          <BrandButton label="Continue" loading={loading} onPress={handleSubmit} />
+          <CtaButton label="Continue" loading={loading} onPress={handleSubmit} />
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>

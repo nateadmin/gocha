@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 
 import { ApiError } from '../../api/client';
-import { BrandButton } from '../../components/brand/BrandButton';
+import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
 import { useAuth } from '../../context/AuthContext';
@@ -113,7 +113,7 @@ export function OtpScreen({ email, onBack }: Props) {
             <BrandText style={{ color: theme.colors.destructive }}>{error}</BrandText>
           ) : null}
 
-          <BrandButton label="Verify" loading={loading} onPress={handleVerify} />
+          <CtaButton label="Verify" loading={loading} onPress={handleVerify} />
 
           <Pressable onPress={handleResend} disabled={cooldown > 0}>
             <BrandText
