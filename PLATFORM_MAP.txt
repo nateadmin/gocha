@@ -19,5 +19,5 @@ STACK (API)
 - nginx reverse proxy (same host as Rydit)
 
 SECRETS
-- Infisical project gocha (slug gocha-ppe-o)
+- Infisical project Rydit / Gocha (id e8bb8347-d16d-4614-930a-94912a2b354e)
 - scripts/infisical-pull.sh wraps export with retry
