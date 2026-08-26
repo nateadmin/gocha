@@ -19,12 +19,26 @@ function discoverTabBarStyle(route: { name: string; key: string; params?: object
   return undefined;
 }
 
+function chatsTabBarStyle(route: { name: string; key: string; params?: object }) {
+  const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatsList';
+  if (routeName === 'ChatDetail') {
+    return { display: 'none' } as const;
+  }
+  return undefined;
+}
+
 export function RootNavigator() {
   return (
     <Tab.Navigator
       tabBar={(props) => <MainTabBar {...props} />}
       screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="ChatsTab" component={ChatsStackNavigator} />
+      <Tab.Screen
+        name="ChatsTab"
+        component={ChatsStackNavigator}
+        options={({ route }) => ({
+          tabBarStyle: chatsTabBarStyle(route),
+        })}
+      />
       <Tab.Screen name="CatchUpTab" component={CatchUpScreen} />
       <Tab.Screen
         name="DiscoverTab"
