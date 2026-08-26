@@ -1,23 +1,69 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  BrandBadge,
+  BrandButton,
+  BrandCard,
+  BrandInput,
+  BrandScreenTitle,
+  BrandText,
+} from '../components/brand';
 import { API_BASE_URL } from '../config/api';
-import { placeholderTheme as theme } from '../theme/placeholders';
+import { useGochaTheme } from '../theme';
 
 export function HomeScreen() {
+  const { theme, mode, toggleMode } = useGochaTheme();
+  const { colors, spacing } = theme;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.container}>
-        <Text style={styles.title}>gocha</Text>
-        <Text style={styles.body}>
-          Mobile-first shell. Branding, navigation, and chat surfaces ship after
-          the template styling arrives.
-        </Text>
-        <View style={styles.card}>
-          <Text style={styles.label}>Planned API host</Text>
-          <Text style={styles.value}>{API_BASE_URL}</Text>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom', 'left', 'right']}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { padding: spacing.screen, gap: spacing.section },
+        ]}>
+        <View style={styles.headerRow}>
+          <Image
+            accessibilityLabel="gocha logo"
+            source={require('../../assets/branding/logo.jpg')}
+            style={styles.logo}
+          />
+          <BrandBadge label={mode === 'dark' ? 'Dark' : 'Light'} tone="secondary" />
         </View>
-      </View>
+
+        <BrandScreenTitle>gocha</BrandScreenTitle>
+        <BrandText muted>
+          Neon Cyber brand library. Primary #1B00D8. Tokens and base components
+          are wired; product screens ship on top of this layer.
+        </BrandText>
+
+        <BrandCard>
+          <BrandText variant="label" muted>Planned API host</BrandText>
+          <BrandText variant="mono">{API_BASE_URL}</BrandText>
+        </BrandCard>
+
+        <View style={styles.buttonRow}>
+          <BrandButton label="Primary" variant="primary" />
+          <BrandButton label="Secondary" variant="secondary" />
+        </View>
+        <View style={styles.buttonRow}>
+          <BrandButton label="Outline" variant="outline" />
+          <BrandButton label="Delete" variant="destructive" />
+        </View>
+
+        <BrandInput placeholder="Input sample" />
+
+        <View style={styles.badgeRow}>
+          <BrandBadge label="Primary" />
+          <BrandBadge label="Secondary" tone="secondary" />
+          <BrandBadge label="Accent" tone="accent" />
+        </View>
+
+        <BrandButton label="Toggle light / dark" onPress={toggleMode} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -25,40 +71,27 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   container: {
-    flex: 1,
-    padding: theme.spacing.screen,
-    gap: theme.spacing.section,
+    flexGrow: 1,
   },
-  title: {
-    fontSize: theme.typography.title,
-    fontWeight: '700',
-    color: theme.colors.text,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  body: {
-    fontSize: theme.typography.body,
-    lineHeight: 24,
-    color: theme.colors.textMuted,
+  logo: {
+    width: 72,
+    height: 72,
+    resizeMode: 'contain',
   },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: theme.spacing.section,
-    gap: theme.spacing.stack,
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  label: {
-    fontSize: theme.typography.caption,
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  value: {
-    fontSize: theme.typography.body,
-    color: theme.colors.text,
-    fontWeight: '600',
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
 });

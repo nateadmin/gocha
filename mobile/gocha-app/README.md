@@ -1,6 +1,20 @@
 # gocha mobile shell
 
-React Native mobile-first app. Branding ships when the template arrives.
+React Native mobile-first app. Neon Cyber brand library with primary `#1B00D8`, dark mode default.
+
+## Brand library
+
+- Tokens: `src/theme/tokens.ts` (light + dark Neon Cyber variables)
+- Provider: `src/theme/ThemeContext.tsx` (`ThemeProvider`, default `dark`)
+- Fonts: Rajdhani, Fira Code, Orbitron via `@expo-google-fonts/*` + `expo-font`
+- Components: `src/components/brand/` (Button, Card, Input, Badge, Text)
+- Logo: `assets/branding/logo.jpg`
+
+To replace the logo with a higher-resolution PNG, upload to:
+
+https://github.com/nateadmin/gocha/upload/cursor/infisical-server-setup-f31e/mobile/gocha-app/assets/branding
+
+Use filename `logo.png` (or update `HomeScreen.tsx` if you keep another name).
 
 ## Commands
 
@@ -12,8 +26,4 @@ React Native mobile-first app. Branding ships when the template arrives.
 
 ## API config
 
-Default planned host: `https://gocha.ai`. Edit `src/config/api.ts` for local API testing.
-
-## Theming
-
-Placeholder tokens live in `src/theme/placeholders.ts`. Replace when branding is provided.
+Planned host: `https://gocha.ai` in `src/config/api.ts`.
