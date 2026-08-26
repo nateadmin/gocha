@@ -1,7 +1,7 @@
 export type RootTabParamList = {
   ChatsTab: undefined;
   CatchUpTab: undefined;
-  BusinessesTab: undefined;
+  DiscoverTab: undefined;
   CallsTab: undefined;
   SettingsTab: undefined;
 };
@@ -11,7 +11,10 @@ export type ChatsStackParamList = {
   ChatDetail: { chatId: string };
 };
 
-export type BusinessesStackParamList = {
-  BusinessesList: undefined;
+export type DiscoverStackParamList = {
+  DiscoverHub: undefined;
   BusinessDetail: { businessId: string };
 };
+
+/** @deprecated Use DiscoverStackParamList */
+export type BusinessesStackParamList = DiscoverStackParamList;

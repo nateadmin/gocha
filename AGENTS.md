@@ -2,17 +2,20 @@
 
 Rulebook: https://github.com/nateadmin/personal-playbook
 
+Product roadmap: `PRODUCT_ROADMAP.md` (Gotcha phased plan). Align new work to the current build before adding scope.
+
 ## Layout
 
 - Laravel API: `app_gocha/`
-- React Native mobile shell: `mobile/gocha-app/`
+- React Native mobile app: `mobile/gocha-app/`
 - Deploy scripts: `scripts/`
-- Planned production host: `gocha.ai` (not wired in nginx until DNS + certbot)
+- Planned production host: `gocha.ai`
 
 ## Stack
 
-- Mobile-first React Native app talking to Laravel JSON API on Contabo
-- Distinct from Rydit on the same VPS; integration via HTTP API later
+- Mobile-first React Native super-app (messaging, Catch Up AI, Discover, calls, settings)
+- Laravel JSON API on Contabo (health/version today; messaging/commerce APIs per roadmap)
+- Rydit integration planned as Build 2 connector (distinct project on same VPS)
 - Secrets only in Infisical (project `gocha`)
 
 ## Local development
@@ -38,4 +41,4 @@ Pull, test, commit, push, deploy with `scripts/deploy-to-contabo.sh`, then run p
 
 ## Branding
 
-Template styling and brand tokens are not in the shell yet. Use `mobile/gocha-app/src/theme/placeholders.ts` until the owner supplies the template.
+Neon Cyber theme in `mobile/gocha-app/src/theme/`. Primary `#1B00D8`, dark default. Logo: `mobile/gocha-app/assets/branding/logo.jpg`.

@@ -63,6 +63,15 @@ export function CatchUpScreen() {
           }}>
           {briefingText}
         </Text>
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.typography.sans,
+            fontSize: 12,
+            marginTop: 4,
+          }}>
+          Build 1 — summaries via managed AI (OpenAI) until proprietary AI in Build 3.
+        </Text>
       </View>
 
       <SectionLabel>NEEDS YOUR ATTENTION</SectionLabel>

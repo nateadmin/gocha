@@ -11,7 +11,7 @@ const TAB_META: Record<
 > = {
   ChatsTab: { label: 'Chats', icon: 'chatbubble-outline' },
   CatchUpTab: { label: 'Catch up', icon: 'sparkles-outline' },
-  BusinessesTab: { label: 'Businesses', icon: 'storefront-outline' },
+  DiscoverTab: { label: 'Discover', icon: 'compass-outline' },
   CallsTab: { label: 'Calls', icon: 'call-outline' },
   SettingsTab: { label: 'Settings', icon: 'settings-outline' },
 };

@@ -1,15 +1,15 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { BusinessesScreen } from '../screens/businesses/BusinessesScreen';
+import { DiscoverHubScreen } from '../screens/discover/DiscoverHubScreen';
 import { BusinessDetailScreen } from '../screens/businesses/BusinessDetailScreen';
-import type { BusinessesStackParamList } from './types';
+import type { DiscoverStackParamList } from './types';
 
-const Stack = createNativeStackNavigator<BusinessesStackParamList>();
+const Stack = createNativeStackNavigator<DiscoverStackParamList>();
 
-export function BusinessesStackNavigator() {
+export function DiscoverStackNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="BusinessesList" component={BusinessesScreen} />
+      <Stack.Screen name="DiscoverHub" component={DiscoverHubScreen} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
     </Stack.Navigator>
   );

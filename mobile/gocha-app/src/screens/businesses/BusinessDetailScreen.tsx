@@ -5,11 +5,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { getBusinessById } from '../../data/mock';
 import { neonShadowStyle, useGochaTheme, type GochaTheme } from '../../theme';
-import type { BusinessesStackParamList } from '../../navigation/types';
+import type { DiscoverStackParamList } from '../../navigation/types';
 
 export function BusinessDetailScreen() {
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<BusinessesStackParamList, 'BusinessDetail'>>();
+  const route = useRoute<RouteProp<DiscoverStackParamList, 'BusinessDetail'>>();
   const { theme } = useGochaTheme();
   const business = getBusinessById(route.params.businessId);
 

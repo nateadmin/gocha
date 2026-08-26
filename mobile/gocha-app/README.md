@@ -1,20 +1,24 @@
 # gocha mobile shell
 
-React Native mobile-first app. Neon Cyber brand library with primary `#1B00D8`, dark mode default.
+React Native mobile-first super-app shell: Chats, Catch Up (AI briefing), Businesses (AI order assistant), Calls, Settings.
 
-## Brand library
+## Brand
 
-- Tokens: `src/theme/tokens.ts` (light + dark Neon Cyber variables)
-- Provider: `src/theme/ThemeContext.tsx` (`ThemeProvider`, default `dark`)
-- Fonts: Rajdhani, Fira Code, Orbitron via `@expo-google-fonts/*` + `expo-font`
-- Components: `src/components/brand/` (Button, Card, Input, Badge, Text)
-- Logo: `assets/branding/logo.jpg`
+Neon Cyber tokens in `src/theme/tokens.ts`. Primary `#1B00D8`. Default theme: dark.
 
-To replace the logo with a higher-resolution PNG, upload to:
+## Navigation
 
-https://github.com/nateadmin/gocha/upload/cursor/infisical-server-setup-f31e/mobile/gocha-app/assets/branding
+Bottom tabs map to PRODUCT_ROADMAP.md:
 
-Use filename `logo.png` (or update `HomeScreen.tsx` if you keep another name).
+- Chats — Build 1 messaging (personal, group, business)
+- Catch up — Build 1 AI summaries
+- Discover — Around Me (Build 1) + Businesses (Build 2)
+- Calls — voice shell
+- Settings — privacy, notifications, AI, Collective stub (Build 3)
+
+## Data
+
+Mock content in `src/data/mock.ts` until Laravel API routes ship.
 
 ## Commands
 

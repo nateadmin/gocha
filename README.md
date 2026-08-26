@@ -1,15 +1,13 @@
-# gocha
-gocha is an ai project, mobile-first app hosted on a contabo server: 212.47.68.106
-The server also has a Rydit project on it. The two will be integrated via API, but are distinct projects
-rules for development on this project live in the personal-playbook repo. Refer to that rulebook before executing any prompt
-gocha is going to function as a multi-faceted app utilizing ai. For example, it will introduce a messegnger similar to whatsapp, but with ai summary.
-It will introduce transportation like uber, but interface-less- just chat
-the primary goal is to begin remove the need for interface wherever undesirable
+# gocha (Gotcha)
+
+Gotcha is a mobile-first super-app: messaging, AI Catch Up, local communities (Around Me), business commerce, and integrations (e.g. Rydit). See `PRODUCT_ROADMAP.md` for phased builds.
+
+Development rules live in the personal-playbook repo.
 
 ## Repo layout
 
 - `app_gocha/` — Laravel JSON API shell (health, version, error contract)
-- `mobile/gocha-app/` — React Native mobile-first shell (safe-area layout, placeholder theme)
+- `mobile/gocha-app/` — React Native app (Chats, Catch Up, Discover, Calls, Settings)
 - `scripts/` — Infisical pull and Contabo deploy helpers
 - `deploy/nginx/gocha.ai.conf.template` — nginx vhost for when DNS is ready
 - `PLATFORM_MAP.txt` — server and stack map

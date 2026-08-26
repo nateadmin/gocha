@@ -33,6 +33,7 @@ export function ChatsScreen() {
           accessibilityLabel="gocha"
         />
         <View style={styles.headerActions}>
+          <IconButton icon="radio-button-on" accessibilityLabel="Status updates" />
           <IconButton icon="camera-outline" />
           <IconButton icon="create-outline" tone="primary" />
         </View>

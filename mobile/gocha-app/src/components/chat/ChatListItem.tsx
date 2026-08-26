@@ -35,6 +35,9 @@ export function ChatListItem({ chat, onPress }: Props) {
             {chat.pinned ? (
               <Ionicons name="pin" size={14} color={theme.colors.mutedForeground} />
             ) : null}
+            {chat.isBusiness ? (
+              <Ionicons name="storefront-outline" size={14} color={theme.colors.primary} />
+            ) : null}
           </View>
           <Text
             style={{

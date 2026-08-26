@@ -5,14 +5,14 @@ import { CatchUpScreen } from '../screens/catchup/CatchUpScreen';
 import { CallsScreen } from '../screens/calls/CallsScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { ChatsStackNavigator } from './ChatsStackNavigator';
-import { BusinessesStackNavigator } from './BusinessesStackNavigator';
+import { DiscoverStackNavigator } from './DiscoverStackNavigator';
 import { MainTabBar } from './MainTabBar';
 import type { RootTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
-function businessesTabBarStyle(route: { name: string; key: string; params?: object }) {
-  const routeName = getFocusedRouteNameFromRoute(route) ?? 'BusinessesList';
+function discoverTabBarStyle(route: { name: string; key: string; params?: object }) {
+  const routeName = getFocusedRouteNameFromRoute(route) ?? 'DiscoverHub';
   if (routeName === 'BusinessDetail') {
     return { display: 'none' } as const;
   }
@@ -27,10 +27,10 @@ export function RootNavigator() {
       <Tab.Screen name="ChatsTab" component={ChatsStackNavigator} />
       <Tab.Screen name="CatchUpTab" component={CatchUpScreen} />
       <Tab.Screen
-        name="BusinessesTab"
-        component={BusinessesStackNavigator}
+        name="DiscoverTab"
+        component={DiscoverStackNavigator}
         options={({ route }) => ({
-          tabBarStyle: businessesTabBarStyle(route),
+          tabBarStyle: discoverTabBarStyle(route),
         })}
       />
       <Tab.Screen name="CallsTab" component={CallsScreen} />

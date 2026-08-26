@@ -18,11 +18,16 @@ import {
   businesses,
 } from '../../data/mock';
 import { neonShadowStyle, useGochaTheme } from '../../theme';
-import type { BusinessesStackParamList } from '../../navigation/types';
+import type { DiscoverStackParamList } from '../../navigation/types';
 
-export function BusinessesScreen() {
+type Props = {
+  /** When true, hides the screen title row (used inside Discover hub). */
+  embedded?: boolean;
+};
+
+export function BusinessesScreen({ embedded = false }: Props) {
   const navigation =
-    useNavigation<NativeStackNavigationProp<BusinessesStackParamList>>();
+    useNavigation<NativeStackNavigationProp<DiscoverStackParamList>>();
   const { theme } = useGochaTheme();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
@@ -42,37 +47,61 @@ export function BusinessesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <View style={styles.header}>
-        <Text
-          style={{
-            color: theme.colors.cardForeground,
-            fontFamily: theme.typography.serif,
-            fontSize: 28,
-          }}>
-          Businesses
-        </Text>
-        <Pressable
-          style={[
-            styles.locationPill,
-            {
-              backgroundColor: theme.colors.muted,
-              borderRadius: theme.radii.pill,
-            },
-          ]}>
-          <Ionicons name="location" size={16} color={theme.colors.primary} />
+      {!embedded ? (
+        <View style={styles.header}>
           <Text
             style={{
               color: theme.colors.cardForeground,
-              fontFamily: theme.typography.sans,
-              fontSize: 13,
+              fontFamily: theme.typography.serif,
+              fontSize: 28,
             }}>
-            Current Location
+            Businesses
           </Text>
-          <Ionicons name="chevron-down" size={16} color={theme.colors.primary} />
-        </Pressable>
-      </View>
+          <Pressable
+            style={[
+              styles.locationPill,
+              {
+                backgroundColor: theme.colors.muted,
+                borderRadius: theme.radii.pill,
+              },
+            ]}>
+            <Ionicons name="location" size={16} color={theme.colors.primary} />
+            <Text
+              style={{
+                color: theme.colors.cardForeground,
+                fontFamily: theme.typography.sans,
+                fontSize: 13,
+              }}>
+              Current Location
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={theme.colors.primary} />
+          </Pressable>
+        </View>
+      ) : null}
 
       <ScrollView contentContainerStyle={styles.scroll}>
+        {embedded ? (
+          <Pressable
+            style={[
+              styles.locationPill,
+              styles.embeddedLocation,
+              {
+                backgroundColor: theme.colors.muted,
+                borderRadius: theme.radii.pill,
+              },
+            ]}>
+            <Ionicons name="location" size={16} color={theme.colors.primary} />
+            <Text
+              style={{
+                color: theme.colors.cardForeground,
+                fontFamily: theme.typography.sans,
+                fontSize: 13,
+              }}>
+              Current Location
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={theme.colors.primary} />
+          </Pressable>
+        ) : null}
         <View
           style={[
             styles.search,
@@ -249,6 +278,10 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 6,
+  },
+  embeddedLocation: {
+    alignSelf: 'flex-start',
+    marginBottom: 12,
   },
   scroll: {
     padding: 16,

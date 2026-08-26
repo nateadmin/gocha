@@ -161,6 +161,27 @@ export function SettingsScreen() {
           onValueChange={setAiSummaries}
         />
       </View>
+      <SectionLabel>GOTCHA COLLECTIVE (BUILD 3)</SectionLabel>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.typography.sans,
+            fontSize: 14,
+            lineHeight: 20,
+          }}>
+          Collective membership, negotiated discounts, and app linkage ship in Build 3.
+          Phase 2 may start as a standalone website first.
+        </Text>
+      </View>
     </ScrollView>
   );
 }

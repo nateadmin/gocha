@@ -7,6 +7,7 @@ type Props = PressableProps & {
   icon: keyof typeof Ionicons.glyphMap;
   tone?: 'primary' | 'muted';
   size?: number;
+  accessibilityLabel?: string;
 };
 
 export function IconButton({
@@ -14,6 +15,7 @@ export function IconButton({
   tone = 'muted',
   size = 40,
   style,
+  accessibilityLabel,
   ...props
 }: Props) {
   const { theme } = useGochaTheme();
@@ -21,6 +23,8 @@ export function IconButton({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={[
         styles.base,
         {

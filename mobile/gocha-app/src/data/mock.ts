@@ -17,6 +17,18 @@ export type ChatSummary = {
   pinned?: boolean;
   isGroup?: boolean;
   groupCount?: number;
+  isBusiness?: boolean;
+};
+
+export type CommunityGroup = {
+  id: string;
+  name: string;
+  description: string;
+  memberCount: number;
+  privacy: 'discoverable' | 'private';
+  avatarLabel: string;
+  avatarColor: string;
+  interestTags: string[];
 };
 
 export type AttentionItem = {
@@ -90,6 +102,15 @@ export const userProfile: UserProfile = {
 };
 
 export const chatSummaries: ChatSummary[] = [
+  {
+    id: 'bella-napoli-chat',
+    name: 'Bella Napoli',
+    avatarLabel: 'BN',
+    avatarColor: '#c45c26',
+    preview: 'Your order is being prepared',
+    dateLabel: '8/8/26',
+    isBusiness: true,
+  },
   {
     id: 'liam',
     name: 'Liam Becker',
@@ -292,6 +313,39 @@ export const aiOrderSuggestions = [
   'Get my usual coffee ☕',
   'Groceries for dinner tonight 🛒',
   'I need a ride to the airport 🚕',
+];
+
+export const discoverableGroups: CommunityGroup[] = [
+  {
+    id: 'musicians-shore',
+    name: 'Musicians on the Shore',
+    description: 'Local jams, open mics, and shoreline gigs.',
+    memberCount: 128,
+    privacy: 'discoverable',
+    avatarLabel: 'MS',
+    avatarColor: '#1B00D8',
+    interestTags: ['music', 'local'],
+  },
+  {
+    id: 'thursday-basketball',
+    name: 'Thursday Basketball',
+    description: 'Pickup games every Thursday at 6pm.',
+    memberCount: 42,
+    privacy: 'discoverable',
+    avatarLabel: 'TB',
+    avatarColor: '#00669c',
+    interestTags: ['sports', 'weekly'],
+  },
+  {
+    id: 'hiking-buddies',
+    name: 'Hiking Buddies',
+    description: 'Weekend trails and group hikes.',
+    memberCount: 89,
+    privacy: 'discoverable',
+    avatarLabel: 'HB',
+    avatarColor: '#00734a',
+    interestTags: ['outdoors', 'hiking'],
+  },
 ];
 
 export const calls: CallEntry[] = [
