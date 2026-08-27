@@ -33,4 +33,5 @@ export const API_PATHS = {
   groupsMine: '/api/groups/mine',
   groups: '/api/groups',
   profileUsername: '/api/profile/username',
+  conversations: '/api/conversations',
 } as const;

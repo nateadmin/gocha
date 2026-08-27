@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -40,6 +40,11 @@ export function ChatDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [messageMenu, setMessageMenu] = useState<ChatMessage | null>(null);
+
+  useEffect(() => {
+    void chatApi.ensureMessagesLoaded(route.params.chatId);
+    chatApi.openChat(route.params.chatId);
+  }, [chatApi, route.params.chatId]);
 
   useLayoutEffect(() => {
     if (!tabNavigation) {

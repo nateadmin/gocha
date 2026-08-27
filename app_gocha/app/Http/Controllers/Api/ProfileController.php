@@ -218,6 +218,7 @@ class ProfileController extends Controller
         $needle = $validated['q'];
 
         $results = User::query()
+            ->where('id', '!=', $request->user()->id)
             ->where('discoverable', true)
             ->where(function ($query) use ($needle) {
                 $query->where('display_name', 'like', '%'.$needle.'%')

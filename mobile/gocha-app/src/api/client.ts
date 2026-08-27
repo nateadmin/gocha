@@ -524,3 +524,89 @@ export async function updateCommunityGroup(
   });
   return payload.group;
 }
+
+export type PublicUserProfile = {
+  id: number;
+  username: string | null;
+  displayName: string;
+  status: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  verificationStatus: string;
+  profileMode: string;
+  website: string | null;
+  chatUserId: number;
+};
+
+export async function searchUsers(query: string): Promise<PublicUserProfile[]> {
+  const payload = await apiRequest<{ results: PublicUserProfile[] }>(
+    `${API_PATHS.userSearch}?q=${encodeURIComponent(query)}`,
+  );
+  return payload.results;
+}
+
+export type ConversationRecord = {
+  id: number;
+  type: string;
+  name: string;
+  avatarUrl: string | null;
+  avatarLabel: string;
+  avatarColor: string;
+  otherUserId: number | null;
+  preview: string;
+  lastActivityAt: string | null;
+  unreadCount: number;
+  isBusiness: boolean;
+};
+
+export type ConversationMessageRecord = {
+  id: string;
+  type: string;
+  text: string | null;
+  sentAt: string | null;
+  isOutgoing: boolean;
+  status?: 'sent' | 'delivered' | 'read';
+};
+
+export async function fetchConversations(): Promise<ConversationRecord[]> {
+  const payload = await apiRequest<{ conversations: ConversationRecord[] }>(API_PATHS.conversations);
+  return payload.conversations;
+}
+
+export async function createConversation(participantUserId: number): Promise<ConversationRecord> {
+  const payload = await apiRequest<{ conversation: ConversationRecord }>(API_PATHS.conversations, {
+    method: 'POST',
+    body: JSON.stringify({ participantUserId }),
+  });
+  return payload.conversation;
+}
+
+export async function fetchConversationMessages(
+  conversationId: number,
+): Promise<ConversationMessageRecord[]> {
+  const payload = await apiRequest<{ messages: ConversationMessageRecord[] }>(
+    `${API_PATHS.conversations}/${conversationId}/messages`,
+  );
+  return payload.messages;
+}
+
+export async function sendConversationMessage(
+  conversationId: number,
+  text: string,
+  type: 'text' | 'emoji' = 'text',
+): Promise<ConversationMessageRecord> {
+  const payload = await apiRequest<{ message: ConversationMessageRecord }>(
+    `${API_PATHS.conversations}/${conversationId}/messages`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ text, type }),
+    },
+  );
+  return payload.message;
+}
+
+export async function markConversationRead(conversationId: number): Promise<void> {
+  await apiRequest(`${API_PATHS.conversations}/${conversationId}/read`, {
+    method: 'POST',
+  });
+}

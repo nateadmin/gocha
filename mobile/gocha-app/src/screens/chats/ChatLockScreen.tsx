@@ -23,7 +23,7 @@ export function ChatLockScreen() {
       navigation.replace('ChatDetail', { chatId: route.params.chatId });
       return;
     }
-    setError('Incorrect PIN. Default demo PIN is 0000.');
+    setError('Incorrect PIN.');
   }
 
   return (

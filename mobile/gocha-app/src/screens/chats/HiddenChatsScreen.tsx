@@ -32,7 +32,7 @@ export function HiddenChatsScreen() {
           Hidden chats
         </Text>
         <Text style={{ color: theme.colors.mutedForeground, marginBottom: 16 }}>
-          Enter PIN to view hidden conversations. Demo PIN: 4242
+          Enter PIN to view hidden conversations.
         </Text>
         <TextInput
           value={pin}

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Admin\AdminVerificationController;
 use App\Http\Controllers\Api\AuthOtpController;
 use App\Http\Controllers\Api\BusinessListingController;
 use App\Http\Controllers\Api\CommunityGroupController;
+use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\VerificationController;
@@ -56,6 +57,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/username', [ProfileController::class, 'updateUsername']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::get('/users/search', [ProfileController::class, 'search']);
+
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::post('/conversations', [ConversationController::class, 'store']);
+    Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
+    Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
+    Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
+
     Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
 
     Route::get('/businesses/mine', [BusinessListingController::class, 'mine']);

@@ -214,16 +214,6 @@ export function ChatLabelsSettingsScreen() {
           <Text style={{ color: theme.colors.primary }}>Left: {preferences.swipeLeft}</Text>
         </Pressable>
       </View>
-
-      <Text style={[styles.section, { color: theme.colors.mutedForeground }]}>
-        Security PINs (demo)
-      </Text>
-      <Pressable onPress={() => setHiddenChatsPin('4242')}>
-        <Text style={{ color: theme.colors.cardForeground }}>Reset hidden chats PIN to 4242</Text>
-      </Pressable>
-      <Pressable onPress={() => setChatLockPin('0000')} style={{ marginTop: 8 }}>
-        <Text style={{ color: theme.colors.cardForeground }}>Reset chat lock PIN to 0000</Text>
-      </Pressable>
     </ScrollView>
   );
 }

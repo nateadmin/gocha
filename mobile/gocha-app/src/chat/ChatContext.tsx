@@ -2,20 +2,28 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 
 import {
   EMOJI_GRID,
-  INITIAL_CHATS,
-  INITIAL_LABELS,
-  INITIAL_LISTS,
-  INITIAL_MESSAGES,
   STICKER_EMOJI,
+  createOrderAssistantChat,
+  createOrderAssistantMessages,
 } from './seedData';
+import {
+  loadConversationMessages,
+  loadConversations,
+  markChatReadOnServer,
+  openDirectConversation,
+  postTextMessage,
+} from './conversationApi';
 import { isOrderAssistantChat } from './orderAssistant';
+import { useAuth } from '../context/AuthContext';
 import type {
   ChatFilterId,
   ChatLabel,
@@ -90,6 +98,10 @@ type ChatContextValue = {
   bulkDelete: () => void;
   bulkMarkRead: () => void;
   openChat: (chatId: string) => void;
+  refreshConversations: () => Promise<void>;
+  startDirectMessage: (userId: number) => Promise<string>;
+  ensureMessagesLoaded: (chatId: string) => Promise<void>;
+  conversationsLoading: boolean;
   createBroadcast: (name: string) => string;
   sendTextMessage: (chatId: string, text: string, replyToId?: string) => void;
   sendEmojiMessage: (chatId: string, emoji: string) => void;
@@ -153,22 +165,81 @@ function previewForMessage(message: ChatMessage): string {
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [chats, setChats] = useState<ChatRecord[]>(INITIAL_CHATS);
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(INITIAL_MESSAGES);
-  const [lists, setLists] = useState<ChatList[]>(INITIAL_LISTS);
-  const [labels, setLabels] = useState<ChatLabel[]>(INITIAL_LABELS);
+  const { user } = useAuth();
+  const orderAssistantChat = useMemo(() => createOrderAssistantChat(), []);
+  const orderAssistantMessages = useMemo(() => createOrderAssistantMessages(), []);
+  const [chats, setChats] = useState<ChatRecord[]>([orderAssistantChat]);
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({
+    [orderAssistantChat.id]: orderAssistantMessages,
+  });
+  const [lists, setLists] = useState<ChatList[]>([]);
+  const [labels, setLabels] = useState<ChatLabel[]>([]);
   const [preferences, setPreferences] = useState<ChatPreferences>({
     labelsEnabled: true,
     listsEnabled: false,
     swipeRight: 'pin',
     swipeLeft: 'archive',
-    hiddenChatsPin: '4242',
-    chatLockPin: '0000',
+    hiddenChatsPin: null,
+    chatLockPin: null,
     showArchived: true,
   });
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const loadedMessageChatsRef = useRef<Set<string>>(new Set());
+  const chatsRef = useRef(chats);
+  chatsRef.current = chats;
   const [activeFilter, setActiveFilter] = useState<ChatFilterId | string>('all');
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
+
+  const refreshConversations = useCallback(async () => {
+    if (!user) {
+      setChats([orderAssistantChat]);
+      setMessages({ [orderAssistantChat.id]: orderAssistantMessages });
+      loadedMessageChatsRef.current = new Set();
+      return;
+    }
+
+    setConversationsLoading(true);
+    try {
+      const existing = chatsRef.current.filter((chat) => !isOrderAssistantChat(chat.id));
+      const apiChats = await loadConversations(existing);
+      setChats([orderAssistantChat, ...apiChats]);
+    } finally {
+      setConversationsLoading(false);
+    }
+  }, [orderAssistantChat, orderAssistantMessages, user]);
+
+  useEffect(() => {
+    loadedMessageChatsRef.current = new Set();
+    void refreshConversations();
+  }, [user?.id, refreshConversations]);
+
+  const ensureMessagesLoaded = useCallback(async (chatId: string) => {
+    if (isOrderAssistantChat(chatId)) return;
+    if (loadedMessageChatsRef.current.has(chatId)) return;
+    if (!/^\d+$/.test(chatId)) return;
+
+    const records = await loadConversationMessages(chatId);
+    loadedMessageChatsRef.current.add(chatId);
+    setMessages((prev) => ({ ...prev, [chatId]: records }));
+  }, []);
+
+  const startDirectMessage = useCallback(
+    async (userId: number) => {
+      const chat = await openDirectConversation(userId);
+      setChats((prev) => {
+        const assistant = prev.find((item) => isOrderAssistantChat(item.id)) ?? orderAssistantChat;
+        const rest = prev.filter(
+          (item) => !isOrderAssistantChat(item.id) && item.id !== chat.id,
+        );
+        return [assistant, chat, ...rest];
+      });
+      setMessages((prev) => ({ ...prev, [chat.id]: prev[chat.id] ?? [] }));
+      loadedMessageChatsRef.current.add(chat.id);
+      return chat.id;
+    },
+    [orderAssistantChat],
+  );
 
   const updateChat = useCallback((chatId: string, patch: Partial<ChatRecord>) => {
     setChats((prev) =>
@@ -247,7 +318,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const archiveChat = useCallback((chatId: string) => updateChat(chatId, { archived: true }), [updateChat]);
   const unarchiveChat = useCallback((chatId: string) => updateChat(chatId, { archived: false }), [updateChat]);
   const markChatRead = useCallback(
-    (chatId: string) => updateChat(chatId, { unreadCount: 0, markedUnread: false }),
+    (chatId: string) => {
+      updateChat(chatId, { unreadCount: 0, markedUnread: false });
+      if (!isOrderAssistantChat(chatId) && /^\d+$/.test(chatId)) {
+        void markChatReadOnServer(chatId).catch(() => undefined);
+      }
+    },
     [updateChat],
   );
   const markChatUnread = useCallback(
@@ -495,8 +571,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [clearSelection, markChatRead, selectedChatIds]);
 
   const openChat = useCallback(
-    (chatId: string) => markChatRead(chatId),
-    [markChatRead],
+    (chatId: string) => {
+      markChatRead(chatId);
+      void ensureMessagesLoaded(chatId);
+    },
+    [ensureMessagesLoaded, markChatRead],
   );
 
   const createBroadcast = useCallback((name: string): string => {
@@ -559,8 +638,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     (chatId: string, text: string, replyToId?: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
+
+      if (isOrderAssistantChat(chatId)) {
+        appendMessage(chatId, {
+          id: `m-${Date.now()}`,
+          type: 'text',
+          text: trimmed,
+          sentAt: formatTimeLabel(),
+          isOutgoing: true,
+          status: 'sent',
+          replyToId,
+        });
+        return;
+      }
+
+      if (!/^\d+$/.test(chatId)) {
+        return;
+      }
+
+      const optimisticId = `pending-${Date.now()}`;
       appendMessage(chatId, {
-        id: `m-${Date.now()}`,
+        id: optimisticId,
         type: 'text',
         text: trimmed,
         sentAt: formatTimeLabel(),
@@ -568,6 +666,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         status: 'sent',
         replyToId,
       });
+
+      void postTextMessage(chatId, trimmed)
+        .then((saved) => {
+          setMessages((prev) => ({
+            ...prev,
+            [chatId]: (prev[chatId] ?? []).map((message) =>
+              message.id === optimisticId ? saved : message,
+            ),
+          }));
+        })
+        .catch(() => {
+          setMessages((prev) => ({
+            ...prev,
+            [chatId]: (prev[chatId] ?? []).filter((message) => message.id !== optimisticId),
+          }));
+        });
     },
     [appendMessage],
   );
@@ -742,6 +856,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       bulkDelete,
       bulkMarkRead,
       openChat,
+      refreshConversations,
+      startDirectMessage,
+      ensureMessagesLoaded,
+      conversationsLoading,
       createBroadcast,
       sendTextMessage,
       sendEmojiMessage,
@@ -816,6 +934,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       bulkDelete,
       bulkMarkRead,
       openChat,
+      refreshConversations,
+      startDirectMessage,
+      ensureMessagesLoaded,
+      conversationsLoading,
       createBroadcast,
       sendTextMessage,
       sendEmojiMessage,

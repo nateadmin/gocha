@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AccountLogoButton,
   AccountSwitcherMenu,
+  Avatar,
   HeaderOverflowMenu,
   ConfirmDialog,
   SearchField,
@@ -25,6 +26,7 @@ import { useChat } from '../../chat/ChatContext';
 import type { ChatRecord } from '../../chat/types';
 import { useAccounts } from '../../context/AccountsContext';
 import { useAuth } from '../../context/AuthContext';
+import { searchUsers, type PublicUserProfile } from '../../api/client';
 import { useGochaTheme } from '../../theme';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 
@@ -50,8 +52,34 @@ export function ChatsScreen() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [listPickerChat, setListPickerChat] = useState<ChatRecord | null>(null);
   const [clearTarget, setClearTarget] = useState<ChatRecord | null>(null);
+  const [userResults, setUserResults] = useState<PublicUserProfile[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [startingChatUserId, setStartingChatUserId] = useState<number | null>(null);
 
   const accountMenuTop = insets.top + 12 + 44;
+
+  useEffect(() => {
+    if (!composeOpen) {
+      setUserResults([]);
+      return;
+    }
+
+    const needle = query.trim();
+    if (needle.length < 2) {
+      setUserResults([]);
+      return;
+    }
+
+    const handle = setTimeout(() => {
+      setUserSearchLoading(true);
+      searchUsers(needle)
+        .then(setUserResults)
+        .catch(() => setUserResults([]))
+        .finally(() => setUserSearchLoading(false));
+    }, 250);
+
+    return () => clearTimeout(handle);
+  }, [composeOpen, query]);
 
   const switcherAccounts = useMemo(() => {
     if (!user) {
@@ -87,6 +115,20 @@ export function ChatsScreen() {
       item.name.toLowerCase().includes(q) || item.preview.toLowerCase().includes(q)
     );
   });
+
+  async function startChatWithUser(profile: PublicUserProfile) {
+    setStartingChatUserId(profile.id);
+    try {
+      const chatId = await chat.startDirectMessage(profile.id);
+      setComposeOpen(false);
+      setQuery('');
+      openChat(chatId);
+    } finally {
+      setStartingChatUserId(null);
+    }
+  }
+
+  const showingUserSearch = composeOpen && query.trim().length >= 2;
 
   function openChat(chatId: string) {
     chat.openChat(chatId);
@@ -230,37 +272,98 @@ export function ChatsScreen() {
         />
       ) : null}
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        style={{ backgroundColor: theme.colors.card, flex: 1 }}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          chat.archivedChats.length > 0 && chat.activeFilter === 'all' ? (
-            <Pressable
-              onPress={() => chat.setActiveFilter('archived')}
-              style={styles.archiveBanner}>
-              <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>
-                Archived ({chat.archivedChats.length})
-              </Text>
-            </Pressable>
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <SwipeableChatListItem
-            chat={item}
-            selected={chat.selectedChatIds.includes(item.id)}
-            onPress={() => {
-              if (item.locked) {
-                navigation.navigate('ChatLock', { chatId: item.id });
-                return;
-              }
-              openChat(item.id);
-            }}
-            onLongPress={() => setContextChat(item)}
-          />
-        )}
-      />
+      {showingUserSearch ? (
+        <View style={{ backgroundColor: theme.colors.card, flex: 1 }}>
+          {userSearchLoading ? (
+            <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 24 }} />
+          ) : userResults.length === 0 ? (
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.typography.sans,
+                padding: 16,
+              }}>
+              No discoverable users matched that search. They need discoverability enabled in profile settings.
+            </Text>
+          ) : (
+            <FlatList
+              data={userResults}
+              keyExtractor={(item) => String(item.id)}
+              contentContainerStyle={styles.list}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => startChatWithUser(item)}
+                  disabled={startingChatUserId === item.id}
+                  style={styles.userResultRow}>
+                  <Avatar
+                    label={item.displayName.slice(0, 2).toUpperCase()}
+                    color={theme.colors.primary}
+                    size={44}
+                  />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text
+                      style={{
+                        color: theme.colors.cardForeground,
+                        fontFamily: theme.typography.sans,
+                        fontSize: 16,
+                        fontWeight: '600',
+                      }}>
+                      {item.displayName}
+                    </Text>
+                    {item.username ? (
+                      <Text
+                        style={{
+                          color: theme.colors.mutedForeground,
+                          fontFamily: theme.typography.sans,
+                          fontSize: 13,
+                        }}>
+                        @{item.username}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {startingChatUserId === item.id ? (
+                    <ActivityIndicator color={theme.colors.primary} />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+                  )}
+                </Pressable>
+              )}
+            />
+          )}
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          style={{ backgroundColor: theme.colors.card, flex: 1 }}
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            chat.archivedChats.length > 0 && chat.activeFilter === 'all' ? (
+              <Pressable
+                onPress={() => chat.setActiveFilter('archived')}
+                style={styles.archiveBanner}>
+                <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>
+                  Archived ({chat.archivedChats.length})
+                </Text>
+              </Pressable>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <SwipeableChatListItem
+              chat={item}
+              selected={chat.selectedChatIds.includes(item.id)}
+              onPress={() => {
+                if (item.locked) {
+                  navigation.navigate('ChatLock', { chatId: item.id });
+                  return;
+                }
+                openChat(item.id);
+              }}
+              onLongPress={() => setContextChat(item)}
+            />
+          )}
+        />
+      )}
 
       <AccountSwitcherMenu
         visible={accountMenuOpen}
@@ -337,6 +440,13 @@ const styles = StyleSheet.create({
   },
   list: { paddingBottom: 8 },
   archiveBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  userResultRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
