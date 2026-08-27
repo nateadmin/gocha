@@ -5,7 +5,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { ConfirmDialog, DropdownMenu, SearchField, type DropdownMenuItem } from '../../components/app';
+import {
+  AnimatedHamburgerMenu,
+  ConfirmDialog,
+  DropdownMenu,
+  SearchField,
+  type DropdownMenuItem,
+} from '../../components/app';
 import { BrandLogo } from '../../components/brand';
 import {
   ActionSheet,
@@ -56,6 +62,7 @@ export function ChatsScreen() {
       label: 'New Chat',
       icon: 'chatbubble-outline',
       onPress: () => {
+        setHeaderMenuOpen(false);
         setComposeOpen(true);
         searchRef.current?.focus();
       },
@@ -64,13 +71,19 @@ export function ChatsScreen() {
       id: 'new-group',
       label: 'New Group',
       icon: 'people-outline',
-      onPress: () => navigation.navigate('CreateGroup'),
+      onPress: () => {
+        setHeaderMenuOpen(false);
+        navigation.navigate('CreateGroup');
+      },
     },
     {
       id: 'new-broadcast',
       label: 'New Broadcast',
       icon: 'megaphone-outline',
-      onPress: () => navigation.navigate('NewBroadcast'),
+      onPress: () => {
+        setHeaderMenuOpen(false);
+        navigation.navigate('NewBroadcast');
+      },
     },
   ];
 
@@ -127,32 +140,24 @@ export function ChatsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        {chat.activeFilter === 'archived' ? (
-          <Pressable onPress={() => chat.setActiveFilter('all')} style={styles.archiveBack}>
-            <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />
-            <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>All chats</Text>
-          </Pressable>
-        ) : (
-          <BrandLogo size={56} />
-        )}
-        <View style={styles.headerActions}>
-          <Pressable
-            onPress={() => setHeaderMenuOpen(true)}
-            style={[
-              styles.menuButton,
-              {
-                backgroundColor: theme.colors.muted,
-                borderColor: theme.colors.border,
-              },
-            ]}
-            accessibilityLabel="Chats menu">
-            <Ionicons name="ellipsis-horizontal" size={22} color={theme.colors.primary} />
-          </Pressable>
+      <View style={[styles.topSection, { paddingTop: insets.top + 12 }]}>
+        <View style={styles.header}>
+          {chat.activeFilter === 'archived' ? (
+            <Pressable onPress={() => chat.setActiveFilter('all')} style={styles.archiveBack}>
+              <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />
+              <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>All chats</Text>
+            </Pressable>
+          ) : (
+            <BrandLogo size={40} />
+          )}
+          <AnimatedHamburgerMenu
+            open={headerMenuOpen}
+            onPress={() => setHeaderMenuOpen((value) => !value)}
+            strokeColor={theme.colors.primary}
+            size={40}
+          />
         </View>
-      </View>
 
-      <View style={styles.searchWrap}>
         <SearchField
           ref={searchRef}
           value={query}
@@ -249,20 +254,15 @@ export function ChatsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  topSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 12,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  headerActions: { flexDirection: 'row', gap: 8 },
-  menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   archiveBack: {
     flexDirection: 'row',
@@ -270,7 +270,6 @@ const styles = StyleSheet.create({
     gap: 4,
     flex: 1,
   },
-  searchWrap: { paddingHorizontal: 16, paddingVertical: 8 },
   filterBanner: {
     paddingHorizontal: 16,
     paddingBottom: 8,

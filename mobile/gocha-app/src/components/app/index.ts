@@ -8,4 +8,5 @@ export { UniversalLoader } from './UniversalLoader';
 export { LoadingShell } from './LoadingShell';
 export { DropdownMenu } from './DropdownMenu';
 export type { DropdownMenuItem } from './DropdownMenu';
+export { AnimatedHamburgerMenu } from './AnimatedHamburgerMenu';
 export { ConfirmDialog } from './ConfirmDialog';
