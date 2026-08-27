@@ -16,6 +16,7 @@ export function BrandLogo({
   return (
     <Image
       accessibilityLabel={accessibilityLabel}
+      pointerEvents="none"
       source={brandLogoSource}
       style={[styles.logo, { width: size, height: size }, style]}
     />

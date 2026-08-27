@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import {
+  AccountLogoButton,
   AccountSwitcherMenu,
   AnimatedHamburgerMenu,
   ConfirmDialog,
@@ -15,7 +16,6 @@ import {
   SearchField,
   type DropdownMenuItem,
 } from '../../components/app';
-import { BrandLogo } from '../../components/brand';
 import {
   ActionSheet,
   ChatFilterBar,
@@ -40,7 +40,7 @@ export function ChatsScreen() {
   const insets = useSafeAreaInsets();
   const chat = useChat();
   const { accounts, activeAccountId, switchAccount, beginAddAccount } = useAccounts();
-  const { refresh } = useAuth();
+  const { user, refresh } = useAuth();
   const searchRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [contextChat, setContextChat] = useState<ChatRecord | null>(null);
@@ -51,6 +51,28 @@ export function ChatsScreen() {
   const [clearTarget, setClearTarget] = useState<ChatRecord | null>(null);
 
   const accountMenuTop = insets.top + 12 + 44;
+
+  const switcherAccounts = useMemo(() => {
+    if (!user) {
+      return accounts;
+    }
+
+    if (accounts.some((account) => account.userId === user.id)) {
+      return accounts;
+    }
+
+    return [
+      {
+        userId: user.id,
+        label: user.email ?? user.phone ?? 'This device',
+        displayName: user.chatDisplayName ?? user.displayName,
+        avatarUrl: user.avatarUrl,
+        deviceToken: '',
+        primaryLoginChannel: user.primaryLoginChannel,
+      },
+      ...accounts,
+    ];
+  }, [accounts, user]);
 
   const listData = useMemo(() => {
     if (chat.activeFilter === 'archived') return chat.archivedChats;
@@ -162,14 +184,7 @@ export function ChatsScreen() {
               <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>All chats</Text>
             </Pressable>
           ) : (
-            <Pressable
-              onPress={() => setAccountMenuOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Switch account"
-              style={styles.logoButton}>
-              <BrandLogo size={40} />
-              <Ionicons name="chevron-down" size={14} color={theme.colors.primary} />
-            </Pressable>
+            <AccountLogoButton onPress={() => setAccountMenuOpen(true)} />
           )}
           <AnimatedHamburgerMenu
             open={headerMenuOpen}
@@ -244,12 +259,13 @@ export function ChatsScreen() {
 
       <AccountSwitcherMenu
         visible={accountMenuOpen}
-        accounts={accounts}
-        activeAccountId={activeAccountId}
+        accounts={switcherAccounts}
+        activeAccountId={activeAccountId ?? user?.id ?? null}
         menuTop={accountMenuTop}
         onClose={() => setAccountMenuOpen(false)}
         onSelectAccount={async (userId) => {
-          if (userId === activeAccountId) return;
+          const currentId = activeAccountId ?? user?.id ?? null;
+          if (userId === currentId) return;
           switchAccount(userId);
           await refresh();
         }}
@@ -301,11 +317,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  logoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
   },
   archiveBack: {
     flexDirection: 'row',
