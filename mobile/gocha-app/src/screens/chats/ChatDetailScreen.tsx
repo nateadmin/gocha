@@ -294,6 +294,7 @@ export function ChatDetailScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.suggestionScroll}
           contentContainerStyle={styles.suggestionRow}>
           {ORDER_ASSISTANT_SUGGESTIONS.map((suggestion) => (
             <Pressable
@@ -380,15 +381,21 @@ const styles = StyleSheet.create({
   messages: { paddingHorizontal: 16, paddingBottom: 16 },
   datePillWrap: { alignItems: 'center', marginVertical: 12 },
   datePill: { paddingHorizontal: 12, paddingVertical: 6 },
+  suggestionScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   suggestionRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingVertical: 8,
   },
   suggestionChip: {
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    alignSelf: 'flex-start',
   },
 });
