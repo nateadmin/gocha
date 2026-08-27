@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -18,7 +19,14 @@ type Props = {
   strokeColor?: string;
 };
 
-/** Web: portal menu to body; keep trigger above overlay for the hamburger-to-X animation. */
+type TriggerRect = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+};
+
+/** Web: portal overlay + fixed trigger so the X stays above backdrop and search. */
 export function HeaderOverflowMenu({
   open,
   menuTop,
@@ -31,12 +39,51 @@ export function HeaderOverflowMenu({
   strokeColor,
 }: Props) {
   const { theme } = useGochaTheme();
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [triggerRect, setTriggerRect] = useState<TriggerRect | null>(null);
   const menuZ = theme.overlayMenu.zIndex;
   const triggerZ = theme.overlayMenu.headerZIndex + 2;
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setTriggerRect(null);
+      return;
+    }
+
+    function measure() {
+      const node = anchorRef.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      setTriggerRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      });
+    }
+
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [open]);
+
+  const hamburger = (
+    <AnimatedHamburgerMenu
+      open={open}
+      onPress={onPress}
+      accessibilityLabel={accessibilityLabel}
+      strokeColor={strokeColor}
+      size={size}
+    />
+  );
+
   return (
-    <MenuAnchor>
-      {open && typeof document !== 'undefined'
+    <MenuAnchor ref={anchorRef}>
+      {open && triggerRect && typeof document !== 'undefined'
         ? createPortal(
             <>
               <Backdrop
@@ -84,18 +131,19 @@ export function HeaderOverflowMenu({
                   </MenuButton>
                 ))}
               </MenuPanel>
+              <TriggerLayer
+                $top={triggerRect.top}
+                $left={triggerRect.left}
+                $width={triggerRect.width}
+                $height={triggerRect.height}
+                $z={triggerZ}>
+                {hamburger}
+              </TriggerLayer>
             </>,
             document.body,
           )
         : null}
-      <AnimatedHamburgerMenu
-        open={open}
-        onPress={onPress}
-        accessibilityLabel={accessibilityLabel}
-        strokeColor={strokeColor}
-        size={size}
-        style={{ position: 'relative', zIndex: open ? triggerZ : undefined }}
-      />
+      <TriggerPlaceholder $hidden={open}>{hamburger}</TriggerPlaceholder>
     </MenuAnchor>
   );
 }
@@ -104,6 +152,29 @@ export type { DropdownMenuItem };
 
 const MenuAnchor = styled.div`
   position: relative;
+`;
+
+const TriggerPlaceholder = styled.div<{ $hidden: boolean }>`
+  visibility: ${(p) => (p.$hidden ? 'hidden' : 'visible')};
+`;
+
+const TriggerLayer = styled.div<{
+  $top: number;
+  $left: number;
+  $width: number;
+  $height: number;
+  $z: number;
+}>`
+  align-items: center;
+  display: flex;
+  height: ${(p) => p.$height}px;
+  justify-content: center;
+  left: ${(p) => p.$left}px;
+  pointer-events: auto;
+  position: fixed;
+  top: ${(p) => p.$top}px;
+  width: ${(p) => p.$width}px;
+  z-index: ${(p) => p.$z};
 `;
 
 const Backdrop = styled.div<{ $z: number }>`

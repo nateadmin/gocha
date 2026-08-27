@@ -181,7 +181,7 @@ export function ChatsScreen() {
         <View
           style={[
             styles.header,
-            headerMenuOpen || accountMenuOpen
+            accountMenuOpen
               ? { position: 'relative', zIndex: theme.overlayMenu.headerZIndex + 2 }
               : null,
           ]}>
