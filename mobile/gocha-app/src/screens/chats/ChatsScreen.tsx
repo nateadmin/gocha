@@ -178,7 +178,12 @@ export function ChatsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.topSection, { paddingTop: insets.top + 12 }]}>
+      <View
+        style={[
+          styles.topSection,
+          { paddingTop: insets.top + 12 },
+          headerMenuOpen || accountMenuOpen ? styles.topSectionAboveMenu : null,
+        ]}>
         <View style={styles.header}>
           {chat.activeFilter === 'archived' ? (
             <Pressable onPress={() => chat.setActiveFilter('all')} style={styles.archiveBack}>
@@ -314,6 +319,10 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   topSection: {
     paddingHorizontal: 16,
+  },
+  topSectionAboveMenu: {
+    position: 'relative',
+    zIndex: 1001,
   },
   header: {
     flexDirection: 'row',

@@ -29,9 +29,9 @@ export function AnimatedHamburgerMenu({
       aria-label={open ? 'Close menu' : accessibilityLabel}
       aria-expanded={open}>
       <svg viewBox="0 0 32 32" aria-hidden>
-        <path className="line line-top-bottom" d="M27 10 5 10" />
-        <path className="line" d="M27 16 5 16" />
-        <path className="line line-top-bottom" d="M27 22 5 22" />
+        <path className="line line-top" d="M27 10 5 10" />
+        <path className="line line-middle" d="M27 16 5 16" />
+        <path className="line line-bottom" d="M27 22 5 22" />
       </svg>
     </HamburgerButton>
   );
@@ -43,10 +43,13 @@ const HamburgerButton = styled.button<{ $open: boolean; $strokeColor: string; $s
   border: none;
   cursor: pointer;
   display: flex;
+  flex-shrink: 0;
   height: ${(p) => p.$size}px;
   justify-content: center;
   padding: 0;
+  position: relative;
   width: ${(p) => p.$size}px;
+  z-index: 1;
 
   svg {
     fill: none;
@@ -61,18 +64,19 @@ const HamburgerButton = styled.button<{ $open: boolean; $strokeColor: string; $s
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-width: 3;
+  }
+
+  .line-top,
+  .line-bottom {
     transition:
       stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1),
       stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .line-top-bottom {
     stroke-dasharray: ${(p) => (p.$open ? '20 300' : '12 63')};
     stroke-dashoffset: ${(p) => (p.$open ? '-32.42px' : '0')};
   }
 
-  .line:not(.line-top-bottom) {
-    stroke-dasharray: ${(p) => (p.$open ? '20 300' : 'none')};
-    stroke-dashoffset: ${(p) => (p.$open ? '-32.42px' : '0')};
+  .line-middle {
+    opacity: ${(p) => (p.$open ? 0 : 1)};
+    transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 `;
