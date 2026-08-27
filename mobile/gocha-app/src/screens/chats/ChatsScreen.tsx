@@ -273,10 +273,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 8,
   },
   headerActions: { flexDirection: 'row', gap: 8 },
-  searchWrap: { paddingHorizontal: 16, paddingBottom: 4 },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 8 },
   list: { paddingBottom: 8 },
   bulkBar: {
     flexDirection: 'row',
