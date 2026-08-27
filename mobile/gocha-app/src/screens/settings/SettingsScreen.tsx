@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { SectionLabel, SettingsToggleRow } from '../../components/app';
+import { ProfileAvatar, SectionLabel, SettingsToggleRow } from '../../components/app';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { SettingsStackParamList } from '../../navigation/types';
-import { brandLogoSource } from '../../branding/logo';
 import { useAuth } from '../../context/AuthContext';
 import { useGochaTheme } from '../../theme';
 
@@ -44,16 +43,13 @@ export function SettingsScreen() {
             borderRadius: theme.radii.card,
           },
         ]}>
-        <Image
-          accessibilityLabel="Profile avatar"
-          source={user?.avatarUrl ? { uri: user.avatarUrl } : brandLogoSource}
-          style={[
-            styles.profileAvatar,
-            {
-              borderRadius: theme.radii.avatar,
-              backgroundColor: theme.colors.muted,
-            },
-          ]}
+        <ProfileAvatar
+          avatarUrl={user?.avatarUrl}
+          displayName={user?.chatDisplayName ?? user?.displayName}
+          email={user?.email}
+          userId={user?.id}
+          size={56}
+          style={styles.profileAvatar}
         />
         <View style={{ flex: 1 }}>
           <Text
@@ -335,7 +331,6 @@ const styles = StyleSheet.create({
   profileAvatar: {
     width: 56,
     height: 56,
-    resizeMode: 'contain',
   },
   card: {
     paddingHorizontal: 14,

@@ -21,7 +21,7 @@ class ProfileController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('activeBusinessListing');
+        $user = $this->ensureAvatar($request->user())->load('activeBusinessListing');
 
         return response()->json([
             'user' => $user->toAuthPayload(),
@@ -56,8 +56,10 @@ class ProfileController extends Controller
             $this->businesses->attachContactPhone($user, $validated['phone']);
         }
 
+        $user = $this->ensureAvatar($user)->fresh()->load('activeBusinessListing');
+
         return response()->json([
-            'user' => $user->fresh()->load('activeBusinessListing')->toAuthPayload(),
+            'user' => $user->toAuthPayload(),
         ]);
     }
 
@@ -191,5 +193,15 @@ class ProfileController extends Controller
         return response()->json([
             'results' => $results,
         ]);
+    }
+
+    private function ensureAvatar(User $user): User
+    {
+        if (! $user->avatar_path) {
+            $this->avatars->assignDefault($user);
+            $user = $user->fresh();
+        }
+
+        return $user;
     }
 }

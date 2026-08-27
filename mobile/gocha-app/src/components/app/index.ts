@@ -1,5 +1,6 @@
 export { ScreenContainer, ScreenBody } from './ScreenContainer';
 export { Avatar } from './Avatar';
+export { ProfileAvatar } from './ProfileAvatar';
 export { SearchField } from './SearchField';
 export { IconButton } from './IconButton';
 export { SectionLabel } from './SectionLabel';

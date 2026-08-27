@@ -11,7 +11,7 @@ import {
 
 import { ApiError } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
-import { SettingsToggleRow } from '../../components/app/SettingsToggleRow';
+import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
@@ -119,16 +119,17 @@ export function OnboardingScreen() {
           </BrandText>
 
           <Pressable onPress={pickAvatar} style={styles.avatarRow}>
-            {avatarPreview ? (
+            {pendingAvatar && avatarPreview ? (
               <Image source={{ uri: avatarPreview }} style={styles.avatar} />
             ) : (
-              <View
-                style={[
-                  styles.avatar,
-                  { backgroundColor: theme.colors.muted, alignItems: 'center', justifyContent: 'center' },
-                ]}>
-                <BrandText variant="label">Avatar</BrandText>
-              </View>
+              <ProfileAvatar
+                avatarUrl={user?.avatarUrl}
+                displayName={displayName || user?.displayName}
+                email={user?.email}
+                userId={user?.id}
+                size={96}
+                style={styles.avatar}
+              />
             )}
             <BrandText style={{ color: theme.colors.primary }}>Add avatar (optional)</BrandText>
           </Pressable>
