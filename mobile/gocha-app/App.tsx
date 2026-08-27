@@ -66,7 +66,7 @@ function AppShell() {
 function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider initialMode="dark">
+      <ThemeProvider>
         <AccountsProvider>
           <AuthProvider>
             <ChatProvider>

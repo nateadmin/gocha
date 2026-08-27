@@ -1,6 +1,8 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -12,6 +14,11 @@ import {
   type GochaTheme,
   type ThemeMode,
 } from './tokens';
+import {
+  applyWebThemeShell,
+  readStoredThemeMode,
+  writeStoredThemeMode,
+} from './themeStore';
 
 type ThemeContextValue = {
   theme: GochaTheme;
@@ -24,12 +31,33 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({
   children,
-  initialMode = 'dark',
+  initialMode,
 }: {
   children: ReactNode;
   initialMode?: ThemeMode;
 }) {
-  const [mode, setMode] = useState<ThemeMode>(initialMode);
+  const [mode, setModeState] = useState<ThemeMode>(
+    () => initialMode ?? readStoredThemeMode(),
+  );
+
+  const setMode = useCallback((next: ThemeMode) => {
+    setModeState(next);
+    writeStoredThemeMode(next);
+    applyWebThemeShell(next);
+  }, []);
+
+  const toggleMode = useCallback(() => {
+    setModeState((current) => {
+      const next = current === 'dark' ? 'light' : 'dark';
+      writeStoredThemeMode(next);
+      applyWebThemeShell(next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    applyWebThemeShell(mode);
+  }, [mode]);
 
   const value = useMemo<ThemeContextValue>(() => {
     const theme = mode === 'dark' ? darkTheme : lightTheme;
@@ -37,9 +65,9 @@ export function ThemeProvider({
       theme,
       mode,
       setMode,
-      toggleMode: () => setMode((current) => (current === 'dark' ? 'light' : 'dark')),
+      toggleMode,
     };
-  }, [mode]);
+  }, [mode, setMode, toggleMode]);
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

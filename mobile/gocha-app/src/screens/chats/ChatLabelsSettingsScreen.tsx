@@ -8,7 +8,38 @@ import { SettingsToggleRow } from '../../components/app';
 import { useChat } from '../../chat/ChatContext';
 import { useGochaTheme } from '../../theme';
 
-const LABEL_COLORS = ['#1B00D8', '#00b8ff', '#ff0055', '#00ff9f', '#f7ff00'];
+const LABEL_COLORS = ['#1B00D8', '#00b8ff', '#ff0055', '#00ff9f', '#f7ff00', '#ff8800', '#9b59b6'];
+
+function LabelColorPicker({
+  colors,
+  selected,
+  onSelect,
+}: {
+  colors: string[];
+  selected: string;
+  onSelect: (color: string) => void;
+}) {
+  const { theme } = useGochaTheme();
+
+  return (
+    <View style={styles.colorRow}>
+      {colors.map((color) => (
+        <Pressable
+          key={color}
+          onPress={() => onSelect(color)}
+          style={[
+            styles.colorSwatch,
+            { backgroundColor: color },
+            selected === color && {
+              borderColor: theme.colors.primary,
+              borderWidth: 2,
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
 
 export function ChatLabelsSettingsScreen() {
   const navigation = useNavigation();
@@ -18,6 +49,7 @@ export function ChatLabelsSettingsScreen() {
     preferences,
     setLabelsEnabled,
     createLabel,
+    updateLabel,
     deleteLabel,
     setSwipeRight,
     setSwipeLeft,
@@ -25,6 +57,30 @@ export function ChatLabelsSettingsScreen() {
     setChatLockPin,
   } = useChat();
   const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState(LABEL_COLORS[0]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState(LABEL_COLORS[0]);
+
+  function startEditing(labelId: string) {
+    const label = labels.find((item) => item.id === labelId);
+    if (!label) return;
+    setEditingId(labelId);
+    setEditName(label.name);
+    setEditColor(label.color);
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setEditName('');
+    setEditColor(LABEL_COLORS[0]);
+  }
+
+  function saveEditing() {
+    if (!editingId || !editName.trim()) return;
+    updateLabel(editingId, { name: editName.trim(), color: editColor });
+    cancelEditing();
+  }
 
   return (
     <ScrollView
@@ -66,21 +122,57 @@ export function ChatLabelsSettingsScreen() {
             <View
               key={label.id}
               style={[
-                styles.labelRow,
-                { borderColor: theme.colors.border },
+                styles.labelCard,
+                {
+                  backgroundColor: theme.colors.card,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.radii.card,
+                },
               ]}>
-              <View
-                style={[
-                  styles.dot,
-                  { backgroundColor: label.color, borderRadius: theme.radii.pill },
-                ]}
-              />
-              <Text style={{ color: theme.colors.cardForeground, flex: 1 }}>
-                {label.name}
-              </Text>
-              <Pressable onPress={() => deleteLabel(label.id)}>
-                <Text style={{ color: theme.colors.destructive }}>Delete</Text>
-              </Pressable>
+              {editingId === label.id ? (
+                <>
+                  <TextInput
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Label name"
+                    placeholderTextColor={theme.colors.mutedForeground}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.colors.background,
+                        borderColor: theme.colors.border,
+                        color: theme.colors.cardForeground,
+                        borderRadius: theme.radii.card,
+                      },
+                    ]}
+                  />
+                  <LabelColorPicker colors={LABEL_COLORS} selected={editColor} onSelect={setEditColor} />
+                  <View style={styles.editActions}>
+                    <Pressable onPress={cancelEditing}>
+                      <Text style={{ color: theme.colors.mutedForeground }}>Cancel</Text>
+                    </Pressable>
+                    <Pressable onPress={saveEditing}>
+                      <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Save</Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.labelRow}>
+                  <View
+                    style={[
+                      styles.dot,
+                      { backgroundColor: label.color, borderRadius: theme.radii.pill },
+                    ]}
+                  />
+                  <Text style={{ color: theme.colors.cardForeground, flex: 1 }}>{label.name}</Text>
+                  <Pressable onPress={() => startEditing(label.id)} style={styles.actionButton}>
+                    <Text style={{ color: theme.colors.primary }}>Edit</Text>
+                  </Pressable>
+                  <Pressable onPress={() => deleteLabel(label.id)} style={styles.actionButton}>
+                    <Text style={{ color: theme.colors.destructive }}>Delete</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           ))}
           <TextInput
@@ -98,12 +190,14 @@ export function ChatLabelsSettingsScreen() {
               },
             ]}
           />
+          <LabelColorPicker colors={LABEL_COLORS} selected={newColor} onSelect={setNewColor} />
           <CtaButton
             label="Add label"
             onPress={() => {
               if (!newName.trim()) return;
-              createLabel(newName.trim(), LABEL_COLORS[labels.length % LABEL_COLORS.length]);
+              createLabel(newName.trim(), newColor);
               setNewName('');
+              setNewColor(LABEL_COLORS[(labels.length + 1) % LABEL_COLORS.length]);
             }}
           />
         </>
@@ -138,15 +232,40 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
   back: { marginBottom: 8 },
   card: { borderWidth: 1, paddingHorizontal: 12, marginBottom: 16 },
+  labelCard: {
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 10,
+    gap: 10,
+  },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   dot: { width: 12, height: 12 },
-  input: { borderWidth: 1, padding: 12, marginBottom: 12, marginTop: 8 },
+  input: { borderWidth: 1, padding: 12, marginBottom: 4 },
+  colorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+  },
+  colorSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 16,
+  },
+  actionButton: {
+    paddingHorizontal: 4,
+  },
   section: {
     marginTop: 20,
     marginBottom: 8,

@@ -12,7 +12,7 @@ import { useGochaTheme } from '../../theme';
 
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
-  const { theme } = useGochaTheme();
+  const { theme, mode, setMode } = useGochaTheme();
   const { user, signOut } = useAuth();
   const [readReceipts, setReadReceipts] = useState(true);
   const [lastSeen, setLastSeen] = useState(true);
@@ -296,6 +296,24 @@ export function SettingsScreen() {
           Collective membership, negotiated discounts, and app linkage ship in Build 3.
           Phase 2 may start as a standalone website first.
         </Text>
+      </View>
+
+      <SectionLabel>APPEARANCE</SectionLabel>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <SettingsToggleRow
+          icon={mode === 'light' ? 'sunny-outline' : 'moon-outline'}
+          label="Light mode"
+          value={mode === 'light'}
+          onValueChange={(enabled) => setMode(enabled ? 'light' : 'dark')}
+        />
       </View>
     </ScrollView>
   );

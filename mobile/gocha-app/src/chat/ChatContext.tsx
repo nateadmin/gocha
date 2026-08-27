@@ -73,6 +73,7 @@ type ChatContextValue = {
   addLabelToChat: (chatId: string, labelId: string) => void;
   removeLabelFromChat: (chatId: string, labelId: string) => void;
   createLabel: (name: string, color: string) => string;
+  updateLabel: (labelId: string, updates: { name?: string; color?: string }) => void;
   deleteLabel: (labelId: string) => void;
   setLabelsEnabled: (enabled: boolean) => void;
   setListsEnabled: (enabled: boolean) => void;
@@ -361,6 +362,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const id = `label-${Date.now()}`;
     setLabels((prev) => [...prev, { id, name, color }]);
     return id;
+  }, []);
+
+  const updateLabel = useCallback((labelId: string, updates: { name?: string; color?: string }) => {
+    setLabels((prev) =>
+      prev.map((label) =>
+        label.id === labelId
+          ? {
+              ...label,
+              ...(updates.name !== undefined ? { name: updates.name.trim() || label.name } : {}),
+              ...(updates.color !== undefined ? { color: updates.color } : {}),
+            }
+          : label,
+      ),
+    );
   }, []);
 
   const deleteLabel = useCallback((labelId: string) => {
@@ -700,6 +715,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       addLabelToChat,
       removeLabelFromChat,
       createLabel,
+      updateLabel,
       deleteLabel,
       setLabelsEnabled,
       setListsEnabled,
@@ -773,6 +789,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       addLabelToChat,
       removeLabelFromChat,
       createLabel,
+      updateLabel,
       deleteLabel,
       setLabelsEnabled,
       setListsEnabled,
