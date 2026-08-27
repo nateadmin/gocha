@@ -14,6 +14,23 @@ if ! command -v infisical >/dev/null 2>&1; then
   exit 1
 fi
 
+# Cloud shells sometimes inject a placeholder INFISICAL_TOKEN that breaks export.
+if [[ "${INFISICAL_TOKEN:-}" == *"You can use this access token"* ]]; then
+  unset INFISICAL_TOKEN
+fi
+
+if [[ -z "${INFISICAL_TOKEN:-}" && -n "${INFISICAL_CLIENT_ID:-}" && -n "${INFISICAL_CLIENT_SECRET:-}" ]]; then
+  INFISICAL_TOKEN="$(
+    infisical login \
+      --method=universal-auth \
+      --client-id="$INFISICAL_CLIENT_ID" \
+      --client-secret="$INFISICAL_CLIENT_SECRET" \
+      --plain \
+      --silent
+  )"
+  export INFISICAL_TOKEN
+fi
+
 attempt=1
 while [[ "$attempt" -le "$MAX_ATTEMPTS" ]]; do
   if infisical export \
