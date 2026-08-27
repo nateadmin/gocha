@@ -16,6 +16,7 @@ import {
   getActiveDeviceToken,
   logout as apiLogout,
   requestOtp,
+  updateProfile as apiUpdateProfile,
   uploadAvatar,
   verifyOtp,
   type AuthUser,
@@ -37,6 +38,13 @@ type AuthContextValue = {
   finishOnboarding: (input: {
     displayName: string;
     username?: string;
+    status?: string;
+    bio?: string;
+    phone?: string;
+    discoverable: boolean;
+  }) => Promise<void>;
+  updateProfile: (input: {
+    displayName: string;
     status?: string;
     bio?: string;
     phone?: string;
@@ -124,12 +132,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const finishOnboarding = useCallback(
     async (input: {
       displayName: string;
+      username?: string;
       status?: string;
       bio?: string;
       phone?: string;
       discoverable: boolean;
     }) => {
       const nextUser = await completeOnboarding(input);
+      setUser(nextUser);
+    },
+    [],
+  );
+
+  const updateProfile = useCallback(
+    async (input: {
+      displayName: string;
+      status?: string;
+      bio?: string;
+      phone?: string;
+      discoverable: boolean;
+    }) => {
+      const nextUser = await apiUpdateProfile(input);
       setUser(nextUser);
     },
     [],
@@ -162,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyWithOtp,
       requestAuthCode,
       finishOnboarding,
+      updateProfile,
       uploadProfileAvatar,
       signOut,
     }),
@@ -174,6 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyWithOtp,
       requestAuthCode,
       finishOnboarding,
+      updateProfile,
       uploadProfileAvatar,
       signOut,
     ],

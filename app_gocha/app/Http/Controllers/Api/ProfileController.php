@@ -30,16 +30,24 @@ class ProfileController extends Controller
 
     public function completeOnboarding(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'displayName' => ['required', 'string', 'max:80'],
-            'username' => ['nullable', 'string', 'min:3', 'max:30', 'regex:/^[a-z0-9_]+$/', Rule::unique('users', 'username')],
+            'username' => [
+                'nullable',
+                'string',
+                'min:3',
+                'max:30',
+                'regex:/^[a-z0-9_]+$/',
+                Rule::unique('users', 'username')->ignore($user->id),
+            ],
             'status' => ['nullable', 'string', 'max:160'],
             'bio' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:32'],
             'discoverable' => ['sometimes', 'boolean'],
         ]);
 
-        $user = $request->user();
         $user->forceFill([
             'display_name' => $validated['displayName'],
             'name' => $validated['displayName'],
@@ -50,6 +58,39 @@ class ProfileController extends Controller
             'bio' => $validated['bio'] ?? null,
             'discoverable' => $validated['discoverable'] ?? false,
             'onboarding_completed_at' => now(),
+        ])->save();
+
+        if (! empty($validated['phone'])) {
+            $this->businesses->attachContactPhone($user, $validated['phone']);
+        }
+
+        $user = $this->ensureAvatar($user)->fresh()->load('activeBusinessListing');
+
+        return response()->json([
+            'user' => $user->toAuthPayload(),
+        ]);
+    }
+
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'displayName' => ['required', 'string', 'max:80'],
+            'status' => ['nullable', 'string', 'max:160'],
+            'bio' => ['nullable', 'string', 'max:500'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'discoverable' => ['sometimes', 'boolean'],
+        ]);
+
+        $user->forceFill([
+            'display_name' => $validated['displayName'],
+            'name' => $validated['displayName'],
+            'status' => $validated['status'] ?? null,
+            'bio' => $validated['bio'] ?? null,
+            'discoverable' => array_key_exists('discoverable', $validated)
+                ? $validated['discoverable']
+                : $user->discoverable,
         ])->save();
 
         if (! empty($validated['phone'])) {

@@ -212,6 +212,20 @@ export async function completeOnboarding(input: {
   return payload.user;
 }
 
+export async function updateProfile(input: {
+  displayName: string;
+  status?: string;
+  bio?: string;
+  phone?: string;
+  discoverable: boolean;
+}): Promise<AuthUser> {
+  const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.profileUpdate, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return payload.user;
+}
+
 export async function updateProfileContact(input: {
   email?: string;
   phone?: string;

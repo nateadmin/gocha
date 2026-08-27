@@ -28,6 +28,7 @@ export type DiscoverStackParamList = {
 
 export type SettingsStackParamList = {
   SettingsHome: undefined;
+  ProfileSettings: undefined;
   Accounts: undefined;
   ProfileMode: undefined;
   SubmitBusiness: undefined;

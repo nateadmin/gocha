@@ -198,6 +198,26 @@ class AuthOtpTest extends TestCase
             ->assertJsonPath('user.needsOnboarding', false);
     }
 
+    public function test_profile_update_edits_existing_user(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'edit@example.com',
+            'display_name' => 'Old Name',
+            'onboarding_completed_at' => now(),
+        ]);
+
+        $this->actingAs($user)->postJson('/api/profile/update', [
+            'displayName' => 'Nate Mandel',
+            'status' => 'Emuna is Everything',
+            'bio' => 'Updated bio',
+            'discoverable' => false,
+        ])
+            ->assertOk()
+            ->assertJsonPath('user.displayName', 'Nate Mandel')
+            ->assertJsonPath('user.status', 'Emuna is Everything')
+            ->assertJsonPath('user.discoverable', false);
+    }
+
     public function test_avatar_upload_stores_image(): void
     {
         $user = User::factory()->create([

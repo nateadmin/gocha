@@ -50,6 +50,7 @@ Route::prefix('auth/otp')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
     Route::post('/profile/onboarding', [ProfileController::class, 'completeOnboarding']);
+    Route::post('/profile/update', [ProfileController::class, 'updateProfile']);
     Route::post('/profile/contact', [ProfileController::class, 'updateContact']);
     Route::post('/profile/mode', [ProfileController::class, 'updateProfileMode']);
     Route::post('/profile/username', [ProfileController::class, 'updateUsername']);

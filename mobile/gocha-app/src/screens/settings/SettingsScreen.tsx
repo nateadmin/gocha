@@ -35,6 +35,7 @@ export function SettingsScreen() {
       </Text>
 
       <Pressable
+        onPress={() => navigation.navigate('ProfileSettings')}
         style={[
           styles.profileCard,
           {

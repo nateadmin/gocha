@@ -15,6 +15,7 @@ export const API_PATHS = {
   logout: '/api/auth/logout',
   me: '/api/me',
   onboarding: '/api/profile/onboarding',
+  profileUpdate: '/api/profile/update',
   contact: '/api/profile/contact',
   profileMode: '/api/profile/mode',
   avatar: '/api/profile/avatar',

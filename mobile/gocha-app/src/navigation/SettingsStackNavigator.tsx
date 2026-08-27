@@ -4,6 +4,7 @@ import { AdminReviewScreen } from '../screens/settings/AdminReviewScreen';
 import { AccountsScreen } from '../screens/settings/AccountsScreen';
 import { MyBusinessListingsScreen } from '../screens/settings/MyBusinessListingsScreen';
 import { ProfileModeScreen } from '../screens/settings/ProfileModeScreen';
+import { ProfileSettingsScreen } from '../screens/settings/ProfileSettingsScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { SubmitBusinessScreen } from '../screens/settings/SubmitBusinessScreen';
 import { UsernameSettingsScreen } from '../screens/settings/UsernameSettingsScreen';
@@ -20,6 +21,7 @@ export function SettingsStackNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="SettingsHome" component={SettingsScreen} />
+      <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
       <Stack.Screen name="Accounts" component={AccountsScreen} />
       <Stack.Screen name="ProfileMode" component={ProfileModeScreen} />
       <Stack.Screen name="SubmitBusiness" component={SubmitBusinessScreen} />
