@@ -34,6 +34,8 @@ type ChatsNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<RootTabParamList>
 >;
 
+const SEARCH_VERTICAL_PADDING = 10;
+
 export function ChatsScreen() {
   const navigation = useNavigation<ChatsNavigationProp>();
   const { theme } = useGochaTheme();
@@ -194,16 +196,18 @@ export function ChatsScreen() {
           />
         </View>
 
-        <SearchField
-          ref={searchRef}
-          value={query}
-          onChangeText={setQuery}
-          placeholder={
-            composeOpen
-              ? 'Search name, email, or phone'
-              : 'Search conversations'
-          }
-        />
+        <View style={styles.searchBlock}>
+          <SearchField
+            ref={searchRef}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={
+              composeOpen
+                ? 'Search name, email, or phone'
+                : 'Search conversations'
+            }
+          />
+        </View>
       </View>
 
       {chat.activeFilter === 'archived' ? (
@@ -310,13 +314,15 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   topSection: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 12,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 40,
+  },
+  searchBlock: {
+    paddingVertical: SEARCH_VERTICAL_PADDING,
   },
   archiveBack: {
     flexDirection: 'row',

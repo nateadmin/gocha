@@ -49,12 +49,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    minHeight: 44,
+    height: 44,
     gap: 8,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 8,
+    lineHeight: 20,
+    paddingVertical: 0,
+    margin: 0,
   },
 });
