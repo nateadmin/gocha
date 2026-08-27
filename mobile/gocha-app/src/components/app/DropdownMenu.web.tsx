@@ -8,11 +8,18 @@ import type { DropdownMenuItem } from './DropdownMenu';
 type Props = {
   visible: boolean;
   anchor?: 'right' | 'left';
+  menuTop?: number;
   items: DropdownMenuItem[];
   onClose: () => void;
 };
 
-export function DropdownMenu({ visible, anchor = 'right', items, onClose }: Props) {
+export function DropdownMenu({
+  visible,
+  anchor = 'right',
+  menuTop = 72,
+  items,
+  onClose,
+}: Props) {
   const { theme } = useGochaTheme();
 
   if (!visible || typeof document === 'undefined') {
@@ -21,9 +28,17 @@ export function DropdownMenu({ visible, anchor = 'right', items, onClose }: Prop
 
   return createPortal(
     <>
-      <Backdrop aria-hidden onClick={onClose} />
+      <Backdrop
+        aria-hidden
+        onClick={onClose}
+        style={{ backgroundColor: theme.overlayMenu.backdropColor }}
+      />
       <MenuPanel
         $anchor={anchor}
+        $menuTop={menuTop}
+        $maxHeight={theme.overlayMenu.panelMaxHeight}
+        $minWidth={theme.overlayMenu.panelMinWidth}
+        $zIndex={theme.overlayMenu.zIndex}
         role="menu"
         style={{
           backgroundColor: theme.colors.card,
@@ -63,20 +78,25 @@ export function DropdownMenu({ visible, anchor = 'right', items, onClose }: Prop
 }
 
 const Backdrop = styled.div`
-  background: rgba(0, 0, 0, 0.15);
   inset: 0;
   position: fixed;
-  z-index: 1000;
 `;
 
-const MenuPanel = styled.div<{ $anchor: 'left' | 'right' }>`
+const MenuPanel = styled.div<{
+  $anchor: 'left' | 'right';
+  $menuTop: number;
+  $minWidth: number;
+  $maxHeight: number;
+  $zIndex: number;
+}>`
   border: 1px solid;
   border-radius: 14px;
-  min-width: 220px;
-  overflow: hidden;
+  max-height: ${(p) => p.$maxHeight}px;
+  min-width: ${(p) => p.$minWidth}px;
+  overflow-y: auto;
   position: fixed;
-  top: 72px;
-  z-index: 1000;
+  top: ${(p) => p.$menuTop}px;
+  z-index: ${(p) => p.$zIndex};
   ${(p) => (p.$anchor === 'right' ? 'right: 16px;' : 'left: 16px;')}
 `;
 
@@ -95,3 +115,5 @@ const MenuButton = styled.button`
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 `;
+
+export type { DropdownMenuItem };

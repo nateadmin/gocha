@@ -5,6 +5,7 @@ import {
   darkColors,
   lightColors,
   neonShadowStyle,
+  overlayMenu,
   PRIMARY,
   radii,
   spacing,
@@ -19,6 +20,7 @@ export type {
   GochaTheme,
   ThemeColors,
   ThemeMode,
+  ThemeOverlayMenu,
   ThemeRadii,
   ThemeShadow,
   ThemeSpacing,
@@ -29,6 +31,7 @@ export {
   darkColors,
   lightColors,
   neonShadowStyle,
+  overlayMenu,
   spacing,
 } from './palette';
 
@@ -58,6 +61,7 @@ export const lightTheme: GochaTheme = {
   },
   typography: webTypography,
   spacing,
+  overlayMenu,
 };
 
 export const darkTheme: GochaTheme = {
@@ -75,6 +79,7 @@ export const darkTheme: GochaTheme = {
   },
   typography: webTypography,
   spacing,
+  overlayMenu,
 };
 
 export function themeForMode(mode: ThemeMode): GochaTheme {

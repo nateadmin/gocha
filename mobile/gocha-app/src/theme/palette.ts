@@ -64,6 +64,15 @@ export interface ThemeRadii {
   avatar: number;
 }
 
+/** Dropdown / header overflow menus (not bottom sheets). */
+export interface ThemeOverlayMenu {
+  backdropColor: string;
+  panelMinWidth: number;
+  panelMaxHeight: number;
+  zIndex: number;
+  headerZIndex: number;
+}
+
 export interface GochaTheme {
   mode: ThemeMode;
   colors: ThemeColors;
@@ -72,6 +81,7 @@ export interface GochaTheme {
   shadow: ThemeShadow;
   typography: ThemeTypography;
   spacing: ThemeSpacing;
+  overlayMenu: ThemeOverlayMenu;
 }
 
 export const PRIMARY = '#1B00D8';
@@ -142,6 +152,14 @@ export const radii: ThemeRadii = {
   card: 14,
   pill: 999,
   avatar: 999,
+};
+
+export const overlayMenu: ThemeOverlayMenu = {
+  backdropColor: 'rgba(0,0,0,0.15)',
+  panelMinWidth: 220,
+  panelMaxHeight: 420,
+  zIndex: 1000,
+  headerZIndex: 1001,
 };
 
 export {

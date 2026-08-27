@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar } from '../../components/app';
+import { HeaderOverflowMenu, type DropdownMenuItem } from '../../components/app';
 import { CtaButton } from '../../components/brand';
 import { ActionSheet, ChatComposer, MessageBubble } from '../../components/chat';
 import type { ActionSheetItem } from '../../components/chat/ActionSheet';
@@ -80,35 +81,70 @@ export function ChatDetailScreen() {
     setReplyTo(null);
   }
 
-  const chatMenuItems: ActionSheetItem[] = [
+  const headerMenuTop = insets.top + 56;
+
+  const chatMenuItems: DropdownMenuItem[] = [
     {
       id: 'search',
       label: 'Search in chat',
+      icon: 'search-outline',
       onPress: () => setSearchOpen(true),
     },
     {
       id: 'clear',
       label: 'Clear chat',
+      icon: 'trash-outline',
       onPress: () => chatApi.clearChat(route.params.chatId),
     },
     ...(chat.isOrderAssistant
       ? []
       : [
           chat.pinned
-            ? { id: 'unpin', label: 'Unpin', onPress: () => chatApi.unpinChat(chat.id) }
-            : { id: 'pin', label: 'Pin', onPress: () => chatApi.pinChat(chat.id) },
+            ? {
+                id: 'unpin',
+                label: 'Unpin',
+                icon: 'pin-outline',
+                onPress: () => chatApi.unpinChat(chat.id),
+              }
+            : {
+                id: 'pin',
+                label: 'Pin',
+                icon: 'pin-outline',
+                onPress: () => chatApi.pinChat(chat.id),
+              },
         ]),
     chat.muted
-      ? { id: 'unmute', label: 'Unmute', onPress: () => chatApi.unmuteChat(chat.id) }
-      : { id: 'mute', label: 'Mute 8 hours', onPress: () => chatApi.muteChat(chat.id, '8h') },
+      ? {
+          id: 'unmute',
+          label: 'Unmute',
+          icon: 'volume-high-outline',
+          onPress: () => chatApi.unmuteChat(chat.id),
+        }
+      : {
+          id: 'mute',
+          label: 'Mute 8 hours',
+          icon: 'volume-mute-outline',
+          onPress: () => chatApi.muteChat(chat.id, '8h'),
+        },
     chat.isSecret
-      ? { id: 'regular', label: 'Switch to regular chat', onPress: () => chatApi.toggleSecretChat(chat.id) }
-      : { id: 'secret', label: 'Start secret chat', onPress: () => chatApi.toggleSecretChat(chat.id) },
+      ? {
+          id: 'regular',
+          label: 'Switch to regular chat',
+          icon: 'lock-open-outline',
+          onPress: () => chatApi.toggleSecretChat(chat.id),
+        }
+      : {
+          id: 'secret',
+          label: 'Start secret chat',
+          icon: 'lock-closed-outline',
+          onPress: () => chatApi.toggleSecretChat(chat.id),
+        },
     {
       id: 'disappear',
       label: chat.disappearingTimerSec
         ? 'Turn off disappearing messages'
         : 'Disappearing messages (1 min)',
+      icon: 'timer-outline',
       onPress: () =>
         chatApi.setDisappearingTimer(
           chat.id,
@@ -118,6 +154,7 @@ export function ChatDetailScreen() {
     {
       id: 'block',
       label: chat.blocked ? 'Unblock' : 'Block',
+      icon: 'ban-outline',
       onPress: () =>
         chat.blocked ? chatApi.unblockChat(chat.id) : chatApi.blockChat(chat.id),
     },
@@ -127,6 +164,7 @@ export function ChatDetailScreen() {
           {
             id: 'delete',
             label: 'Delete chat',
+            icon: 'trash-outline',
             destructive: true,
             onPress: () => {
               chatApi.deleteChat(chat.id);
@@ -187,6 +225,9 @@ export function ChatDetailScreen() {
             borderBottomColor: theme.colors.border,
             paddingTop: insets.top + 6,
           },
+          menuOpen
+            ? { position: 'relative', zIndex: theme.overlayMenu.headerZIndex }
+            : null,
         ]}>
         <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.colors.primary} />
@@ -217,13 +258,15 @@ export function ChatDetailScreen() {
           <Pressable onPress={() => setSearchOpen((value) => !value)} hitSlop={8}>
             <Ionicons name="search" size={22} color={theme.colors.primary} />
           </Pressable>
-          <Pressable onPress={() => setMenuOpen(true)} hitSlop={8}>
-            <Ionicons
-              name="ellipsis-vertical"
-              size={22}
-              color={theme.colors.primary}
-            />
-          </Pressable>
+          <HeaderOverflowMenu
+            open={menuOpen}
+            menuTop={headerMenuTop}
+            items={chatMenuItems}
+            onPress={() => setMenuOpen((value) => !value)}
+            onClose={() => setMenuOpen(false)}
+            accessibilityLabel="Chat options"
+            strokeColor={theme.colors.primary}
+          />
         </View>
       </View>
 
@@ -355,12 +398,6 @@ export function ChatDetailScreen() {
         onCancelReply={() => setReplyTo(null)}
       />
 
-      <ActionSheet
-        visible={menuOpen}
-        title="Chat options"
-        items={chatMenuItems}
-        onClose={() => setMenuOpen(false)}
-      />
       <ActionSheet
         visible={messageMenu !== null}
         title="Message"

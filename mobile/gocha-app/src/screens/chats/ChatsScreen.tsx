@@ -10,9 +10,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AccountLogoButton,
   AccountSwitcherMenu,
-  AnimatedHamburgerMenu,
+  HeaderOverflowMenu,
   ConfirmDialog,
-  DropdownMenu,
   SearchField,
   type DropdownMenuItem,
 } from '../../components/app';
@@ -182,7 +181,9 @@ export function ChatsScreen() {
         style={[
           styles.topSection,
           { paddingTop: insets.top + 12 },
-          headerMenuOpen || accountMenuOpen ? styles.topSectionAboveMenu : null,
+          headerMenuOpen || accountMenuOpen
+            ? { position: 'relative', zIndex: theme.overlayMenu.headerZIndex }
+            : null,
         ]}>
         <View style={styles.header}>
           {chat.activeFilter === 'archived' ? (
@@ -193,11 +194,13 @@ export function ChatsScreen() {
           ) : (
             <AccountLogoButton onPress={() => setAccountMenuOpen(true)} />
           )}
-          <AnimatedHamburgerMenu
+          <HeaderOverflowMenu
             open={headerMenuOpen}
+            menuTop={accountMenuTop}
+            items={headerMenuItems}
             onPress={() => setHeaderMenuOpen((value) => !value)}
+            onClose={() => setHeaderMenuOpen(false)}
             strokeColor={theme.colors.primary}
-            size={40}
           />
         </View>
 
@@ -260,12 +263,6 @@ export function ChatsScreen() {
         )}
       />
 
-      <DropdownMenu
-        visible={headerMenuOpen}
-        items={headerMenuItems}
-        onClose={() => setHeaderMenuOpen(false)}
-      />
-
       <AccountSwitcherMenu
         visible={accountMenuOpen}
         accounts={switcherAccounts}
@@ -319,10 +316,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   topSection: {
     paddingHorizontal: 16,
-  },
-  topSectionAboveMenu: {
-    position: 'relative',
-    zIndex: 1001,
   },
   header: {
     flexDirection: 'row',

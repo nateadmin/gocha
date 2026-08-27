@@ -9,6 +9,7 @@ export { UniversalLoader } from './UniversalLoader';
 export { LoadingShell } from './LoadingShell';
 export { DropdownMenu } from './DropdownMenu';
 export type { DropdownMenuItem } from './DropdownMenu';
+export { HeaderOverflowMenu } from './HeaderOverflowMenu';
 export { AnimatedHamburgerMenu } from './AnimatedHamburgerMenu';
 export { AccountLogoButton } from './AccountLogoButton';
 export { AccountSwitcherMenu } from './AccountSwitcherMenu';

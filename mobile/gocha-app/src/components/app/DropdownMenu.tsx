@@ -1,4 +1,4 @@
-import { Modal, Pressable, Text, View, StyleSheet } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useGochaTheme } from '../../theme';
@@ -14,74 +14,92 @@ export type DropdownMenuItem = {
 type Props = {
   visible: boolean;
   anchor?: 'right' | 'left';
+  menuTop?: number;
   items: DropdownMenuItem[];
   onClose: () => void;
 };
 
-export function DropdownMenu({ visible, anchor = 'right', items, onClose }: Props) {
+export function DropdownMenu({
+  visible,
+  anchor = 'right',
+  menuTop = 72,
+  items,
+  onClose,
+}: Props) {
   const { theme } = useGochaTheme();
 
   if (!visible) return null;
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <View style={styles.overlay}>
+        <Pressable
+          style={[styles.backdrop, { backgroundColor: theme.overlayMenu.backdropColor }]}
+          onPress={onClose}
+          accessibilityLabel="Close menu"
+        />
         <View
           style={[
             styles.menu,
             anchor === 'right' ? styles.menuRight : styles.menuLeft,
             {
+              top: menuTop,
+              minWidth: theme.overlayMenu.panelMinWidth,
+              maxHeight: theme.overlayMenu.panelMaxHeight,
               backgroundColor: theme.colors.card,
               borderColor: theme.colors.border,
               shadowColor: theme.colors.primary,
+              zIndex: theme.overlayMenu.zIndex,
             },
           ]}>
-          {items.map((item, index) => (
-            <Pressable
-              key={item.id}
-              onPress={() => {
-                onClose();
-                item.onPress();
-              }}
-              style={[
-                styles.row,
-                index < items.length - 1 && {
-                  borderBottomWidth: StyleSheet.hairlineWidth,
-                  borderBottomColor: theme.colors.border,
-                },
-              ]}>
-              {item.icon ? (
-                <Ionicons
-                  name={item.icon as keyof typeof Ionicons.glyphMap}
-                  size={18}
-                  color={item.destructive ? theme.colors.destructive : theme.colors.primary}
-                />
-              ) : null}
-              <Text
-                style={{
-                  color: item.destructive ? theme.colors.destructive : theme.colors.cardForeground,
-                  fontFamily: theme.typography.sans,
-                  fontSize: 15,
-                }}>
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
+          <ScrollView bounces={false} keyboardShouldPersistTaps="handled">
+            {items.map((item, index) => (
+              <Pressable
+                key={item.id}
+                onPress={() => {
+                  onClose();
+                  item.onPress();
+                }}
+                style={[
+                  styles.row,
+                  index < items.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: theme.colors.border,
+                  },
+                ]}>
+                {item.icon ? (
+                  <Ionicons
+                    name={item.icon as keyof typeof Ionicons.glyphMap}
+                    size={18}
+                    color={item.destructive ? theme.colors.destructive : theme.colors.primary}
+                  />
+                ) : null}
+                <Text
+                  style={{
+                    color: item.destructive ? theme.colors.destructive : theme.colors.cardForeground,
+                    fontFamily: theme.typography.sans,
+                    fontSize: 15,
+                  }}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   menu: {
     position: 'absolute',
-    top: 72,
-    minWidth: 220,
     borderWidth: 1,
     borderRadius: 14,
     overflow: 'hidden',
