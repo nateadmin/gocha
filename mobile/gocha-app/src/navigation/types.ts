@@ -11,6 +11,10 @@ export type ChatsStackParamList = {
   ChatDetail: { chatId: string };
   ChatInfo: { chatId: string };
   ChatLock: { chatId: string };
+  CreateGroup: undefined;
+  GroupSettings: { groupId: number };
+  NewBroadcast: undefined;
+  BlockedChats: undefined;
   ChatListsSettings: undefined;
   ChatLabelsSettings: undefined;
   HiddenChats: undefined;
@@ -30,6 +34,8 @@ export type SettingsStackParamList = {
   MyBusinessListings: undefined;
   BusinessListingForm: { listingId?: number } | undefined;
   AdminReview: undefined;
+  UsernameSettings: undefined;
+  BlockedChats: undefined;
   ChatListsSettings: undefined;
   ChatLabelsSettings: undefined;
   HiddenChats: undefined;

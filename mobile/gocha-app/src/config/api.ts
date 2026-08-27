@@ -27,4 +27,9 @@ export const API_PATHS = {
   verificationUser: '/api/verifications/user',
   adminBusinessListings: '/api/admin/business-listings',
   adminVerifications: '/api/admin/verifications',
+  groupsDiscover: '/api/groups/discover',
+  groupsSearch: '/api/groups/search',
+  groupsMine: '/api/groups/mine',
+  groups: '/api/groups',
+  profileUsername: '/api/profile/username',
 } as const;

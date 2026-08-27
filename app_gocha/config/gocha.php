@@ -21,4 +21,12 @@ return [
     ],
 
     'google_places_api_key' => env('GOOGLE_PLACES_API_KEY'),
+
+    'ai' => [
+        'forbidden_characters' => ['—', '–'],
+        'style_rules' => [
+            'Do not use em dashes or en dashes as punctuation.',
+            'Use commas, periods, or colons instead.',
+        ],
+    ],
 ];

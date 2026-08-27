@@ -103,6 +103,50 @@ class AccountFoundationTest extends TestCase
             ->assertJsonPath('import.name', 'Neon Pizza');
     }
 
+    public function test_user_can_set_unique_username(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/profile/username', [
+            'username' => 'neon_user',
+        ])
+            ->assertOk()
+            ->assertJsonPath('user.username', 'neon_user');
+    }
+
+    public function test_public_group_with_location_appears_in_discover(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/groups', [
+            'name' => 'Shore Runners',
+            'privacy' => 'public',
+            'city' => 'Asbury Park',
+            'state' => 'NJ',
+        ])->assertCreated();
+
+        $this->getJson('/api/groups/discover')
+            ->assertOk()
+            ->assertJsonCount(1, 'groups')
+            ->assertJsonPath('groups.0.name', 'Shore Runners');
+    }
+
+    public function test_private_group_is_hidden_from_discover(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/groups', [
+            'name' => 'Secret Club',
+            'privacy' => 'private',
+            'city' => 'Asbury Park',
+            'state' => 'NJ',
+        ])->assertCreated();
+
+        $this->getJson('/api/groups/discover')
+            ->assertOk()
+            ->assertJsonCount(0, 'groups');
+    }
+
     public function test_admin_can_approve_business_listing(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

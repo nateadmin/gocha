@@ -49,6 +49,7 @@ export type ChatRecord = {
   isGroup: boolean;
   groupCount?: number;
   isBusiness: boolean;
+  isBroadcast?: boolean;
   isOrderAssistant?: boolean;
   isSecret: boolean;
   listIds: string[];

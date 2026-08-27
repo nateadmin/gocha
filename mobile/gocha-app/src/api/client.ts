@@ -18,6 +18,7 @@ export type AuthUser = {
   phone: string | null;
   primaryLoginChannel: string;
   displayName: string;
+  username: string | null;
   chatDisplayName: string;
   status: string | null;
   bio: string | null;
@@ -198,6 +199,7 @@ export async function logout(): Promise<void> {
 
 export async function completeOnboarding(input: {
   displayName: string;
+  username?: string;
   status?: string;
   bio?: string;
   phone?: string;
@@ -421,4 +423,71 @@ export async function fetchPendingBusinessListings(): Promise<OwnerBusinessListi
     `${API_PATHS.adminBusinessListings}?status=pending_review`,
   );
   return payload.listings;
+}
+
+export async function updateUsername(username: string): Promise<AuthUser> {
+  const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.profileUsername, {
+    method: 'POST',
+    body: JSON.stringify({ username }),
+  });
+  return payload.user;
+}
+
+export type CommunityGroupRecord = {
+  id: number;
+  name: string;
+  description: string | null;
+  privacy: 'public' | 'private';
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  avatarLabel: string | null;
+  avatarColor: string | null;
+  memberCount: number;
+  isPublic: boolean;
+  hasLocation: boolean;
+  ownerUserId: number;
+};
+
+export async function fetchDiscoverableGroups(): Promise<CommunityGroupRecord[]> {
+  const payload = await apiRequest<{ groups: CommunityGroupRecord[] }>(API_PATHS.groupsDiscover);
+  return payload.groups;
+}
+
+export async function fetchMyCommunityGroups(): Promise<CommunityGroupRecord[]> {
+  const payload = await apiRequest<{ groups: CommunityGroupRecord[] }>(API_PATHS.groupsMine);
+  return payload.groups;
+}
+
+export async function createCommunityGroup(input: {
+  name: string;
+  description?: string;
+  privacy: 'public' | 'private';
+  address?: string;
+  city?: string;
+  state?: string;
+}): Promise<CommunityGroupRecord> {
+  const payload = await apiRequest<{ group: CommunityGroupRecord }>(API_PATHS.groups, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return payload.group;
+}
+
+export async function updateCommunityGroup(
+  id: number,
+  input: Partial<{
+    name: string;
+    description?: string;
+    privacy: 'public' | 'private';
+    address?: string;
+    city?: string;
+    state?: string;
+  }>,
+): Promise<CommunityGroupRecord> {
+  const payload = await apiRequest<{ group: CommunityGroupRecord }>(`${API_PATHS.groups}/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+  return payload.group;
 }

@@ -21,6 +21,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'display_name',
+        'username',
         'email',
         'password',
         'status',
@@ -148,6 +149,7 @@ class User extends Authenticatable
             'phone' => $this->phone,
             'primaryLoginChannel' => $this->primary_login_channel,
             'displayName' => $this->publicDisplayName(),
+            'username' => $this->username,
             'chatDisplayName' => $this->chatDisplayName(),
             'status' => $this->status,
             'bio' => $this->bio,
@@ -169,6 +171,7 @@ class User extends Authenticatable
     {
         return [
             'id' => $this->id,
+            'username' => $this->username,
             'displayName' => $this->chatDisplayName(),
             'status' => $this->status,
             'bio' => $this->bio,

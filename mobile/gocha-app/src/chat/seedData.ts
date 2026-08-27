@@ -21,7 +21,7 @@ export const INITIAL_CHATS: ChatRecord[] = [
     name: ORDER_ASSISTANT_DEFAULT_NAME,
     avatarLabel: 'BC',
     avatarColor: '#5b42f3',
-    preview: 'Tell me what you need — I will find the best option.',
+    preview: 'Tell me what you need. I will find the best option.',
     dateLabel: 'Today',
     lastActivityAt: Date.now() + 1000,
     unreadCount: 0,
@@ -212,7 +212,7 @@ export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
       id: 'welcome',
       type: 'text',
       text:
-        'Hi — I am your Gocha assistant. Tell me what you need and I will find the best local option, prepare your request, and help you book or order.',
+        'Hi. I am your Gocha assistant. Tell me what you need and I will find the best local option, prepare your request, and help you book or order.',
       sentAt: 'Now',
       isOutgoing: false,
     },

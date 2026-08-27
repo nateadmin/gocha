@@ -1,13 +1,42 @@
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar } from '../../components/app';
 import { BrandBadge, CtaButton } from '../../components/brand';
-import { discoverableGroups } from '../../data/mock';
+import { fetchDiscoverableGroups, type CommunityGroupRecord } from '../../api/client';
+import { discoverableGroups as mockGroups } from '../../data/mock';
 import { useGochaTheme } from '../../theme';
+
+function mapApiGroup(group: CommunityGroupRecord) {
+  const location = group.city && group.state ? `${group.city}, ${group.state}` : group.address;
+  return {
+    id: String(group.id),
+    name: group.name,
+    description: group.description ?? '',
+    memberCount: group.memberCount,
+    avatarLabel: group.avatarLabel ?? group.name.slice(0, 2).toUpperCase(),
+    avatarColor: group.avatarColor ?? '#1B00D8',
+    interestTags: location ? [location] : [],
+  };
+}
 
 export function AroundMeScreen() {
   const { theme } = useGochaTheme();
+  const [apiGroups, setApiGroups] = useState<CommunityGroupRecord[]>([]);
+
+  useEffect(() => {
+    fetchDiscoverableGroups()
+      .then(setApiGroups)
+      .catch(() => setApiGroups([]));
+  }, []);
+
+  const groups = useMemo(() => {
+    if (apiGroups.length > 0) {
+      return apiGroups.map(mapApiGroup);
+    }
+    return mockGroups;
+  }, [apiGroups]);
 
   return (
     <ScrollView
@@ -29,11 +58,10 @@ export function AroundMeScreen() {
           lineHeight: 20,
           marginBottom: 8,
         }}>
-        Discover local groups and activities. Discoverable groups accept join requests;
-        admins approve or decline. Conversations stay private until you are a member.
+        Discover local public groups with a location. Private groups stay invite-only.
       </Text>
 
-      {discoverableGroups.map((group) => (
+      {groups.map((group) => (
         <View
           key={group.id}
           style={[

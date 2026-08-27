@@ -70,7 +70,7 @@ export function CatchUpScreen() {
             fontSize: 12,
             marginTop: 4,
           }}>
-          Build 1 — summaries via managed AI (OpenAI) until proprietary AI in Build 3.
+          Build 1: summaries via managed AI (OpenAI) until proprietary AI in Build 3.
         </Text>
       </View>
 

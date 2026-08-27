@@ -23,6 +23,7 @@ export function OnboardingScreen() {
   const { theme } = useGochaTheme();
   const { user, finishOnboarding, uploadProfileAvatar } = useAuth();
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
+  const [username, setUsername] = useState(user?.username ?? '');
   const [status, setStatus] = useState(user?.status ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
@@ -41,6 +42,7 @@ export function OnboardingScreen() {
     const fallbackName =
       user.displayName && user.displayName !== 'Gocha user' ? user.displayName : '';
     setDisplayName(fallbackName);
+    setUsername(user.username ?? '');
     setStatus(user.status ?? '');
     setBio(user.bio ?? '');
     setPhone(user.phone?.replace(/^\++/, '') ?? '');
@@ -82,6 +84,7 @@ export function OnboardingScreen() {
     try {
       await finishOnboarding({
         displayName: trimmedName,
+        username: username.trim() || undefined,
         status: status.trim() || undefined,
         bio: bio.trim() || undefined,
         phone: phone.trim() || undefined,
@@ -138,6 +141,13 @@ export function OnboardingScreen() {
             value={displayName}
             onChangeText={setDisplayName}
             autoComplete="name"
+          />
+          <BrandInput
+            placeholder="Username (optional, for @tags)"
+            value={username}
+            onChangeText={(text) => setUsername(text.toLowerCase())}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <BrandInput
             placeholder="Status"

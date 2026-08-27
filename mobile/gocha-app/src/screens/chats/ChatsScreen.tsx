@@ -3,8 +3,9 @@ import { FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-na
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { IconButton, SearchField } from '../../components/app';
+import { ConfirmDialog, DropdownMenu, SearchField, type DropdownMenuItem } from '../../components/app';
 import { BrandLogo } from '../../components/brand';
 import {
   ActionSheet,
@@ -27,6 +28,9 @@ export function ChatsScreen() {
   const [query, setQuery] = useState('');
   const [contextChat, setContextChat] = useState<ChatRecord | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [listPickerChat, setListPickerChat] = useState<ChatRecord | null>(null);
+  const [clearTarget, setClearTarget] = useState<ChatRecord | null>(null);
 
   const listData = useMemo(() => {
     if (chat.activeFilter === 'archived') return chat.archivedChats;
@@ -46,121 +50,105 @@ export function ChatsScreen() {
     navigation.navigate('ChatDetail', { chatId });
   }
 
+  const headerMenuItems: DropdownMenuItem[] = [
+    {
+      id: 'new-chat',
+      label: 'New Chat',
+      icon: 'chatbubble-outline',
+      onPress: () => {
+        setComposeOpen(true);
+        searchRef.current?.focus();
+      },
+    },
+    {
+      id: 'new-group',
+      label: 'New Group',
+      icon: 'people-outline',
+      onPress: () => navigation.navigate('CreateGroup'),
+    },
+    {
+      id: 'new-broadcast',
+      label: 'New Broadcast',
+      icon: 'megaphone-outline',
+      onPress: () => navigation.navigate('NewBroadcast'),
+    },
+  ];
+
   function buildContextItems(record: ChatRecord): ActionSheetItem[] {
     const items: ActionSheetItem[] = [
       {
-        id: 'open',
-        label: 'Open chat',
-        onPress: () => openChat(record.id),
+        id: 'profile',
+        label: 'View Profile',
+        onPress: () => navigation.navigate('ChatInfo', { chatId: record.id }),
       },
-      {
-        id: 'select',
-        label: 'Select',
-        onPress: () => {
-          chat.setBulkMode(true);
-          chat.toggleSelectChat(record.id);
-        },
-      },
-    ];
-
-    if (!record.isOrderAssistant) {
-      items.push(
-        record.pinned
-          ? { id: 'unpin', label: 'Unpin', onPress: () => chat.unpinChat(record.id) }
-          : { id: 'pin', label: 'Pin', onPress: () => chat.pinChat(record.id) },
-      );
-    }
-
-    items.push(
       record.markedUnread || record.unreadCount > 0
-        ? { id: 'read', label: 'Mark as read', onPress: () => chat.markChatRead(record.id) }
-        : { id: 'unread', label: 'Mark as unread', onPress: () => chat.markChatUnread(record.id) },
-      record.favorite
-        ? { id: 'unfav', label: 'Remove from favorites', onPress: () => chat.unfavoriteChat(record.id) }
-        : { id: 'fav', label: 'Add to favorites', onPress: () => chat.favoriteChat(record.id) },
-      record.archived
-        ? { id: 'unarchive', label: 'Unarchive', onPress: () => chat.unarchiveChat(record.id) }
-        : { id: 'archive', label: 'Archive', onPress: () => chat.archiveChat(record.id) },
-      record.muted
-        ? { id: 'unmute', label: 'Unmute', onPress: () => chat.unmuteChat(record.id) }
-        : {
-            id: 'mute',
-            label: 'Mute 8 hours',
-            onPress: () => chat.muteChat(record.id, '8h'),
-          },
+        ? { id: 'read', label: 'Mark as Read', onPress: () => chat.markChatRead(record.id) }
+        : { id: 'unread', label: 'Mark as Unread', onPress: () => chat.markChatUnread(record.id) },
       record.locked
-        ? { id: 'unlock', label: 'Unlock chat', onPress: () => chat.unlockChat(record.id) }
-        : { id: 'lock', label: 'Lock chat', onPress: () => chat.lockChat(record.id) },
-      record.hidden
-        ? { id: 'unhide', label: 'Show in chat list', onPress: () => chat.unhideChat(record.id) }
-        : { id: 'hide', label: 'Hide chat', onPress: () => chat.hideChat(record.id) },
-      {
-        id: 'clear',
-        label: 'Clear chat',
-        onPress: () => chat.clearChat(record.id),
-      },
+        ? { id: 'unlock', label: 'Unlock Chat', onPress: () => chat.unlockChat(record.id) }
+        : { id: 'lock', label: 'Lock Chat', onPress: () => chat.lockChat(record.id) },
+      record.favorite
+        ? { id: 'unfav', label: 'Remove from Favorites', onPress: () => chat.unfavoriteChat(record.id) }
+        : { id: 'fav', label: 'Add to Favorites', onPress: () => chat.favoriteChat(record.id) },
       {
         id: 'lists',
-        label: 'Add to list',
-        onPress: () => {
-          const firstList = chat.lists[0];
-          if (firstList) chat.addChatToList(record.id, firstList.id);
-        },
+        label: 'Add to List',
+        onPress: () => setListPickerChat(record),
       },
-    );
-
-    if (chat.preferences.labelsEnabled) {
-      chat.labels.forEach((label) => {
-        const has = record.labelIds.includes(label.id);
-        items.push({
-          id: `label-${label.id}`,
-          label: has ? `Remove label ${label.name}` : `Add label ${label.name}`,
-          onPress: () =>
-            has
-              ? chat.removeLabelFromChat(record.id, label.id)
-              : chat.addLabelToChat(record.id, label.id),
-        });
-      });
-    }
-
-    items.push(
+      {
+        id: 'clear',
+        label: 'Clear Chat',
+        destructive: true,
+        onPress: () => setClearTarget(record),
+      },
       record.blocked
         ? { id: 'unblock', label: 'Unblock', onPress: () => chat.unblockChat(record.id) }
         : { id: 'block', label: 'Block', onPress: () => chat.blockChat(record.id) },
-    );
-
-    if (!record.isOrderAssistant) {
-      items.push({
-        id: 'delete',
-        label: 'Delete chat',
-        destructive: true,
-        onPress: () => chat.deleteChat(record.id),
-      });
-    }
+    ];
 
     return items;
   }
 
+  const listPickerItems: ActionSheetItem[] = listPickerChat
+    ? chat.lists.map((list) => ({
+        id: list.id,
+        label: listPickerChat.listIds.includes(list.id)
+          ? `Remove from ${list.name}`
+          : `Add to ${list.name}`,
+        onPress: () => {
+          if (listPickerChat.listIds.includes(list.id)) {
+            chat.removeChatFromList(listPickerChat.id, list.id);
+          } else {
+            chat.addChatToList(listPickerChat.id, list.id);
+          }
+        },
+      }))
+    : [];
+
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <BrandLogo size={56} />
+        {chat.activeFilter === 'archived' ? (
+          <Pressable onPress={() => chat.setActiveFilter('all')} style={styles.archiveBack}>
+            <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />
+            <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>All chats</Text>
+          </Pressable>
+        ) : (
+          <BrandLogo size={56} />
+        )}
         <View style={styles.headerActions}>
-          <IconButton
-            icon="checkbox-outline"
-            accessibilityLabel="Bulk select"
-            onPress={() => chat.setBulkMode(!chat.bulkMode)}
-          />
-          <IconButton icon="camera-outline" accessibilityLabel="Camera" />
-          <IconButton
-            icon="create-outline"
-            tone="primary"
-            accessibilityLabel="New message"
-            onPress={() => {
-              setComposeOpen(true);
-              searchRef.current?.focus();
-            }}
-          />
+          <Pressable
+            onPress={() => setHeaderMenuOpen(true)}
+            style={[
+              styles.menuButton,
+              {
+                backgroundColor: theme.colors.muted,
+                borderColor: theme.colors.border,
+              },
+            ]}
+            accessibilityLabel="Chats menu">
+            <Ionicons name="ellipsis-horizontal" size={22} color={theme.colors.primary} />
+          </Pressable>
         </View>
       </View>
 
@@ -177,47 +165,17 @@ export function ChatsScreen() {
         />
       </View>
 
-      {chat.preferences.listsEnabled ? (
+      {chat.activeFilter === 'archived' ? (
+        <View style={styles.filterBanner}>
+          <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.typography.sans }}>
+            Archived conversations
+          </Text>
+        </View>
+      ) : chat.preferences.listsEnabled ? (
         <ChatFilterBar
           onManageLists={() => navigation.navigate('ChatListsSettings')}
           onOpenHidden={() => navigation.navigate('HiddenChats')}
         />
-      ) : null}
-
-      {chat.bulkMode ? (
-        <View
-          style={[
-            styles.bulkBar,
-            { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
-          ]}>
-          <Text style={{ color: theme.colors.cardForeground, fontSize: 13 }}>
-            {chat.selectedChatIds.length} selected
-          </Text>
-          <View style={styles.bulkActions}>
-            <Pressable onPress={chat.bulkMarkRead}>
-              <Text style={{ color: theme.colors.primary }}>Read</Text>
-            </Pressable>
-            <Pressable onPress={chat.bulkPin}>
-              <Text style={{ color: theme.colors.primary }}>Pin</Text>
-            </Pressable>
-            <Pressable onPress={chat.bulkArchive}>
-              <Text style={{ color: theme.colors.primary }}>Archive</Text>
-            </Pressable>
-            <Pressable onPress={chat.bulkMute}>
-              <Text style={{ color: theme.colors.primary }}>Mute</Text>
-            </Pressable>
-            <Pressable onPress={chat.bulkDelete}>
-              <Text style={{ color: theme.colors.destructive }}>Delete</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                chat.clearSelection();
-                chat.setBulkMode(false);
-              }}>
-              <Text style={{ color: theme.colors.mutedForeground }}>Done</Text>
-            </Pressable>
-          </View>
-        </View>
       ) : null}
 
       <FlatList
@@ -241,10 +199,6 @@ export function ChatsScreen() {
             chat={item}
             selected={chat.selectedChatIds.includes(item.id)}
             onPress={() => {
-              if (chat.bulkMode) {
-                chat.toggleSelectChat(item.id);
-                return;
-              }
               if (item.locked) {
                 navigation.navigate('ChatLock', { chatId: item.id });
                 return;
@@ -256,11 +210,38 @@ export function ChatsScreen() {
         )}
       />
 
+      <DropdownMenu
+        visible={headerMenuOpen}
+        items={headerMenuItems}
+        onClose={() => setHeaderMenuOpen(false)}
+      />
+
       <ActionSheet
         visible={contextChat !== null}
         title={contextChat?.name}
         items={contextChat ? buildContextItems(contextChat) : []}
         onClose={() => setContextChat(null)}
+      />
+
+      <ActionSheet
+        visible={listPickerChat !== null}
+        title="Add to list"
+        items={listPickerItems}
+        onClose={() => setListPickerChat(null)}
+      />
+
+      <ConfirmDialog
+        visible={clearTarget !== null}
+        title="Clear chat?"
+        message="This permanently deletes all messages in this conversation. This cannot be undone."
+        confirmLabel="Clear permanently"
+        destructive
+        onConfirm={() => {
+          if (clearTarget) {
+            chat.clearChat(clearTarget.id);
+          }
+        }}
+        onCancel={() => setClearTarget(null)}
       />
     </View>
   );
@@ -275,17 +256,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerActions: { flexDirection: 'row', gap: 8 },
-  searchWrap: { paddingHorizontal: 16, paddingVertical: 8 },
-  list: { paddingBottom: 8 },
-  bulkBar: {
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  archiveBack: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 4,
+    flex: 1,
   },
-  bulkActions: { flexDirection: 'row', gap: 12 },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 8 },
+  filterBanner: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  list: { paddingBottom: 8 },
   archiveBanner: {
     paddingHorizontal: 16,
     paddingVertical: 12,

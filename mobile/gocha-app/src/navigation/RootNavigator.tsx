@@ -21,7 +21,19 @@ function discoverTabBarStyle(route: { name: string; key: string; params?: object
 
 function chatsTabBarStyle(route: { name: string; key: string; params?: object }) {
   const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatsList';
-  if (routeName !== 'ChatsList') {
+  const hideOn = new Set([
+    'ChatDetail',
+    'ChatInfo',
+    'ChatLock',
+    'CreateGroup',
+    'GroupSettings',
+    'NewBroadcast',
+    'BlockedChats',
+    'ChatListsSettings',
+    'ChatLabelsSettings',
+    'HiddenChats',
+  ]);
+  if (hideOn.has(routeName)) {
     return {
       display: 'none',
       height: 0,

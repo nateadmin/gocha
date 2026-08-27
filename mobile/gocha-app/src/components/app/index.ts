@@ -6,3 +6,6 @@ export { SectionLabel } from './SectionLabel';
 export { SettingsToggleRow } from './SettingsToggleRow';
 export { UniversalLoader } from './UniversalLoader';
 export { LoadingShell } from './LoadingShell';
+export { DropdownMenu } from './DropdownMenu';
+export type { DropdownMenuItem } from './DropdownMenu';
+export { ConfirmDialog } from './ConfirmDialog';

@@ -32,6 +32,7 @@ class ProfileController extends Controller
     {
         $validated = $request->validate([
             'displayName' => ['required', 'string', 'max:80'],
+            'username' => ['nullable', 'string', 'min:3', 'max:30', 'regex:/^[a-z0-9_]+$/', Rule::unique('users', 'username')],
             'status' => ['nullable', 'string', 'max:160'],
             'bio' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:32'],
@@ -42,6 +43,9 @@ class ProfileController extends Controller
         $user->forceFill([
             'display_name' => $validated['displayName'],
             'name' => $validated['displayName'],
+            'username' => isset($validated['username'])
+                ? strtolower($validated['username'])
+                : $user->username,
             'status' => $validated['status'] ?? null,
             'bio' => $validated['bio'] ?? null,
             'discoverable' => $validated['discoverable'] ?? false,
@@ -119,6 +123,30 @@ class ProfileController extends Controller
         ]);
     }
 
+    public function updateUsername(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'username' => [
+                'required',
+                'string',
+                'min:3',
+                'max:30',
+                'regex:/^[a-z0-9_]+$/',
+                Rule::unique('users', 'username')->ignore($user->id),
+            ],
+        ]);
+
+        $user->forceFill([
+            'username' => strtolower($validated['username']),
+        ])->save();
+
+        return response()->json([
+            'user' => $user->fresh()->load('activeBusinessListing')->toAuthPayload(),
+        ]);
+    }
+
     public function uploadAvatar(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -151,6 +179,7 @@ class ProfileController extends Controller
             ->where(function ($query) use ($needle) {
                 $query->where('display_name', 'like', '%'.$needle.'%')
                     ->orWhere('name', 'like', '%'.$needle.'%')
+                    ->orWhere('username', 'like', '%'.$needle.'%')
                     ->orWhere('email', 'like', '%'.$needle.'%');
             })
             ->orderBy('display_name')

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\AdminBusinessListingController;
 use App\Http\Controllers\Api\Admin\AdminVerificationController;
 use App\Http\Controllers\Api\AuthOtpController;
 use App\Http\Controllers\Api\BusinessListingController;
+use App\Http\Controllers\Api\CommunityGroupController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\VerificationController;
@@ -33,6 +34,8 @@ Route::get('/meta', function () {
     ]);
 });
 
+Route::get('/groups/discover', [CommunityGroupController::class, 'discover']);
+Route::get('/groups/search', [CommunityGroupController::class, 'search']);
 Route::get('/businesses', [BusinessListingController::class, 'index']);
 Route::get('/businesses/industries', [BusinessListingController::class, 'industries']);
 Route::get('/businesses/{slug}', [BusinessListingController::class, 'show']);
@@ -49,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/onboarding', [ProfileController::class, 'completeOnboarding']);
     Route::post('/profile/contact', [ProfileController::class, 'updateContact']);
     Route::post('/profile/mode', [ProfileController::class, 'updateProfileMode']);
+    Route::post('/profile/username', [ProfileController::class, 'updateUsername']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::get('/users/search', [ProfileController::class, 'search']);
     Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
@@ -63,6 +67,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/businesses/mine/{businessListing}/cover', [BusinessListingController::class, 'uploadCover']);
     Route::post('/businesses/mine/{businessListing}/sync-reviews', [BusinessListingController::class, 'syncReviews']);
     Route::delete('/businesses/mine/{businessListing}', [BusinessListingController::class, 'destroy']);
+
+    Route::get('/groups/mine', [CommunityGroupController::class, 'mine']);
+    Route::post('/groups', [CommunityGroupController::class, 'store']);
+    Route::put('/groups/{communityGroup}', [CommunityGroupController::class, 'update']);
 
     Route::get('/verifications/mine', [VerificationController::class, 'mine']);
     Route::post('/verifications/user', [VerificationController::class, 'submitUserIdentity']);

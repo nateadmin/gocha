@@ -40,6 +40,7 @@ type ChatContextValue = {
   filteredChats: ChatRecord[];
   archivedChats: ChatRecord[];
   hiddenChats: ChatRecord[];
+  blockedChats: ChatRecord[];
   selectedChatIds: string[];
   bulkMode: boolean;
   setBulkMode: (value: boolean) => void;
@@ -88,6 +89,7 @@ type ChatContextValue = {
   bulkDelete: () => void;
   bulkMarkRead: () => void;
   openChat: (chatId: string) => void;
+  createBroadcast: (name: string) => string;
   sendTextMessage: (chatId: string, text: string, replyToId?: string) => void;
   sendEmojiMessage: (chatId: string, emoji: string) => void;
   sendStickerMessage: (chatId: string, stickerKey: string) => void;
@@ -215,6 +217,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const hiddenChats = useMemo(
     () => sortedChats.filter((chat) => chat.hidden),
+    [sortedChats],
+  );
+
+  const blockedChats = useMemo(
+    () => sortedChats.filter((chat) => chat.blocked),
     [sortedChats],
   );
 
@@ -473,6 +480,46 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [markChatRead],
   );
 
+  const createBroadcast = useCallback((name: string): string => {
+    const id = `broadcast-${Date.now()}`;
+    const trimmed = name.trim() || 'Broadcast';
+    const label = trimmed
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('');
+
+    const record: ChatRecord = {
+      id,
+      name: trimmed,
+      avatarLabel: label || 'BC',
+      avatarColor: '#7c6cf0',
+      preview: 'Broadcast list created',
+      dateLabel: formatDateLabel(),
+      lastActivityAt: Date.now(),
+      unreadCount: 0,
+      pinned: false,
+      archived: false,
+      muted: false,
+      blocked: false,
+      locked: false,
+      hidden: false,
+      favorite: false,
+      markedUnread: false,
+      isGroup: true,
+      groupCount: 0,
+      isBusiness: false,
+      isBroadcast: true,
+      isSecret: false,
+      listIds: [],
+      labelIds: [],
+    };
+
+    setChats((prev) => [record, ...prev]);
+    setMessages((prev) => ({ ...prev, [id]: [] }));
+    return id;
+  }, []);
+
   const appendMessage = useCallback(
     (chatId: string, message: ChatMessage) => {
       setMessages((prev) => ({
@@ -620,6 +667,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       filteredChats,
       archivedChats,
       hiddenChats,
+      blockedChats,
       selectedChatIds,
       bulkMode,
       setBulkMode,
@@ -668,6 +716,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       bulkDelete,
       bulkMarkRead,
       openChat,
+      createBroadcast,
       sendTextMessage,
       sendEmojiMessage,
       sendStickerMessage,
@@ -692,6 +741,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       filteredChats,
       archivedChats,
       hiddenChats,
+      blockedChats,
       selectedChatIds,
       bulkMode,
       toggleSelectChat,
@@ -739,6 +789,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       bulkDelete,
       bulkMarkRead,
       openChat,
+      createBroadcast,
       sendTextMessage,
       sendEmojiMessage,
       sendStickerMessage,

@@ -117,6 +117,13 @@ export function SettingsScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable onPress={() => navigation.navigate('UsernameSettings')} style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Username {user?.username ? `(@${user.username})` : ''}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable onPress={() => navigation.navigate('MyBusinessListings')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
             My business listings
@@ -176,6 +183,13 @@ export function SettingsScreen() {
         <Pressable onPress={() => navigation.navigate('HiddenChats')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
             Hidden chats
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable onPress={() => navigation.navigate('BlockedChats')} style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Blocked contacts
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>

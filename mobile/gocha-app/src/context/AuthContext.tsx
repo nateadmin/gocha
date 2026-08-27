@@ -36,6 +36,7 @@ type AuthContextValue = {
   ) => Promise<{ resendAvailableInSeconds: number }>;
   finishOnboarding: (input: {
     displayName: string;
+    username?: string;
     status?: string;
     bio?: string;
     phone?: string;
