@@ -10,4 +10,5 @@ export { LoadingShell } from './LoadingShell';
 export { DropdownMenu } from './DropdownMenu';
 export type { DropdownMenuItem } from './DropdownMenu';
 export { AnimatedHamburgerMenu } from './AnimatedHamburgerMenu';
+export { AccountSwitcherMenu } from './AccountSwitcherMenu';
 export { ConfirmDialog } from './ConfirmDialog';

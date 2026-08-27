@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AccountsProvider } from './src/context/AccountsContext';
+import { AccountsProvider, useAccounts } from './src/context/AccountsContext';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
@@ -15,6 +15,7 @@ import { useBrandFonts } from './src/theme/fonts';
 function AppShell() {
   const { ready } = useBrandFonts();
   const { theme } = useGochaTheme();
+  const { isAddingAccount } = useAccounts();
   const { loading, appPhase } = useAuthGate();
   const splashReady = useSplashGate(ready && !loading);
 
@@ -48,7 +49,7 @@ function AppShell() {
   }
 
   let content: ReactNode;
-  if (appPhase === 'auth') {
+  if (appPhase === 'auth' || isAddingAccount) {
     content = <AuthNavigator />;
   } else if (appPhase === 'onboarding') {
     content = <OnboardingScreen />;
@@ -57,7 +58,7 @@ function AppShell() {
   }
 
   return (
-    <NavigationContainer theme={navTheme} key={appPhase}>
+    <NavigationContainer theme={navTheme} key={`${appPhase}-${isAddingAccount ? 'add' : 'main'}`}>
       {content}
     </NavigationContainer>
   );

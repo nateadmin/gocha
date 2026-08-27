@@ -1,11 +1,14 @@
 import { useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import {
+  AccountSwitcherMenu,
   AnimatedHamburgerMenu,
   ConfirmDialog,
   DropdownMenu,
@@ -21,22 +24,33 @@ import {
 } from '../../components/chat';
 import { useChat } from '../../chat/ChatContext';
 import type { ChatRecord } from '../../chat/types';
+import { useAccounts } from '../../context/AccountsContext';
+import { useAuth } from '../../context/AuthContext';
 import { useGochaTheme } from '../../theme';
-import type { ChatsStackParamList } from '../../navigation/types';
+import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
+
+type ChatsNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<ChatsStackParamList, 'ChatsList'>,
+  BottomTabNavigationProp<RootTabParamList>
+>;
 
 export function ChatsScreen() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ChatsStackParamList, 'ChatsList'>>();
+  const navigation = useNavigation<ChatsNavigationProp>();
   const { theme } = useGochaTheme();
   const insets = useSafeAreaInsets();
   const chat = useChat();
+  const { accounts, activeAccountId, switchAccount, beginAddAccount } = useAccounts();
+  const { refresh } = useAuth();
   const searchRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [contextChat, setContextChat] = useState<ChatRecord | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [listPickerChat, setListPickerChat] = useState<ChatRecord | null>(null);
   const [clearTarget, setClearTarget] = useState<ChatRecord | null>(null);
+
+  const accountMenuTop = insets.top + 12 + 44;
 
   const listData = useMemo(() => {
     if (chat.activeFilter === 'archived') return chat.archivedChats;
@@ -148,7 +162,14 @@ export function ChatsScreen() {
               <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>All chats</Text>
             </Pressable>
           ) : (
-            <BrandLogo size={40} />
+            <Pressable
+              onPress={() => setAccountMenuOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Switch account"
+              style={styles.logoButton}>
+              <BrandLogo size={40} />
+              <Ionicons name="chevron-down" size={14} color={theme.colors.primary} />
+            </Pressable>
           )}
           <AnimatedHamburgerMenu
             open={headerMenuOpen}
@@ -221,6 +242,23 @@ export function ChatsScreen() {
         onClose={() => setHeaderMenuOpen(false)}
       />
 
+      <AccountSwitcherMenu
+        visible={accountMenuOpen}
+        accounts={accounts}
+        activeAccountId={activeAccountId}
+        menuTop={accountMenuTop}
+        onClose={() => setAccountMenuOpen(false)}
+        onSelectAccount={async (userId) => {
+          if (userId === activeAccountId) return;
+          switchAccount(userId);
+          await refresh();
+        }}
+        onAddAccount={() => beginAddAccount()}
+        onManageAccounts={() => {
+          navigation.navigate('SettingsTab', { screen: 'Accounts' });
+        }}
+      />
+
       <ActionSheet
         visible={contextChat !== null}
         title={contextChat?.name}
@@ -263,6 +301,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  logoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   archiveBack: {
     flexDirection: 'row',
