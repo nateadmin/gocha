@@ -12,6 +12,8 @@ final class BusinessListingStatus
 
     public const REJECTED = 'rejected';
 
+    public const UNPUBLISHED = 'unpublished';
+
     public static function publicStatuses(): array
     {
         return [self::APPROVED];

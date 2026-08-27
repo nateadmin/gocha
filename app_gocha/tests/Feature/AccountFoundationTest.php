@@ -32,10 +32,11 @@ class AccountFoundationTest extends TestCase
 
         $response = $this->actingAs($user)->postJson('/api/businesses', [
             'name' => 'Neon Pizza',
-            'category' => 'Food',
+            'category' => 'food',
             'description' => 'Late night slices',
             'address' => '12 Main St',
             'website' => 'https://neon-pizza.example',
+            'submit' => true,
         ]);
 
         $response
@@ -48,6 +49,58 @@ class AccountFoundationTest extends TestCase
             'owner_user_id' => $user->id,
             'status' => BusinessListingStatus::PENDING_REVIEW,
         ]);
+    }
+
+    public function test_user_can_save_business_listing_as_draft(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/businesses', [
+            'name' => 'Draft Cafe',
+            'category' => 'food',
+            'submit' => false,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('listing.status', BusinessListingStatus::DRAFT);
+
+        $this->assertDatabaseHas('business_listings', [
+            'name' => 'Draft Cafe',
+            'status' => BusinessListingStatus::DRAFT,
+        ]);
+    }
+
+    public function test_owner_can_unpublish_and_resubmit_listing(): void
+    {
+        $user = User::factory()->create();
+        $listing = BusinessListing::query()->create([
+            'owner_user_id' => $user->id,
+            'submitted_by_user_id' => $user->id,
+            'slug' => 'live-cafe',
+            'name' => 'Live Cafe',
+            'status' => BusinessListingStatus::APPROVED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/api/businesses/mine/{$listing->id}/unpublish")
+            ->assertOk()
+            ->assertJsonPath('listing.status', BusinessListingStatus::UNPUBLISHED);
+
+        $this->actingAs($user)
+            ->postJson("/api/businesses/mine/{$listing->id}/submit")
+            ->assertOk()
+            ->assertJsonPath('listing.status', BusinessListingStatus::PENDING_REVIEW);
+    }
+
+    public function test_google_import_parses_maps_url(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/businesses/import-google', [
+            'url' => 'https://www.google.com/maps/place/Neon+Pizza/@40.7,-74.0,17z',
+        ])
+            ->assertOk()
+            ->assertJsonPath('import.name', 'Neon Pizza');
     }
 
     public function test_admin_can_approve_business_listing(): void

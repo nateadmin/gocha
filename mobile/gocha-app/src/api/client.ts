@@ -245,6 +245,13 @@ export async function uploadAvatar(file: Blob, filename = 'avatar.png'): Promise
   return payload.user;
 }
 
+export type GoogleReview = {
+  author: string;
+  rating: number | null;
+  text: string;
+  relativeTime: string | null;
+};
+
 export type PublicBusinessListing = {
   id: number;
   slug: string;
@@ -252,7 +259,11 @@ export type PublicBusinessListing = {
   category: string | null;
   description: string | null;
   address: string | null;
+  noPhysicalAddress: boolean;
   website: string | null;
+  coverPhotoUrl: string | null;
+  googleReviews: GoogleReview[];
+  googleReviewsSyncedAt: string | null;
   verificationStatus: string;
   isVerified: boolean;
   chatEnabled: boolean;
@@ -262,9 +273,40 @@ export type PublicBusinessListing = {
 
 export type OwnerBusinessListing = PublicBusinessListing & {
   status: string;
+  googleBusinessUrl: string | null;
+  googlePlaceId: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
+};
+
+export type BusinessIndustry = {
+  id: string;
+  label: string;
+};
+
+export type GoogleBusinessImport = {
+  name: string | null;
+  address: string | null;
+  website: string | null;
+  category: string | null;
+  description: string | null;
+  googleBusinessUrl: string;
+  googlePlaceId: string | null;
+  noPhysicalAddress: boolean;
+  source: string;
+};
+
+export type BusinessListingInput = {
+  name: string;
+  category?: string;
+  description?: string;
+  address?: string;
+  no_physical_address?: boolean;
+  website?: string;
+  google_business_url?: string;
+  google_place_id?: string;
+  submit?: boolean;
 };
 
 export async function fetchPublicBusinesses(): Promise<PublicBusinessListing[]> {
@@ -272,22 +314,89 @@ export async function fetchPublicBusinesses(): Promise<PublicBusinessListing[]> 
   return payload.listings;
 }
 
+export async function fetchBusinessIndustries(): Promise<BusinessIndustry[]> {
+  const payload = await apiRequest<{ industries: BusinessIndustry[] }>(API_PATHS.businessesIndustries);
+  return payload.industries;
+}
+
 export async function fetchMyBusinessListings(): Promise<OwnerBusinessListing[]> {
   const payload = await apiRequest<{ listings: OwnerBusinessListing[] }>(API_PATHS.businessesMine);
   return payload.listings;
 }
 
-export async function submitBusinessListing(input: {
-  name: string;
-  category?: string;
-  description?: string;
-  address?: string;
-  website?: string;
-}): Promise<OwnerBusinessListing> {
+export async function importGoogleBusiness(url: string): Promise<GoogleBusinessImport> {
+  const payload = await apiRequest<{ import: GoogleBusinessImport }>(API_PATHS.businessesImportGoogle, {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  });
+  return payload.import;
+}
+
+export async function submitBusinessListing(input: BusinessListingInput): Promise<OwnerBusinessListing> {
   const payload = await apiRequest<{ listing: OwnerBusinessListing }>(API_PATHS.businesses, {
     method: 'POST',
     body: JSON.stringify(input),
   });
+  return payload.listing;
+}
+
+export async function updateBusinessListing(
+  id: number,
+  input: Partial<BusinessListingInput>,
+): Promise<OwnerBusinessListing> {
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.businessesMine}/${id}`,
+    { method: 'PUT', body: JSON.stringify(input) },
+  );
+  return payload.listing;
+}
+
+export async function saveBusinessListingDraft(
+  id: number,
+  input: Partial<BusinessListingInput>,
+): Promise<OwnerBusinessListing> {
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.businessesMine}/${id}/draft`,
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+  return payload.listing;
+}
+
+export async function submitBusinessListingForReview(id: number): Promise<OwnerBusinessListing> {
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.businessesMine}/${id}/submit`,
+    { method: 'POST' },
+  );
+  return payload.listing;
+}
+
+export async function unpublishBusinessListing(id: number): Promise<OwnerBusinessListing> {
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.businessesMine}/${id}/unpublish`,
+    { method: 'POST' },
+  );
+  return payload.listing;
+}
+
+export async function deleteBusinessListing(id: number): Promise<void> {
+  await apiRequest(`${API_PATHS.businessesMine}/${id}`, { method: 'DELETE' });
+}
+
+export async function uploadBusinessCover(id: number, file: Blob, filename = 'cover.jpg'): Promise<OwnerBusinessListing> {
+  const form = new FormData();
+  form.append('cover', file, filename);
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.businessesMine}/${id}/cover`,
+    { method: 'POST', body: form },
+  );
+  return payload.listing;
+}
+
+export async function syncBusinessGoogleReviews(id: number): Promise<OwnerBusinessListing> {
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.businessesMine}/${id}/sync-reviews`,
+    { method: 'POST' },
+  );
   return payload.listing;
 }
 

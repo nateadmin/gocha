@@ -7,6 +7,7 @@ use App\Support\VerificationStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class BusinessListing extends Model
 {
@@ -18,7 +19,13 @@ class BusinessListing extends Model
         'category',
         'description',
         'address',
+        'no_physical_address',
         'website',
+        'cover_photo_path',
+        'google_business_url',
+        'google_place_id',
+        'google_reviews',
+        'google_reviews_synced_at',
         'status',
         'verification_status',
         'verified_at',
@@ -30,6 +37,9 @@ class BusinessListing extends Model
     ];
 
     protected $casts = [
+        'no_physical_address' => 'boolean',
+        'google_reviews' => 'array',
+        'google_reviews_synced_at' => 'datetime',
         'verified_at' => 'datetime',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
@@ -71,6 +81,15 @@ class BusinessListing extends Model
         return $this->owner_user_id;
     }
 
+    public function coverPhotoUrl(): ?string
+    {
+        if (! $this->cover_photo_path) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->cover_photo_path);
+    }
+
     public function toSummaryPayload(): array
     {
         return [
@@ -83,6 +102,7 @@ class BusinessListing extends Model
             'isVerified' => $this->isVerified(),
             'chatEnabled' => $this->chat_enabled,
             'chatUserId' => $this->chatUserId(),
+            'coverPhotoUrl' => $this->coverPhotoUrl(),
         ];
     }
 
@@ -95,7 +115,11 @@ class BusinessListing extends Model
             'category' => $this->category,
             'description' => $this->description,
             'address' => $this->address,
+            'noPhysicalAddress' => $this->no_physical_address,
             'website' => $this->website,
+            'coverPhotoUrl' => $this->coverPhotoUrl(),
+            'googleReviews' => $this->google_reviews ?? [],
+            'googleReviewsSyncedAt' => $this->google_reviews_synced_at?->toIso8601String(),
             'verificationStatus' => $this->verification_status,
             'isVerified' => $this->isVerified(),
             'chatEnabled' => $this->chat_enabled,
@@ -108,6 +132,8 @@ class BusinessListing extends Model
     {
         return array_merge($this->toPublicPayload(), [
             'status' => $this->status,
+            'googleBusinessUrl' => $this->google_business_url,
+            'googlePlaceId' => $this->google_place_id,
             'submittedAt' => $this->submitted_at?->toIso8601String(),
             'reviewedAt' => $this->reviewed_at?->toIso8601String(),
             'rejectionReason' => $this->rejection_reason,

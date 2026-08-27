@@ -77,7 +77,7 @@ export function BusinessesScreen({ embedded = false }: Props) {
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.listBusinessCta}>
-          <CtaButton label="List your business" onPress={() => {}} />
+          <CtaButton label="List your business" onPress={() => navigation.navigate('BusinessListingForm')} />
         </View>
 
         {embedded ? (

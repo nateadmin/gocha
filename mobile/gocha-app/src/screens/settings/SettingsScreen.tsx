@@ -117,9 +117,16 @@ export function SettingsScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-        <Pressable onPress={() => navigation.navigate('SubmitBusiness')} style={styles.linkRow}>
+        <Pressable onPress={() => navigation.navigate('MyBusinessListings')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
-            Submit business listing
+            My business listings
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable onPress={() => navigation.navigate('BusinessListingForm')} style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            List a new business
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>

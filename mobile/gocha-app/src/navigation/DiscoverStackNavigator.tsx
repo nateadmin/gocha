@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { DiscoverHubScreen } from '../screens/discover/DiscoverHubScreen';
 import { BusinessDetailScreen } from '../screens/businesses/BusinessDetailScreen';
+import { BusinessListingFormScreen } from '../screens/businesses/BusinessListingFormScreen';
 import type { DiscoverStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<DiscoverStackParamList>();
@@ -11,6 +12,7 @@ export function DiscoverStackNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DiscoverHub" component={DiscoverHubScreen} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
+      <Stack.Screen name="BusinessListingForm" component={BusinessListingFormScreen} />
     </Stack.Navigator>
   );
 }

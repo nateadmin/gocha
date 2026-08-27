@@ -1,0 +1,41 @@
+<?php
+
+return [
+    'industries' => [
+        'food',
+        'groceries',
+        'pharmacy',
+        'services',
+        'shop',
+        'healthcare',
+        'beauty',
+        'automotive',
+        'real_estate',
+        'entertainment',
+        'education',
+        'professional',
+        'home_garden',
+        'fitness',
+        'hospitality',
+        'other',
+    ],
+
+    'industry_labels' => [
+        'food' => 'Food & Drink',
+        'groceries' => 'Groceries',
+        'pharmacy' => 'Pharmacy',
+        'services' => 'Services',
+        'shop' => 'Shop',
+        'healthcare' => 'Healthcare',
+        'beauty' => 'Beauty & Wellness',
+        'automotive' => 'Automotive',
+        'real_estate' => 'Real Estate',
+        'entertainment' => 'Entertainment',
+        'education' => 'Education',
+        'professional' => 'Professional Services',
+        'home_garden' => 'Home & Garden',
+        'fitness' => 'Fitness',
+        'hospitality' => 'Travel & Hospitality',
+        'other' => 'Other',
+    ],
+];

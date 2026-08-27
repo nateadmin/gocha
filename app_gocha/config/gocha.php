@@ -19,4 +19,6 @@ return [
         'from' => env('RESEND_FROM', 'Gocha <noreply@gocha.ai>'),
         'from_name' => env('RESEND_FROM_NAME', 'Gocha'),
     ],
+
+    'google_places_api_key' => env('GOOGLE_PLACES_API_KEY'),
 ];

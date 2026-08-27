@@ -34,6 +34,7 @@ Route::get('/meta', function () {
 });
 
 Route::get('/businesses', [BusinessListingController::class, 'index']);
+Route::get('/businesses/industries', [BusinessListingController::class, 'industries']);
 Route::get('/businesses/{slug}', [BusinessListingController::class, 'show']);
 
 Route::prefix('auth/otp')->group(function () {
@@ -53,7 +54,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
 
     Route::get('/businesses/mine', [BusinessListingController::class, 'mine']);
+    Route::post('/businesses/import-google', [BusinessListingController::class, 'importGoogle']);
     Route::post('/businesses', [BusinessListingController::class, 'store']);
+    Route::put('/businesses/mine/{businessListing}', [BusinessListingController::class, 'update']);
+    Route::post('/businesses/mine/{businessListing}/draft', [BusinessListingController::class, 'saveDraft']);
+    Route::post('/businesses/mine/{businessListing}/submit', [BusinessListingController::class, 'submit']);
+    Route::post('/businesses/mine/{businessListing}/unpublish', [BusinessListingController::class, 'unpublish']);
+    Route::post('/businesses/mine/{businessListing}/cover', [BusinessListingController::class, 'uploadCover']);
+    Route::post('/businesses/mine/{businessListing}/sync-reviews', [BusinessListingController::class, 'syncReviews']);
+    Route::delete('/businesses/mine/{businessListing}', [BusinessListingController::class, 'destroy']);
 
     Route::get('/verifications/mine', [VerificationController::class, 'mine']);
     Route::post('/verifications/user', [VerificationController::class, 'submitUserIdentity']);

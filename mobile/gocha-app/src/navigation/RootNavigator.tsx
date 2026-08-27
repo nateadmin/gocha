@@ -13,7 +13,7 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 
 function discoverTabBarStyle(route: { name: string; key: string; params?: object }) {
   const routeName = getFocusedRouteNameFromRoute(route) ?? 'DiscoverHub';
-  if (routeName === 'BusinessDetail') {
+  if (routeName === 'BusinessDetail' || routeName === 'BusinessListingForm') {
     return { display: 'none' } as const;
   }
   return undefined;

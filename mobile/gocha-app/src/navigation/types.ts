@@ -18,7 +18,8 @@ export type ChatsStackParamList = {
 
 export type DiscoverStackParamList = {
   DiscoverHub: undefined;
-  BusinessDetail: { slug: string };
+  BusinessDetail: { businessId: string };
+  BusinessListingForm: { listingId?: number } | undefined;
 };
 
 export type SettingsStackParamList = {
@@ -26,6 +27,8 @@ export type SettingsStackParamList = {
   Accounts: undefined;
   ProfileMode: undefined;
   SubmitBusiness: undefined;
+  MyBusinessListings: undefined;
+  BusinessListingForm: { listingId?: number } | undefined;
   AdminReview: undefined;
   ChatListsSettings: undefined;
   ChatLabelsSettings: undefined;

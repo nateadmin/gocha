@@ -21,6 +21,8 @@ export const API_PATHS = {
   userSearch: '/api/users/search',
   businesses: '/api/businesses',
   businessesMine: '/api/businesses/mine',
+  businessesImportGoogle: '/api/businesses/import-google',
+  businessesIndustries: '/api/businesses/industries',
   verificationsMine: '/api/verifications/mine',
   verificationUser: '/api/verifications/user',
   adminBusinessListings: '/api/admin/business-listings',
