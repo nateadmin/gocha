@@ -1,0 +1,832 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+
+import {
+  EMOJI_GRID,
+  INITIAL_CHATS,
+  INITIAL_LABELS,
+  INITIAL_LISTS,
+  INITIAL_MESSAGES,
+  STICKER_EMOJI,
+} from './seedData';
+import { isOrderAssistantChat } from './orderAssistant';
+import type {
+  ChatFilterId,
+  ChatLabel,
+  ChatList,
+  ChatMessage,
+  ChatPreferences,
+  ChatRecord,
+  MessageType,
+  MuteDuration,
+  SwipeAction,
+} from './types';
+
+type ChatContextValue = {
+  chats: ChatRecord[];
+  lists: ChatList[];
+  labels: ChatLabel[];
+  preferences: ChatPreferences;
+  messagesFor: (chatId: string) => ChatMessage[];
+  getChat: (chatId: string) => ChatRecord | undefined;
+  activeFilter: ChatFilterId | string;
+  setActiveFilter: (filter: ChatFilterId | string) => void;
+  filteredChats: ChatRecord[];
+  archivedChats: ChatRecord[];
+  hiddenChats: ChatRecord[];
+  blockedChats: ChatRecord[];
+  selectedChatIds: string[];
+  bulkMode: boolean;
+  setBulkMode: (value: boolean) => void;
+  toggleSelectChat: (chatId: string) => void;
+  clearSelection: () => void;
+  pinChat: (chatId: string) => void;
+  unpinChat: (chatId: string) => void;
+  archiveChat: (chatId: string) => void;
+  unarchiveChat: (chatId: string) => void;
+  muteChat: (chatId: string, duration: MuteDuration) => void;
+  unmuteChat: (chatId: string) => void;
+  markChatRead: (chatId: string) => void;
+  markChatUnread: (chatId: string) => void;
+  favoriteChat: (chatId: string) => void;
+  unfavoriteChat: (chatId: string) => void;
+  blockChat: (chatId: string) => void;
+  unblockChat: (chatId: string) => void;
+  lockChat: (chatId: string) => void;
+  unlockChat: (chatId: string) => void;
+  hideChat: (chatId: string) => void;
+  unhideChat: (chatId: string) => void;
+  deleteChat: (chatId: string) => void;
+  clearChat: (chatId: string) => void;
+  addChatToList: (chatId: string, listId: string) => void;
+  removeChatFromList: (chatId: string, listId: string) => void;
+  createList: (name: string) => string;
+  deleteList: (listId: string) => void;
+  muteList: (listId: string) => void;
+  unmuteList: (listId: string) => void;
+  addLabelToChat: (chatId: string, labelId: string) => void;
+  removeLabelFromChat: (chatId: string, labelId: string) => void;
+  createLabel: (name: string, color: string) => string;
+  updateLabel: (labelId: string, updates: { name?: string; color?: string }) => void;
+  deleteLabel: (labelId: string) => void;
+  setLabelsEnabled: (enabled: boolean) => void;
+  setListsEnabled: (enabled: boolean) => void;
+  setSwipeRight: (action: SwipeAction) => void;
+  setSwipeLeft: (action: SwipeAction) => void;
+  setHiddenChatsPin: (pin: string | null) => void;
+  setChatLockPin: (pin: string | null) => void;
+  verifyHiddenPin: (pin: string) => boolean;
+  verifyLockPin: (pin: string) => boolean;
+  applySwipeAction: (chatId: string, action: SwipeAction) => void;
+  bulkPin: () => void;
+  bulkArchive: () => void;
+  bulkMute: () => void;
+  bulkDelete: () => void;
+  bulkMarkRead: () => void;
+  openChat: (chatId: string) => void;
+  createBroadcast: (name: string) => string;
+  sendTextMessage: (chatId: string, text: string, replyToId?: string) => void;
+  sendEmojiMessage: (chatId: string, emoji: string) => void;
+  sendStickerMessage: (chatId: string, stickerKey: string) => void;
+  sendVoiceMessage: (chatId: string, durationSec: number) => void;
+  sendMediaMessage: (chatId: string, type: 'image' | 'video' | 'file', fileName?: string) => void;
+  deleteMessage: (chatId: string, messageId: string, forEveryone?: boolean) => void;
+  starMessage: (chatId: string, messageId: string) => void;
+  unstarMessage: (chatId: string, messageId: string) => void;
+  setDisappearingTimer: (chatId: string, seconds: number | null) => void;
+  toggleSecretChat: (chatId: string) => void;
+  emojiGrid: string[];
+  stickerEmoji: Record<string, string>;
+};
+
+const ChatContext = createContext<ChatContextValue | null>(null);
+
+function formatTimeLabel(): string {
+  return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function formatDateLabel(): string {
+  return new Date().toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
+}
+
+function muteUntilFor(duration: MuteDuration): number | null {
+  const now = Date.now();
+  switch (duration) {
+    case '1h':
+      return now + 3600000;
+    case '8h':
+      return now + 8 * 3600000;
+    case '1w':
+      return now + 7 * 86400000;
+    default:
+      return null;
+  }
+}
+
+function previewForMessage(message: ChatMessage): string {
+  switch (message.type) {
+    case 'voice':
+      return `Voice message (${message.durationSec ?? 0}s)`;
+    case 'video':
+      return 'Video';
+    case 'image':
+      return 'Photo';
+    case 'file':
+      return message.fileName ?? 'File';
+    case 'sticker':
+      return STICKER_EMOJI[message.stickerKey ?? ''] ?? 'Sticker';
+    case 'emoji':
+      return message.text ?? '';
+    default:
+      return message.text ?? '';
+  }
+}
+
+export function ChatProvider({ children }: { children: ReactNode }) {
+  const [chats, setChats] = useState<ChatRecord[]>(INITIAL_CHATS);
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(INITIAL_MESSAGES);
+  const [lists, setLists] = useState<ChatList[]>(INITIAL_LISTS);
+  const [labels, setLabels] = useState<ChatLabel[]>(INITIAL_LABELS);
+  const [preferences, setPreferences] = useState<ChatPreferences>({
+    labelsEnabled: true,
+    listsEnabled: false,
+    swipeRight: 'pin',
+    swipeLeft: 'archive',
+    hiddenChatsPin: '4242',
+    chatLockPin: '0000',
+    showArchived: true,
+  });
+  const [activeFilter, setActiveFilter] = useState<ChatFilterId | string>('all');
+  const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
+  const [bulkMode, setBulkMode] = useState(false);
+
+  const updateChat = useCallback((chatId: string, patch: Partial<ChatRecord>) => {
+    setChats((prev) =>
+      prev.map((chat) => (chat.id === chatId ? { ...chat, ...patch } : chat)),
+    );
+  }, []);
+
+  const getChat = useCallback(
+    (chatId: string) => chats.find((chat) => chat.id === chatId),
+    [chats],
+  );
+
+  const messagesFor = useCallback(
+    (chatId: string) => messages[chatId] ?? [],
+    [messages],
+  );
+
+  const sortedChats = useMemo(() => {
+    return [...chats].sort((a, b) => {
+      if (isOrderAssistantChat(a.id)) return -1;
+      if (isOrderAssistantChat(b.id)) return 1;
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return b.lastActivityAt - a.lastActivityAt;
+    });
+  }, [chats]);
+
+  const filteredChats = useMemo(() => {
+    let pool = sortedChats.filter((chat) => !chat.hidden && !chat.archived && !chat.blocked);
+
+    if (activeFilter === 'unread') {
+      pool = pool.filter((chat) => chat.unreadCount > 0 || chat.markedUnread);
+    } else if (activeFilter === 'groups') {
+      pool = pool.filter((chat) => chat.isGroup);
+    } else if (activeFilter === 'favorites') {
+      pool = pool.filter((chat) => chat.favorite);
+    } else if (activeFilter.startsWith('list:')) {
+      const listId = activeFilter.replace('list:', '');
+      pool = pool.filter((chat) => chat.listIds.includes(listId));
+    } else if (activeFilter.startsWith('label:')) {
+      const labelId = activeFilter.replace('label:', '');
+      pool = pool.filter((chat) => chat.labelIds.includes(labelId));
+    }
+
+    return pool;
+  }, [activeFilter, sortedChats]);
+
+  const archivedChats = useMemo(
+    () => sortedChats.filter((chat) => chat.archived && !chat.hidden),
+    [sortedChats],
+  );
+
+  const hiddenChats = useMemo(
+    () => sortedChats.filter((chat) => chat.hidden),
+    [sortedChats],
+  );
+
+  const blockedChats = useMemo(
+    () => sortedChats.filter((chat) => chat.blocked),
+    [sortedChats],
+  );
+
+  const pinChat = useCallback(
+    (chatId: string) => {
+      if (isOrderAssistantChat(chatId)) return;
+      updateChat(chatId, { pinned: true });
+    },
+    [updateChat],
+  );
+  const unpinChat = useCallback(
+    (chatId: string) => {
+      if (isOrderAssistantChat(chatId)) return;
+      updateChat(chatId, { pinned: false });
+    },
+    [updateChat],
+  );
+  const archiveChat = useCallback((chatId: string) => updateChat(chatId, { archived: true }), [updateChat]);
+  const unarchiveChat = useCallback((chatId: string) => updateChat(chatId, { archived: false }), [updateChat]);
+  const markChatRead = useCallback(
+    (chatId: string) => updateChat(chatId, { unreadCount: 0, markedUnread: false }),
+    [updateChat],
+  );
+  const markChatUnread = useCallback(
+    (chatId: string) => updateChat(chatId, { markedUnread: true }),
+    [updateChat],
+  );
+  const favoriteChat = useCallback((chatId: string) => updateChat(chatId, { favorite: true }), [updateChat]);
+  const unfavoriteChat = useCallback((chatId: string) => updateChat(chatId, { favorite: false }), [updateChat]);
+  const blockChat = useCallback((chatId: string) => updateChat(chatId, { blocked: true }), [updateChat]);
+  const unblockChat = useCallback((chatId: string) => updateChat(chatId, { blocked: false }), [updateChat]);
+  const lockChat = useCallback((chatId: string) => updateChat(chatId, { locked: true }), [updateChat]);
+  const unlockChat = useCallback((chatId: string) => updateChat(chatId, { locked: false }), [updateChat]);
+  const hideChat = useCallback((chatId: string) => updateChat(chatId, { hidden: true }), [updateChat]);
+  const unhideChat = useCallback((chatId: string) => updateChat(chatId, { hidden: false }), [updateChat]);
+
+  const muteChat = useCallback(
+    (chatId: string, duration: MuteDuration) => {
+      updateChat(chatId, { muted: true, muteUntil: muteUntilFor(duration) });
+    },
+    [updateChat],
+  );
+
+  const unmuteChat = useCallback(
+    (chatId: string) => updateChat(chatId, { muted: false, muteUntil: null }),
+    [updateChat],
+  );
+
+  const deleteChat = useCallback((chatId: string) => {
+    if (isOrderAssistantChat(chatId)) return;
+    setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+    setMessages((prev) => {
+      const next = { ...prev };
+      delete next[chatId];
+      return next;
+    });
+    setLists((prev) =>
+      prev.map((list) => ({
+        ...list,
+        chatIds: list.chatIds.filter((id) => id !== chatId),
+      })),
+    );
+  }, []);
+
+  const clearChat = useCallback((chatId: string) => {
+    setMessages((prev) => ({ ...prev, [chatId]: [] }));
+    updateChat(chatId, { preview: 'Messages cleared', unreadCount: 0 });
+  }, [updateChat]);
+
+  const addChatToList = useCallback((chatId: string, listId: string) => {
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === listId
+          ? { ...list, chatIds: list.chatIds.includes(chatId) ? list.chatIds : [...list.chatIds, chatId] }
+          : list,
+      ),
+    );
+    updateChat(chatId, {
+      listIds: [...(getChat(chatId)?.listIds ?? []), listId].filter(
+        (id, index, arr) => arr.indexOf(id) === index,
+      ),
+    });
+  }, [getChat, updateChat]);
+
+  const removeChatFromList = useCallback((chatId: string, listId: string) => {
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === listId
+          ? { ...list, chatIds: list.chatIds.filter((id) => id !== chatId) }
+          : list,
+      ),
+    );
+    updateChat(chatId, {
+      listIds: (getChat(chatId)?.listIds ?? []).filter((id) => id !== listId),
+    });
+  }, [getChat, updateChat]);
+
+  const createList = useCallback((name: string) => {
+    const id = `list-${Date.now()}`;
+    setLists((prev) => [...prev, { id, name, chatIds: [], muted: false }]);
+    return id;
+  }, []);
+
+  const deleteList = useCallback((listId: string) => {
+    setLists((prev) => prev.filter((list) => list.id !== listId));
+    setChats((prev) =>
+      prev.map((chat) => ({
+        ...chat,
+        listIds: chat.listIds.filter((id) => id !== listId),
+      })),
+    );
+  }, []);
+
+  const muteList = useCallback((listId: string) => {
+    setLists((prev) => prev.map((list) => (list.id === listId ? { ...list, muted: true } : list)));
+  }, []);
+
+  const unmuteList = useCallback((listId: string) => {
+    setLists((prev) => prev.map((list) => (list.id === listId ? { ...list, muted: false } : list)));
+  }, []);
+
+  const addLabelToChat = useCallback((chatId: string, labelId: string) => {
+    const chat = getChat(chatId);
+    if (!chat) return;
+    updateChat(chatId, {
+      labelIds: [...chat.labelIds, labelId].filter((id, i, arr) => arr.indexOf(id) === i),
+    });
+  }, [getChat, updateChat]);
+
+  const removeLabelFromChat = useCallback((chatId: string, labelId: string) => {
+    const chat = getChat(chatId);
+    if (!chat) return;
+    updateChat(chatId, { labelIds: chat.labelIds.filter((id) => id !== labelId) });
+  }, [getChat, updateChat]);
+
+  const createLabel = useCallback((name: string, color: string) => {
+    const id = `label-${Date.now()}`;
+    setLabels((prev) => [...prev, { id, name, color }]);
+    return id;
+  }, []);
+
+  const updateLabel = useCallback((labelId: string, updates: { name?: string; color?: string }) => {
+    setLabels((prev) =>
+      prev.map((label) =>
+        label.id === labelId
+          ? {
+              ...label,
+              ...(updates.name !== undefined ? { name: updates.name.trim() || label.name } : {}),
+              ...(updates.color !== undefined ? { color: updates.color } : {}),
+            }
+          : label,
+      ),
+    );
+  }, []);
+
+  const deleteLabel = useCallback((labelId: string) => {
+    setLabels((prev) => prev.filter((label) => label.id !== labelId));
+    setChats((prev) =>
+      prev.map((chat) => ({
+        ...chat,
+        labelIds: chat.labelIds.filter((id) => id !== labelId),
+      })),
+    );
+  }, []);
+
+  const setLabelsEnabled = useCallback((enabled: boolean) => {
+    setPreferences((prev) => ({ ...prev, labelsEnabled: enabled }));
+  }, []);
+
+  const setListsEnabled = useCallback((enabled: boolean) => {
+    setPreferences((prev) => ({ ...prev, listsEnabled: enabled }));
+    if (!enabled) {
+      setActiveFilter('all');
+    }
+  }, []);
+
+  const setSwipeRight = useCallback((action: SwipeAction) => {
+    setPreferences((prev) => ({ ...prev, swipeRight: action }));
+  }, []);
+
+  const setSwipeLeft = useCallback((action: SwipeAction) => {
+    setPreferences((prev) => ({ ...prev, swipeLeft: action }));
+  }, []);
+
+  const setHiddenChatsPin = useCallback((pin: string | null) => {
+    setPreferences((prev) => ({ ...prev, hiddenChatsPin: pin }));
+  }, []);
+
+  const setChatLockPin = useCallback((pin: string | null) => {
+    setPreferences((prev) => ({ ...prev, chatLockPin: pin }));
+  }, []);
+
+  const verifyHiddenPin = useCallback(
+    (pin: string) => preferences.hiddenChatsPin === pin,
+    [preferences.hiddenChatsPin],
+  );
+
+  const verifyLockPin = useCallback(
+    (pin: string) => preferences.chatLockPin === pin,
+    [preferences.chatLockPin],
+  );
+
+  const applySwipeAction = useCallback(
+    (chatId: string, action: SwipeAction) => {
+      switch (action) {
+        case 'pin':
+          const chat = getChat(chatId);
+          if (chat?.pinned) unpinChat(chatId);
+          else pinChat(chatId);
+          break;
+        case 'read':
+          const c = getChat(chatId);
+          if (c && (c.unreadCount > 0 || c.markedUnread)) markChatRead(chatId);
+          else markChatUnread(chatId);
+          break;
+        case 'archive':
+          archiveChat(chatId);
+          break;
+        case 'mute':
+          muteChat(chatId, '8h');
+          break;
+        case 'delete':
+          deleteChat(chatId);
+          break;
+      }
+    },
+    [archiveChat, deleteChat, getChat, markChatRead, markChatUnread, muteChat, pinChat, unpinChat],
+  );
+
+  const toggleSelectChat = useCallback((chatId: string) => {
+    setSelectedChatIds((prev) =>
+      prev.includes(chatId) ? prev.filter((id) => id !== chatId) : [...prev, chatId],
+    );
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedChatIds([]), []);
+
+  const bulkPin = useCallback(() => {
+    selectedChatIds.forEach((id) => pinChat(id));
+    clearSelection();
+    setBulkMode(false);
+  }, [clearSelection, pinChat, selectedChatIds]);
+
+  const bulkArchive = useCallback(() => {
+    selectedChatIds.forEach((id) => archiveChat(id));
+    clearSelection();
+    setBulkMode(false);
+  }, [archiveChat, clearSelection, selectedChatIds]);
+
+  const bulkMute = useCallback(() => {
+    selectedChatIds.forEach((id) => muteChat(id, '8h'));
+    clearSelection();
+    setBulkMode(false);
+  }, [clearSelection, muteChat, selectedChatIds]);
+
+  const bulkDelete = useCallback(() => {
+    selectedChatIds.forEach((id) => deleteChat(id));
+    clearSelection();
+    setBulkMode(false);
+  }, [clearSelection, deleteChat, selectedChatIds]);
+
+  const bulkMarkRead = useCallback(() => {
+    selectedChatIds.forEach((id) => markChatRead(id));
+    clearSelection();
+    setBulkMode(false);
+  }, [clearSelection, markChatRead, selectedChatIds]);
+
+  const openChat = useCallback(
+    (chatId: string) => markChatRead(chatId),
+    [markChatRead],
+  );
+
+  const createBroadcast = useCallback((name: string): string => {
+    const id = `broadcast-${Date.now()}`;
+    const trimmed = name.trim() || 'Broadcast';
+    const label = trimmed
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('');
+
+    const record: ChatRecord = {
+      id,
+      name: trimmed,
+      avatarLabel: label || 'BC',
+      avatarColor: '#7c6cf0',
+      preview: 'Broadcast list created',
+      dateLabel: formatDateLabel(),
+      lastActivityAt: Date.now(),
+      unreadCount: 0,
+      pinned: false,
+      archived: false,
+      muted: false,
+      blocked: false,
+      locked: false,
+      hidden: false,
+      favorite: false,
+      markedUnread: false,
+      isGroup: true,
+      groupCount: 0,
+      isBusiness: false,
+      isBroadcast: true,
+      isSecret: false,
+      listIds: [],
+      labelIds: [],
+    };
+
+    setChats((prev) => [record, ...prev]);
+    setMessages((prev) => ({ ...prev, [id]: [] }));
+    return id;
+  }, []);
+
+  const appendMessage = useCallback(
+    (chatId: string, message: ChatMessage) => {
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: [...(prev[chatId] ?? []), message],
+      }));
+      updateChat(chatId, {
+        preview: previewForMessage(message),
+        dateLabel: formatDateLabel(),
+        lastActivityAt: Date.now(),
+        unreadCount: message.isOutgoing ? 0 : (getChat(chatId)?.unreadCount ?? 0),
+      });
+    },
+    [getChat, updateChat],
+  );
+
+  const sendTextMessage = useCallback(
+    (chatId: string, text: string, replyToId?: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      appendMessage(chatId, {
+        id: `m-${Date.now()}`,
+        type: 'text',
+        text: trimmed,
+        sentAt: formatTimeLabel(),
+        isOutgoing: true,
+        status: 'sent',
+        replyToId,
+      });
+    },
+    [appendMessage],
+  );
+
+  const sendEmojiMessage = useCallback(
+    (chatId: string, emoji: string) => {
+      appendMessage(chatId, {
+        id: `m-${Date.now()}`,
+        type: 'emoji',
+        text: emoji,
+        sentAt: formatTimeLabel(),
+        isOutgoing: true,
+        status: 'sent',
+      });
+    },
+    [appendMessage],
+  );
+
+  const sendStickerMessage = useCallback(
+    (chatId: string, stickerKey: string) => {
+      appendMessage(chatId, {
+        id: `m-${Date.now()}`,
+        type: 'sticker',
+        stickerKey,
+        sentAt: formatTimeLabel(),
+        isOutgoing: true,
+        status: 'sent',
+      });
+    },
+    [appendMessage],
+  );
+
+  const sendVoiceMessage = useCallback(
+    (chatId: string, durationSec: number) => {
+      appendMessage(chatId, {
+        id: `m-${Date.now()}`,
+        type: 'voice',
+        durationSec,
+        sentAt: formatTimeLabel(),
+        isOutgoing: true,
+        status: 'sent',
+      });
+    },
+    [appendMessage],
+  );
+
+  const sendMediaMessage = useCallback(
+    (chatId: string, type: MessageType, fileName?: string) => {
+      if (type !== 'image' && type !== 'video' && type !== 'file') return;
+      appendMessage(chatId, {
+        id: `m-${Date.now()}`,
+        type,
+        fileName,
+        sentAt: formatTimeLabel(),
+        isOutgoing: true,
+        status: 'sent',
+      });
+    },
+    [appendMessage],
+  );
+
+  const deleteMessage = useCallback(
+    (chatId: string, messageId: string, _forEveryone?: boolean) => {
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: (prev[chatId] ?? []).filter((message) => message.id !== messageId),
+      }));
+    },
+    [],
+  );
+
+  const starMessage = useCallback((chatId: string, messageId: string) => {
+    setMessages((prev) => ({
+      ...prev,
+      [chatId]: (prev[chatId] ?? []).map((message) =>
+        message.id === messageId ? { ...message, starred: true } : message,
+      ),
+    }));
+  }, []);
+
+  const unstarMessage = useCallback((chatId: string, messageId: string) => {
+    setMessages((prev) => ({
+      ...prev,
+      [chatId]: (prev[chatId] ?? []).map((message) =>
+        message.id === messageId ? { ...message, starred: false } : message,
+      ),
+    }));
+  }, []);
+
+  const setDisappearingTimer = useCallback(
+    (chatId: string, seconds: number | null) => {
+      updateChat(chatId, { disappearingTimerSec: seconds });
+    },
+    [updateChat],
+  );
+
+  const toggleSecretChat = useCallback(
+    (chatId: string) => {
+      const chat = getChat(chatId);
+      if (!chat) return;
+      updateChat(chatId, { isSecret: !chat.isSecret });
+    },
+    [getChat, updateChat],
+  );
+
+  const value = useMemo(
+    () => ({
+      chats: sortedChats,
+      lists,
+      labels,
+      preferences,
+      messagesFor,
+      getChat,
+      activeFilter,
+      setActiveFilter,
+      filteredChats,
+      archivedChats,
+      hiddenChats,
+      blockedChats,
+      selectedChatIds,
+      bulkMode,
+      setBulkMode,
+      toggleSelectChat,
+      clearSelection,
+      pinChat,
+      unpinChat,
+      archiveChat,
+      unarchiveChat,
+      muteChat,
+      unmuteChat,
+      markChatRead,
+      markChatUnread,
+      favoriteChat,
+      unfavoriteChat,
+      blockChat,
+      unblockChat,
+      lockChat,
+      unlockChat,
+      hideChat,
+      unhideChat,
+      deleteChat,
+      clearChat,
+      addChatToList,
+      removeChatFromList,
+      createList,
+      deleteList,
+      muteList,
+      unmuteList,
+      addLabelToChat,
+      removeLabelFromChat,
+      createLabel,
+      updateLabel,
+      deleteLabel,
+      setLabelsEnabled,
+      setListsEnabled,
+      setSwipeRight,
+      setSwipeLeft,
+      setHiddenChatsPin,
+      setChatLockPin,
+      verifyHiddenPin,
+      verifyLockPin,
+      applySwipeAction,
+      bulkPin,
+      bulkArchive,
+      bulkMute,
+      bulkDelete,
+      bulkMarkRead,
+      openChat,
+      createBroadcast,
+      sendTextMessage,
+      sendEmojiMessage,
+      sendStickerMessage,
+      sendVoiceMessage,
+      sendMediaMessage,
+      deleteMessage,
+      starMessage,
+      unstarMessage,
+      setDisappearingTimer,
+      toggleSecretChat,
+      emojiGrid: EMOJI_GRID,
+      stickerEmoji: STICKER_EMOJI,
+    }),
+    [
+      sortedChats,
+      lists,
+      labels,
+      preferences,
+      messagesFor,
+      getChat,
+      activeFilter,
+      filteredChats,
+      archivedChats,
+      hiddenChats,
+      blockedChats,
+      selectedChatIds,
+      bulkMode,
+      toggleSelectChat,
+      clearSelection,
+      pinChat,
+      unpinChat,
+      archiveChat,
+      unarchiveChat,
+      muteChat,
+      unmuteChat,
+      markChatRead,
+      markChatUnread,
+      favoriteChat,
+      unfavoriteChat,
+      blockChat,
+      unblockChat,
+      lockChat,
+      unlockChat,
+      hideChat,
+      unhideChat,
+      deleteChat,
+      clearChat,
+      addChatToList,
+      removeChatFromList,
+      createList,
+      deleteList,
+      muteList,
+      unmuteList,
+      addLabelToChat,
+      removeLabelFromChat,
+      createLabel,
+      updateLabel,
+      deleteLabel,
+      setLabelsEnabled,
+      setListsEnabled,
+      setSwipeRight,
+      setSwipeLeft,
+      setHiddenChatsPin,
+      setChatLockPin,
+      verifyHiddenPin,
+      verifyLockPin,
+      applySwipeAction,
+      bulkPin,
+      bulkArchive,
+      bulkMute,
+      bulkDelete,
+      bulkMarkRead,
+      openChat,
+      createBroadcast,
+      sendTextMessage,
+      sendEmojiMessage,
+      sendStickerMessage,
+      sendVoiceMessage,
+      sendMediaMessage,
+      deleteMessage,
+      starMessage,
+      unstarMessage,
+      setDisappearingTimer,
+      toggleSecretChat,
+    ],
+  );
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+}
+
+export function useChat(): ChatContextValue {
+  const context = useContext(ChatContext);
+  if (!context) {
+    throw new Error('useChat must be used within ChatProvider');
+  }
+  return context;
+}

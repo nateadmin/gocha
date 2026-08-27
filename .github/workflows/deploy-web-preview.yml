@@ -1,0 +1,65 @@
+name: Deploy web preview
+
+on:
+  push:
+    branches:
+      - main
+      - cursor/**
+    paths:
+      - 'mobile/gocha-app/**'
+      - '.github/workflows/deploy-web-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: deploy-web-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/gocha-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile/gocha-app
+        run: npm ci
+
+      - name: Build static web app
+        working-directory: mobile/gocha-app
+        env:
+          VITE_BASE_PATH: /gocha/
+        run: npm run build:web
+
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: mobile/gocha-app/web/dist
+          force_orphan: true
+          commit_message: 'Deploy web preview'
+
+      - name: Enable GitHub Pages
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/pages \
+            -X POST \
+            -f build_type=legacy \
+            -f source[branch]=gh-pages \
+            -f source[path]=/ \
+            || gh api repos/${{ github.repository }}/pages \
+            -X PUT \
+            -f build_type=legacy \
+            -f source[branch]=gh-pages \
+            -f source[path]=/

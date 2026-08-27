@@ -1,0 +1,112 @@
+import {
+  Pressable,
+  Text,
+  type PressableProps,
+  StyleSheet,
+  View,
+} from 'react-native';
+
+import { UniversalLoader } from '../app/UniversalLoader';
+import { useGochaTheme } from '../../theme';
+import { brandFontFamilies } from '../../theme/fonts';
+
+const INNER_BG = 'rgb(5, 6, 45)';
+const GRADIENT_EDGE = '#5b42f3';
+
+type Props = Omit<PressableProps, 'children'> & {
+  label: string;
+  loading?: boolean;
+  fullWidth?: boolean;
+  compact?: boolean;
+};
+
+export function CtaButton({
+  label,
+  loading = false,
+  disabled,
+  fullWidth = true,
+  compact = false,
+  style,
+  ...props
+}: Props) {
+  const { theme } = useGochaTheme();
+  const isDisabled = disabled || loading;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={isDisabled}
+      style={({ pressed }) => [
+        fullWidth && styles.fullWidth,
+        {
+          opacity: isDisabled ? 0.55 : 1,
+          transform: pressed && !isDisabled ? [{ scale: 0.96 }] : undefined,
+        },
+        style,
+      ]}
+      {...props}>
+      <View
+        style={[
+          styles.outer,
+          compact && styles.outerCompact,
+          {
+            backgroundColor: GRADIENT_EDGE,
+            shadowColor: '#9741fc',
+          },
+        ]}>
+        <View style={[styles.inner, compact && styles.innerCompact, { backgroundColor: INNER_BG }]}>
+          {loading ? (
+            <UniversalLoader size={compact ? 0.22 : 0.28} />
+          ) : (
+            <Text
+              style={{
+                color: '#ffffff',
+                fontFamily: brandFontFamilies.cta,
+                fontSize: compact ? theme.typography.caption : theme.typography.body,
+                lineHeight: compact ? 16 : 20,
+                letterSpacing: theme.typography.letterSpacing,
+                textAlign: 'center',
+              }}>
+              {label}
+            </Text>
+          )}
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  fullWidth: {
+    width: '100%',
+  },
+  outer: {
+    borderRadius: 8,
+    padding: 3,
+    minWidth: 140,
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  outerCompact: {
+    minWidth: 0,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  inner: {
+    borderRadius: 6,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  innerCompact: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    minHeight: 32,
+  },
+});

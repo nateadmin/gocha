@@ -1,0 +1,21 @@
+# Mobile shell (React Native)
+mobile/gocha-app/node_modules/
+
+# Laravel API
+app_gocha/vendor/
+app_gocha/.env
+app_gocha/.env.*
+!app_gocha/.env.example
+app_gocha/storage/logs/
+app_gocha/storage/framework/cache/data/
+app_gocha/bootstrap/cache/*.php
+!app_gocha/bootstrap/cache/.gitignore
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Keys
+*.pem
+.ssh/
