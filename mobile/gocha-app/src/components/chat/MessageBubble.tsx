@@ -1,4 +1,4 @@
-import { Pressable, View, Text, StyleSheet } from 'react-native';
+import { Image, Pressable, View, Text, StyleSheet, Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import type { ChatMessage } from '../../chat/types';
@@ -54,6 +54,32 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
           </View>
         );
       case 'video':
+        if (message.mediaUrl) {
+          if (Platform.OS === 'web') {
+            return (
+              <video
+                src={message.mediaUrl}
+                controls
+                style={{
+                  width: 220,
+                  maxWidth: '100%',
+                  borderRadius: 12,
+                  display: 'block',
+                }}
+              />
+            );
+          }
+          return (
+            <View style={styles.mediaBox}>
+              <Ionicons name="videocam" size={32} color={theme.colors.primaryForeground} />
+              <Text
+                numberOfLines={1}
+                style={{ color: theme.colors.primaryForeground, fontSize: 13 }}>
+                {message.fileName ?? 'Video'}
+              </Text>
+            </View>
+          );
+        }
         return (
           <View style={styles.mediaBox}>
             <Ionicons name="videocam" size={32} color={theme.colors.primaryForeground} />
@@ -61,6 +87,16 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
           </View>
         );
       case 'image':
+        if (message.mediaUrl) {
+          return (
+            <Image
+              accessibilityLabel={message.fileName ?? 'Photo'}
+              source={{ uri: message.mediaUrl }}
+              style={styles.mediaImage}
+              resizeMode="cover"
+            />
+          );
+        }
         return (
           <View style={[styles.mediaBox, { backgroundColor: theme.colors.secondary }]}>
             <Ionicons name="image" size={32} color={theme.colors.primaryForeground} />
@@ -108,6 +144,9 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
     }
   })();
 
+  const isMediaPreview =
+    (message.type === 'image' || message.type === 'video') && Boolean(message.mediaUrl);
+
   return (
     <Pressable
       onLongPress={onLongPress}
@@ -138,9 +177,10 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
           message.type === 'sticker' || message.type === 'emoji'
             ? styles.stickerBubble
             : null,
+          isMediaPreview ? styles.mediaBubble : null,
           {
             backgroundColor:
-              message.type === 'sticker' || message.type === 'emoji'
+              message.type === 'sticker' || message.type === 'emoji' || isMediaPreview
                 ? 'transparent'
                 : outgoing
                   ? theme.colors.primary
@@ -200,6 +240,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingVertical: 0,
   },
+  mediaBubble: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
   meta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -227,6 +271,13 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#1B00D8',
     borderRadius: 12,
+  },
+  mediaImage: {
+    width: 220,
+    maxWidth: '100%',
+    height: 220,
+    borderRadius: 12,
+    backgroundColor: '#1B00D8',
   },
   fileRow: {
     flexDirection: 'row',

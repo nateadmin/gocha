@@ -15,6 +15,8 @@ export type ChatMessage = {
   text?: string;
   stickerKey?: string;
   fileName?: string;
+  mediaUrl?: string;
+  mimeType?: string;
   durationSec?: number;
   sentAt: string;
   isOutgoing: boolean;

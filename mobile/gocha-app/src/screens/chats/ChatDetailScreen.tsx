@@ -330,14 +330,26 @@ export function ChatDetailScreen() {
         onSendVoice={(duration) =>
           chatApi.sendVoiceMessage(route.params.chatId, duration)
         }
-        onAttachImage={() =>
-          chatApi.sendMediaMessage(route.params.chatId, 'image')
+        onAttachImage={(media) =>
+          chatApi.sendMediaMessage(route.params.chatId, 'image', {
+            fileName: media.fileName,
+            mediaUrl: media.uri,
+            mimeType: media.mimeType,
+          })
         }
-        onAttachVideo={() =>
-          chatApi.sendMediaMessage(route.params.chatId, 'video')
+        onAttachVideo={(media) =>
+          chatApi.sendMediaMessage(route.params.chatId, 'video', {
+            fileName: media.fileName,
+            mediaUrl: media.uri,
+            mimeType: media.mimeType,
+          })
         }
-        onAttachFile={() =>
-          chatApi.sendMediaMessage(route.params.chatId, 'file', 'document.pdf')
+        onAttachFile={(media) =>
+          chatApi.sendMediaMessage(route.params.chatId, 'file', {
+            fileName: media.fileName,
+            mediaUrl: media.uri,
+            mimeType: media.mimeType,
+          })
         }
         replyLabel={replyTo?.text ?? replyTo?.stickerKey}
         onCancelReply={() => setReplyTo(null)}

@@ -9,13 +9,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { EmojiPickerPanel } from './EmojiPickerPanel';
+import type { PickedMedia } from '../../chat/pickMedia';
+import { pickCameraPhoto, pickDocument } from '../../chat/pickMedia';
 import { StickerPickerPanel } from './StickerPickerPanel';
 import { VoiceRecorderBar } from './VoiceRecorderBar';
-import { ActionSheet, type ActionSheetItem } from './ActionSheet';
 import { useGochaTheme } from '../../theme';
 
-type Panel = 'none' | 'emoji' | 'sticker' | 'attach' | 'voice';
+type Panel = 'none' | 'emoji' | 'sticker' | 'voice';
 
 type Props = {
   value: string;
@@ -24,9 +24,9 @@ type Props = {
   onSendEmoji?: (emoji: string) => void;
   onSendSticker?: (key: string) => void;
   onSendVoice?: (durationSec: number) => void;
-  onAttachImage?: () => void;
-  onAttachVideo?: () => void;
-  onAttachFile?: () => void;
+  onAttachImage?: (media: PickedMedia) => void;
+  onAttachVideo?: (media: PickedMedia) => void;
+  onAttachFile?: (media: PickedMedia) => void;
   replyLabel?: string;
   onCancelReply?: () => void;
 };
@@ -48,7 +48,6 @@ export function ChatComposer({
   const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState(false);
   const [panel, setPanel] = useState<Panel>('none');
-  const [attachOpen, setAttachOpen] = useState(false);
 
   const webInputReset =
     Platform.OS === 'web'
@@ -61,28 +60,36 @@ export function ChatComposer({
         } as const)
       : {};
 
-  const attachItems: ActionSheetItem[] = [
-    {
-      id: 'image',
-      label: 'Photo',
-      onPress: () => onAttachImage?.(),
-    },
-    {
-      id: 'video',
-      label: 'Video',
-      onPress: () => onAttachVideo?.(),
-    },
-    {
-      id: 'file',
-      label: 'Document',
-      onPress: () => onAttachFile?.(),
-    },
-    {
-      id: 'sticker',
-      label: 'Sticker',
-      onPress: () => setPanel('sticker'),
-    },
-  ];
+  const webActionStyle =
+    Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null;
+
+  async function handleCameraPress() {
+    setPanel('none');
+    const media = await pickCameraPhoto();
+    if (media) {
+      onAttachImage?.(media);
+    }
+  }
+
+  async function handleFilePress() {
+    setPanel('none');
+    const media = await pickDocument();
+    if (!media) {
+      return;
+    }
+
+    if (media.mimeType.startsWith('image/')) {
+      onAttachImage?.(media);
+      return;
+    }
+
+    if (media.mimeType.startsWith('video/')) {
+      onAttachVideo?.(media);
+      return;
+    }
+
+    onAttachFile?.(media);
+  }
 
   if (panel === 'voice') {
     return (
@@ -108,7 +115,7 @@ export function ChatComposer({
             },
           ]}>
           <Ionicons name="return-down-forward" size={16} color={theme.colors.primary} />
-          <View style={styles.inputWrap}>
+          <View style={styles.replyTextWrap}>
             <TextInput
               editable={false}
               value={replyLabel}
@@ -119,7 +126,7 @@ export function ChatComposer({
               }}
             />
           </View>
-          <Pressable onPress={onCancelReply} hitSlop={8} style={styles.action}>
+          <Pressable onPress={onCancelReply} hitSlop={8} style={[styles.outsideAction, webActionStyle]}>
             <Ionicons name="close" size={20} color={theme.colors.mutedForeground} />
           </Pressable>
         </View>
@@ -151,61 +158,72 @@ export function ChatComposer({
             paddingBottom: Math.max(insets.bottom, 10),
           },
         ]}>
-        <Pressable
-          hitSlop={8}
-          style={styles.action}
-          onPress={() => {
-            setAttachOpen(true);
-            setPanel('none');
-          }}>
-          <Ionicons name="add" size={24} color={theme.colors.primary} />
-        </Pressable>
-        <View style={styles.inputWrap}>
-          <TextInput
-            value={value}
-            onChangeText={onChangeText}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="Message"
-            placeholderTextColor={theme.colors.mutedForeground}
-            selectionColor={theme.colors.primary}
-            style={[
-              styles.input,
-              webInputReset,
-              {
-                backgroundColor: theme.colors.muted,
-                color: theme.colors.cardForeground,
-                borderRadius: theme.radii.pill,
-                fontFamily: theme.typography.sans,
-                borderWidth: focused ? 1 : 0,
-                borderColor: theme.colors.primary,
-              },
-            ]}
-          />
+        <View
+          style={[
+            styles.fieldShell,
+            {
+              backgroundColor: theme.colors.muted,
+              borderRadius: theme.radii.pill,
+              borderColor: focused ? theme.colors.primary : 'transparent',
+              borderWidth: focused ? 1 : 0,
+            },
+          ]}>
+          <Pressable
+            hitSlop={6}
+            style={[styles.inlineAction, webActionStyle]}
+            accessibilityLabel="Stickers"
+            onPress={() => setPanel(panel === 'sticker' ? 'none' : 'sticker')}>
+            <Ionicons name="happy-outline" size={22} color={theme.colors.primary} />
+          </Pressable>
+          <Pressable
+            hitSlop={6}
+            style={[styles.inlineAction, webActionStyle]}
+            accessibilityLabel="Attach file"
+            onPress={handleFilePress}>
+            <Ionicons name="attach" size={22} color={theme.colors.primary} />
+          </Pressable>
+          <Pressable
+            hitSlop={6}
+            style={[styles.inlineAction, webActionStyle]}
+            accessibilityLabel="Camera"
+            onPress={handleCameraPress}>
+            <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
+          </Pressable>
+          <View style={styles.inputWrap}>
+            <TextInput
+              value={value}
+              onChangeText={onChangeText}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder="Message"
+              placeholderTextColor={theme.colors.mutedForeground}
+              selectionColor={theme.colors.primary}
+              style={[
+                styles.input,
+                webInputReset,
+                {
+                  color: theme.colors.cardForeground,
+                  fontFamily: theme.typography.sans,
+                },
+              ]}
+            />
+          </View>
         </View>
-        <Pressable
-          hitSlop={8}
-          style={styles.action}
-          onPress={() => setPanel(panel === 'emoji' ? 'none' : 'emoji')}>
-          <Ionicons name="happy-outline" size={22} color={theme.colors.primary} />
-        </Pressable>
+
         {value.trim() ? (
-          <Pressable hitSlop={8} style={styles.action} onPress={onSend}>
+          <Pressable hitSlop={8} style={[styles.outsideAction, webActionStyle]} onPress={onSend}>
             <Ionicons name="send" size={22} color={theme.colors.primary} />
           </Pressable>
         ) : (
-          <Pressable hitSlop={8} style={styles.action} onPress={() => setPanel('voice')}>
-            <Ionicons name="mic-outline" size={22} color={theme.colors.primary} />
+          <Pressable
+            hitSlop={8}
+            style={[styles.outsideAction, webActionStyle]}
+            accessibilityLabel="Record voice message"
+            onPress={() => setPanel('voice')}>
+            <Ionicons name="mic-outline" size={24} color={theme.colors.primary} />
           </Pressable>
         )}
       </View>
-
-      <ActionSheet
-        visible={attachOpen}
-        title="Attach"
-        items={attachItems}
-        onClose={() => setAttachOpen(false)}
-      />
     </View>
   );
 }
@@ -219,12 +237,28 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     paddingHorizontal: 10,
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     width: '100%',
     maxWidth: '100%',
+  },
+  fieldShell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    minWidth: 0,
+    paddingLeft: 4,
+    paddingRight: 10,
+  },
+  inlineAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 34,
+    height: 34,
+    flexShrink: 0,
   },
   inputWrap: {
     flex: 1,
@@ -232,16 +266,16 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 40,
-    paddingHorizontal: 14,
     paddingVertical: 8,
+    paddingHorizontal: 0,
     fontSize: 16,
   },
-  action: {
-    flexShrink: 0,
+  outsideAction: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
+    flexShrink: 0,
   },
   replyBar: {
     flexDirection: 'row',
@@ -251,5 +285,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     width: '100%',
+  },
+  replyTextWrap: {
+    flex: 1,
+    minWidth: 0,
   },
 });

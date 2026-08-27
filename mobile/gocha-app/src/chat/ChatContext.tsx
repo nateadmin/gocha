@@ -95,7 +95,11 @@ type ChatContextValue = {
   sendEmojiMessage: (chatId: string, emoji: string) => void;
   sendStickerMessage: (chatId: string, stickerKey: string) => void;
   sendVoiceMessage: (chatId: string, durationSec: number) => void;
-  sendMediaMessage: (chatId: string, type: 'image' | 'video' | 'file', fileName?: string) => void;
+  sendMediaMessage: (
+    chatId: string,
+    type: 'image' | 'video' | 'file',
+    media?: { fileName?: string; mediaUrl?: string; mimeType?: string },
+  ) => void;
   deleteMessage: (chatId: string, messageId: string, forEveryone?: boolean) => void;
   starMessage: (chatId: string, messageId: string) => void;
   unstarMessage: (chatId: string, messageId: string) => void;
@@ -611,12 +615,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const sendMediaMessage = useCallback(
-    (chatId: string, type: MessageType, fileName?: string) => {
+    (
+      chatId: string,
+      type: MessageType,
+      media?: { fileName?: string; mediaUrl?: string; mimeType?: string },
+    ) => {
       if (type !== 'image' && type !== 'video' && type !== 'file') return;
       appendMessage(chatId, {
         id: `m-${Date.now()}`,
         type,
-        fileName,
+        fileName: media?.fileName,
+        mediaUrl: media?.mediaUrl,
+        mimeType: media?.mimeType,
         sentAt: formatTimeLabel(),
         isOutgoing: true,
         status: 'sent',
