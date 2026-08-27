@@ -26,7 +26,7 @@ type TriggerRect = {
   height: number;
 };
 
-/** Web: portal overlay + fixed trigger so the X stays above backdrop and search. */
+/** Web: portal overlay to body; float the animated trigger above it at measured coords. */
 export function HeaderOverflowMenu({
   open,
   menuTop,
@@ -42,7 +42,7 @@ export function HeaderOverflowMenu({
   const anchorRef = useRef<HTMLDivElement>(null);
   const [triggerRect, setTriggerRect] = useState<TriggerRect | null>(null);
   const menuZ = theme.overlayMenu.zIndex;
-  const triggerZ = theme.overlayMenu.headerZIndex + 2;
+  const triggerZ = theme.overlayMenu.triggerZIndex;
 
   useLayoutEffect(() => {
     if (!open) {
@@ -63,13 +63,15 @@ export function HeaderOverflowMenu({
     }
 
     measure();
+    const raf = window.requestAnimationFrame(measure);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
     return () => {
+      window.cancelAnimationFrame(raf);
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
-  }, [open]);
+  }, [open, size]);
 
   const hamburger = (
     <AnimatedHamburgerMenu
@@ -81,81 +83,88 @@ export function HeaderOverflowMenu({
     />
   );
 
-  return (
-    <MenuAnchor ref={anchorRef}>
-      {open && triggerRect && typeof document !== 'undefined'
-        ? createPortal(
-            <>
-              <Backdrop
-                aria-hidden
-                onClick={onClose}
-                style={{ backgroundColor: theme.overlayMenu.backdropColor }}
-                $z={menuZ - 1}
-              />
-              <MenuPanel
-                $anchor={anchor}
-                $menuTop={menuTop}
-                $maxHeight={theme.overlayMenu.panelMaxHeight}
-                $minWidth={theme.overlayMenu.panelMinWidth}
-                $z={menuZ}
-                role="menu"
-                style={{
-                  backgroundColor: theme.colors.card,
-                  borderColor: theme.colors.border,
-                  boxShadow: `0 8px 16px ${theme.colors.primary}2e`,
-                }}>
-                {items.map((item) => (
-                  <MenuButton
-                    key={item.id}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      onClose();
-                      item.onPress();
+  const triggerPad = size * 0.4;
+  const overlay =
+    open && typeof document !== 'undefined'
+      ? createPortal(
+          <>
+            <Backdrop
+              aria-hidden
+              onClick={onClose}
+              style={{ backgroundColor: theme.overlayMenu.backdropColor }}
+              $z={menuZ - 1}
+            />
+            <MenuPanel
+              $anchor={anchor}
+              $menuTop={menuTop}
+              $maxHeight={theme.overlayMenu.panelMaxHeight}
+              $minWidth={theme.overlayMenu.panelMinWidth}
+              $z={menuZ}
+              role="menu"
+              style={{
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
+                boxShadow: `0 8px 16px ${theme.colors.primary}2e`,
+              }}>
+              {items.map((item) => (
+                <MenuButton
+                  key={item.id}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onClose();
+                    item.onPress();
+                  }}>
+                  {item.icon ? (
+                    <Ionicons
+                      name={item.icon as keyof typeof Ionicons.glyphMap}
+                      size={18}
+                      color={item.destructive ? theme.colors.destructive : theme.colors.primary}
+                    />
+                  ) : null}
+                  <span
+                    style={{
+                      color: item.destructive ? theme.colors.destructive : theme.colors.cardForeground,
+                      fontFamily: theme.typography.sans,
+                      fontSize: 15,
                     }}>
-                    {item.icon ? (
-                      <Ionicons
-                        name={item.icon as keyof typeof Ionicons.glyphMap}
-                        size={18}
-                        color={item.destructive ? theme.colors.destructive : theme.colors.primary}
-                      />
-                    ) : null}
-                    <span
-                      style={{
-                        color: item.destructive ? theme.colors.destructive : theme.colors.cardForeground,
-                        fontFamily: theme.typography.sans,
-                        fontSize: 15,
-                      }}>
-                      {item.label}
-                    </span>
-                  </MenuButton>
-                ))}
-              </MenuPanel>
+                    {item.label}
+                  </span>
+                </MenuButton>
+              ))}
+            </MenuPanel>
+            {triggerRect ? (
               <TriggerLayer
-                $top={triggerRect.top}
-                $left={triggerRect.left}
-                $width={triggerRect.width}
-                $height={triggerRect.height}
+                $top={triggerRect.top - triggerPad}
+                $left={triggerRect.left - triggerPad}
+                $width={triggerRect.width + triggerPad * 2}
+                $height={triggerRect.height + triggerPad * 2}
                 $z={triggerZ}>
                 {hamburger}
               </TriggerLayer>
-            </>,
-            document.body,
-          )
-        : null}
-      <TriggerPlaceholder $hidden={open}>{hamburger}</TriggerPlaceholder>
-    </MenuAnchor>
+            ) : null}
+          </>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <>
+      {overlay}
+      <AnchorSlot ref={anchorRef} $size={size}>
+        {open ? null : hamburger}
+      </AnchorSlot>
+    </>
   );
 }
 
 export type { DropdownMenuItem };
 
-const MenuAnchor = styled.div`
+const AnchorSlot = styled.div<{ $size: number }>`
+  flex-shrink: 0;
+  height: ${(p) => p.$size}px;
   position: relative;
-`;
-
-const TriggerPlaceholder = styled.div<{ $hidden: boolean }>`
-  visibility: ${(p) => (p.$hidden ? 'hidden' : 'visible')};
+  width: ${(p) => p.$size}px;
 `;
 
 const TriggerLayer = styled.div<{
@@ -170,6 +179,7 @@ const TriggerLayer = styled.div<{
   height: ${(p) => p.$height}px;
   justify-content: center;
   left: ${(p) => p.$left}px;
+  overflow: visible;
   pointer-events: auto;
   position: fixed;
   top: ${(p) => p.$top}px;

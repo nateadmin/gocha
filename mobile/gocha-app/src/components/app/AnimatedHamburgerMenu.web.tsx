@@ -46,6 +46,7 @@ const HamburgerButton = styled.button<{ $open: boolean; $strokeColor: string; $s
   flex-shrink: 0;
   height: ${(p) => p.$size}px;
   justify-content: center;
+  overflow: visible;
   padding: 0;
   position: relative;
   width: ${(p) => p.$size}px;
@@ -72,11 +73,6 @@ const HamburgerButton = styled.button<{ $open: boolean; $strokeColor: string; $s
 
   .line-top-bottom {
     stroke-dasharray: ${(p) => (p.$open ? '20 300' : '12 63')};
-    stroke-dashoffset: ${(p) => (p.$open ? '-32.42' : '0')};
-  }
-
-  .line:not(.line-top-bottom) {
-    stroke-dasharray: ${(p) => (p.$open ? '20 300' : 'none')};
     stroke-dashoffset: ${(p) => (p.$open ? '-32.42' : '0')};
   }
 `;

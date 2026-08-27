@@ -71,6 +71,7 @@ export interface ThemeOverlayMenu {
   panelMaxHeight: number;
   zIndex: number;
   headerZIndex: number;
+  triggerZIndex: number;
 }
 
 export interface GochaTheme {
@@ -160,6 +161,7 @@ export const overlayMenu: ThemeOverlayMenu = {
   panelMaxHeight: 420,
   zIndex: 1000,
   headerZIndex: 1001,
+  triggerZIndex: 1100,
 };
 
 export {
