@@ -76,12 +76,14 @@ export function AroundMeScreen() {
             }}>
             {group.description}
           </Text>
-          <View style={styles.tags}>
-            {group.interestTags.map((tag) => (
-              <BrandBadge key={tag} label={tag} />
-            ))}
+          <View style={styles.tagsRow}>
+            <View style={styles.tags}>
+              {group.interestTags.map((tag) => (
+                <BrandBadge key={tag} label={tag} />
+              ))}
+            </View>
+            <CtaButton label="Request to join" fullWidth={false} compact />
           </View>
-          <CtaButton label="Request to join" />
         </View>
       ))}
 
@@ -127,7 +129,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  tagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
   tags: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,

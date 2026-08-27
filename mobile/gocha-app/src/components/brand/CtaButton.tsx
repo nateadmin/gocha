@@ -17,6 +17,7 @@ type Props = Omit<PressableProps, 'children'> & {
   label: string;
   loading?: boolean;
   fullWidth?: boolean;
+  compact?: boolean;
 };
 
 export function CtaButton({
@@ -24,6 +25,7 @@ export function CtaButton({
   loading = false,
   disabled,
   fullWidth = true,
+  compact = false,
   style,
   ...props
 }: Props) {
@@ -46,21 +48,22 @@ export function CtaButton({
       <View
         style={[
           styles.outer,
+          compact && styles.outerCompact,
           {
             backgroundColor: GRADIENT_EDGE,
             shadowColor: '#9741fc',
           },
         ]}>
-        <View style={[styles.inner, { backgroundColor: INNER_BG }]}>
+        <View style={[styles.inner, compact && styles.innerCompact, { backgroundColor: INNER_BG }]}>
           {loading ? (
-            <UniversalLoader size={0.28} />
+            <UniversalLoader size={compact ? 0.22 : 0.28} />
           ) : (
             <Text
               style={{
                 color: '#ffffff',
                 fontFamily: brandFontFamilies.cta,
-                fontSize: theme.typography.body,
-                lineHeight: 20,
+                fontSize: compact ? theme.typography.caption : theme.typography.body,
+                lineHeight: compact ? 16 : 20,
                 letterSpacing: theme.typography.letterSpacing,
                 textAlign: 'center',
               }}>
@@ -86,6 +89,13 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 8,
   },
+  outerCompact: {
+    minWidth: 0,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   inner: {
     borderRadius: 6,
     paddingVertical: 16,
@@ -93,5 +103,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,
+  },
+  innerCompact: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    minHeight: 32,
   },
 });
