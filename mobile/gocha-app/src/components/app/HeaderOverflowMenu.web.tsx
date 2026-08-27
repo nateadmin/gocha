@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -17,7 +18,7 @@ type Props = {
   strokeColor?: string;
 };
 
-/** Web: keep trigger above fixed overlay so the menu-to-X animation stays visible. */
+/** Web: portal menu to body; keep trigger above overlay for the hamburger-to-X animation. */
 export function HeaderOverflowMenu({
   open,
   menuTop,
@@ -30,65 +31,70 @@ export function HeaderOverflowMenu({
   strokeColor,
 }: Props) {
   const { theme } = useGochaTheme();
+  const menuZ = theme.overlayMenu.zIndex;
+  const triggerZ = theme.overlayMenu.headerZIndex + 2;
 
   return (
-    <MenuAnchor $open={open} $headerZ={theme.overlayMenu.headerZIndex}>
-      {open ? (
-        <>
-          <Backdrop
-            aria-hidden
-            onClick={onClose}
-            style={{ backgroundColor: theme.overlayMenu.backdropColor }}
-            $z={theme.overlayMenu.zIndex}
-          />
-          <MenuPanel
-            $anchor={anchor}
-            $menuTop={menuTop}
-            $maxHeight={theme.overlayMenu.panelMaxHeight}
-            $minWidth={theme.overlayMenu.panelMinWidth}
-            $z={theme.overlayMenu.zIndex + 1}
-            role="menu"
-            style={{
-              backgroundColor: theme.colors.card,
-              borderColor: theme.colors.border,
-              boxShadow: `0 8px 16px ${theme.colors.primary}2e`,
-            }}>
-            {items.map((item) => (
-              <MenuButton
-                key={item.id}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onClose();
-                  item.onPress();
+    <MenuAnchor>
+      {open && typeof document !== 'undefined'
+        ? createPortal(
+            <>
+              <Backdrop
+                aria-hidden
+                onClick={onClose}
+                style={{ backgroundColor: theme.overlayMenu.backdropColor }}
+                $z={menuZ - 1}
+              />
+              <MenuPanel
+                $anchor={anchor}
+                $menuTop={menuTop}
+                $maxHeight={theme.overlayMenu.panelMaxHeight}
+                $minWidth={theme.overlayMenu.panelMinWidth}
+                $z={menuZ}
+                role="menu"
+                style={{
+                  backgroundColor: theme.colors.card,
+                  borderColor: theme.colors.border,
+                  boxShadow: `0 8px 16px ${theme.colors.primary}2e`,
                 }}>
-                {item.icon ? (
-                  <Ionicons
-                    name={item.icon as keyof typeof Ionicons.glyphMap}
-                    size={18}
-                    color={item.destructive ? theme.colors.destructive : theme.colors.primary}
-                  />
-                ) : null}
-                <span
-                  style={{
-                    color: item.destructive ? theme.colors.destructive : theme.colors.cardForeground,
-                    fontFamily: theme.typography.sans,
-                    fontSize: 15,
-                  }}>
-                  {item.label}
-                </span>
-              </MenuButton>
-            ))}
-          </MenuPanel>
-        </>
-      ) : null}
+                {items.map((item) => (
+                  <MenuButton
+                    key={item.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      onClose();
+                      item.onPress();
+                    }}>
+                    {item.icon ? (
+                      <Ionicons
+                        name={item.icon as keyof typeof Ionicons.glyphMap}
+                        size={18}
+                        color={item.destructive ? theme.colors.destructive : theme.colors.primary}
+                      />
+                    ) : null}
+                    <span
+                      style={{
+                        color: item.destructive ? theme.colors.destructive : theme.colors.cardForeground,
+                        fontFamily: theme.typography.sans,
+                        fontSize: 15,
+                      }}>
+                      {item.label}
+                    </span>
+                  </MenuButton>
+                ))}
+              </MenuPanel>
+            </>,
+            document.body,
+          )
+        : null}
       <AnimatedHamburgerMenu
         open={open}
         onPress={onPress}
         accessibilityLabel={accessibilityLabel}
         strokeColor={strokeColor}
         size={size}
-        style={{ position: 'relative', zIndex: theme.overlayMenu.headerZIndex + 2 }}
+        style={{ position: 'relative', zIndex: open ? triggerZ : undefined }}
       />
     </MenuAnchor>
   );
@@ -96,9 +102,8 @@ export function HeaderOverflowMenu({
 
 export type { DropdownMenuItem };
 
-const MenuAnchor = styled.div<{ $open: boolean; $headerZ: number }>`
+const MenuAnchor = styled.div`
   position: relative;
-  z-index: ${(p) => (p.$open ? p.$headerZ : 'auto')};
 `;
 
 const Backdrop = styled.div<{ $z: number }>`

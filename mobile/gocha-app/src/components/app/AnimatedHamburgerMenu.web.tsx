@@ -53,12 +53,14 @@ const HamburgerButton = styled.button<{ $open: boolean; $strokeColor: string; $s
   svg {
     fill: none;
     height: ${(p) => p.$size * 0.75}px;
+    overflow: visible;
     transform: rotate(${(p) => (p.$open ? '-45deg' : '0deg')});
     transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
     width: ${(p) => p.$size * 0.75}px;
   }
 
   .line {
+    fill: none;
     stroke: ${(p) => p.$strokeColor};
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -70,6 +72,11 @@ const HamburgerButton = styled.button<{ $open: boolean; $strokeColor: string; $s
 
   .line-top-bottom {
     stroke-dasharray: ${(p) => (p.$open ? '20 300' : '12 63')};
-    stroke-dashoffset: ${(p) => (p.$open ? '-32.42px' : '0')};
+    stroke-dashoffset: ${(p) => (p.$open ? '-32.42' : '0')};
+  }
+
+  .line:not(.line-top-bottom) {
+    stroke-dasharray: ${(p) => (p.$open ? '20 300' : 'none')};
+    stroke-dashoffset: ${(p) => (p.$open ? '-32.42' : '0')};
   }
 `;

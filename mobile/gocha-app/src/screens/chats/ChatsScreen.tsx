@@ -177,15 +177,14 @@ export function ChatsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-      <View
-        style={[
-          styles.topSection,
-          { paddingTop: insets.top + 12 },
-          headerMenuOpen || accountMenuOpen
-            ? { position: 'relative', zIndex: theme.overlayMenu.headerZIndex }
-            : null,
-        ]}>
-        <View style={styles.header}>
+      <View style={[styles.topSection, { paddingTop: insets.top + 12 }]}>
+        <View
+          style={[
+            styles.header,
+            headerMenuOpen || accountMenuOpen
+              ? { position: 'relative', zIndex: theme.overlayMenu.headerZIndex + 2 }
+              : null,
+          ]}>
           {chat.activeFilter === 'archived' ? (
             <Pressable onPress={() => chat.setActiveFilter('all')} style={styles.archiveBack}>
               <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />

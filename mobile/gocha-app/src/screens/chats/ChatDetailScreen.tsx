@@ -14,8 +14,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Avatar } from '../../components/app';
-import { HeaderOverflowMenu, type DropdownMenuItem } from '../../components/app';
+import { Avatar, HeaderOverflowMenu, type DropdownMenuItem } from '../../components/app';
 import { CtaButton } from '../../components/brand';
 import { ActionSheet, ChatComposer, MessageBubble } from '../../components/chat';
 import type { ActionSheetItem } from '../../components/chat/ActionSheet';
@@ -226,7 +225,7 @@ export function ChatDetailScreen() {
             paddingTop: insets.top + 6,
           },
           menuOpen
-            ? { position: 'relative', zIndex: theme.overlayMenu.headerZIndex }
+            ? { position: 'relative', zIndex: theme.overlayMenu.headerZIndex + 2 }
             : null,
         ]}>
         <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
