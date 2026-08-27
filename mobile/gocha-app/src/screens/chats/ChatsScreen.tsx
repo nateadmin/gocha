@@ -61,9 +61,17 @@ export function ChatsScreen() {
           chat.toggleSelectChat(record.id);
         },
       },
-      record.pinned
-        ? { id: 'unpin', label: 'Unpin', onPress: () => chat.unpinChat(record.id) }
-        : { id: 'pin', label: 'Pin', onPress: () => chat.pinChat(record.id) },
+    ];
+
+    if (!record.isOrderAssistant) {
+      items.push(
+        record.pinned
+          ? { id: 'unpin', label: 'Unpin', onPress: () => chat.unpinChat(record.id) }
+          : { id: 'pin', label: 'Pin', onPress: () => chat.pinChat(record.id) },
+      );
+    }
+
+    items.push(
       record.markedUnread || record.unreadCount > 0
         ? { id: 'read', label: 'Mark as read', onPress: () => chat.markChatRead(record.id) }
         : { id: 'unread', label: 'Mark as unread', onPress: () => chat.markChatUnread(record.id) },
@@ -99,7 +107,7 @@ export function ChatsScreen() {
           if (firstList) chat.addChatToList(record.id, firstList.id);
         },
       },
-    ];
+    );
 
     if (chat.preferences.labelsEnabled) {
       chat.labels.forEach((label) => {
@@ -119,13 +127,16 @@ export function ChatsScreen() {
       record.blocked
         ? { id: 'unblock', label: 'Unblock', onPress: () => chat.unblockChat(record.id) }
         : { id: 'block', label: 'Block', onPress: () => chat.blockChat(record.id) },
-      {
+    );
+
+    if (!record.isOrderAssistant) {
+      items.push({
         id: 'delete',
         label: 'Delete chat',
         destructive: true,
         onPress: () => chat.deleteChat(record.id),
-      },
-    );
+      });
+    }
 
     return items;
   }

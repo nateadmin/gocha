@@ -15,6 +15,7 @@ import {
   INITIAL_MESSAGES,
   STICKER_EMOJI,
 } from './seedData';
+import { isOrderAssistantChat } from './orderAssistant';
 import type {
   ChatFilterId,
   ChatLabel,
@@ -180,6 +181,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const sortedChats = useMemo(() => {
     return [...chats].sort((a, b) => {
+      if (isOrderAssistantChat(a.id)) return -1;
+      if (isOrderAssistantChat(b.id)) return 1;
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return b.lastActivityAt - a.lastActivityAt;
     });
@@ -215,8 +218,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [sortedChats],
   );
 
-  const pinChat = useCallback((chatId: string) => updateChat(chatId, { pinned: true }), [updateChat]);
-  const unpinChat = useCallback((chatId: string) => updateChat(chatId, { pinned: false }), [updateChat]);
+  const pinChat = useCallback(
+    (chatId: string) => {
+      if (isOrderAssistantChat(chatId)) return;
+      updateChat(chatId, { pinned: true });
+    },
+    [updateChat],
+  );
+  const unpinChat = useCallback(
+    (chatId: string) => {
+      if (isOrderAssistantChat(chatId)) return;
+      updateChat(chatId, { pinned: false });
+    },
+    [updateChat],
+  );
   const archiveChat = useCallback((chatId: string) => updateChat(chatId, { archived: true }), [updateChat]);
   const unarchiveChat = useCallback((chatId: string) => updateChat(chatId, { archived: false }), [updateChat]);
   const markChatRead = useCallback(
@@ -249,6 +264,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const deleteChat = useCallback((chatId: string) => {
+    if (isOrderAssistantChat(chatId)) return;
     setChats((prev) => prev.filter((chat) => chat.id !== chatId));
     setMessages((prev) => {
       const next = { ...prev };

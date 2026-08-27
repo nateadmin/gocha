@@ -58,6 +58,9 @@ export function ChatListItem({ chat, selected, onPress, onLongPress }: Props) {
             {chat.isSecret ? (
               <Ionicons name="shield-checkmark" size={14} color={theme.colors.accent} />
             ) : null}
+            {chat.isOrderAssistant ? (
+              <Ionicons name="sparkles" size={14} color={theme.colors.primary} />
+            ) : null}
             {chat.isBusiness ? (
               <Ionicons name="storefront-outline" size={14} color={theme.colors.primary} />
             ) : null}

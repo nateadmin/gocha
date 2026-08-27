@@ -1,3 +1,7 @@
+import {
+  ORDER_ASSISTANT_CHAT_ID,
+  ORDER_ASSISTANT_DEFAULT_NAME,
+} from './orderAssistant';
 import type { ChatLabel, ChatList, ChatMessage, ChatRecord } from './types';
 
 export const INITIAL_LABELS: ChatLabel[] = [
@@ -12,6 +16,30 @@ export const INITIAL_LISTS: ChatList[] = [
 ];
 
 export const INITIAL_CHATS: ChatRecord[] = [
+  {
+    id: ORDER_ASSISTANT_CHAT_ID,
+    name: ORDER_ASSISTANT_DEFAULT_NAME,
+    avatarLabel: 'BC',
+    avatarColor: '#5b42f3',
+    preview: 'Tell me what you need — I will find the best option.',
+    dateLabel: 'Today',
+    lastActivityAt: Date.now() + 1000,
+    unreadCount: 0,
+    pinned: true,
+    archived: false,
+    muted: false,
+    blocked: false,
+    locked: false,
+    hidden: false,
+    favorite: false,
+    markedUnread: false,
+    isGroup: false,
+    isBusiness: false,
+    isOrderAssistant: true,
+    isSecret: false,
+    listIds: [],
+    labelIds: [],
+  },
   {
     id: 'bella-napoli-chat',
     name: 'Bella Napoli',
@@ -179,6 +207,16 @@ export const INITIAL_CHATS: ChatRecord[] = [
 ];
 
 export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
+  [ORDER_ASSISTANT_CHAT_ID]: [
+    {
+      id: 'welcome',
+      type: 'text',
+      text:
+        'Hi — I am your Gocha assistant. Tell me what you need and I will find the best local option, prepare your request, and help you book or order.',
+      sentAt: 'Now',
+      isOutgoing: false,
+    },
+  ],
   liam: [
     {
       id: '1',

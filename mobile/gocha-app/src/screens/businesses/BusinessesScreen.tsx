@@ -13,12 +13,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { BusinessCard } from '../../components/business';
 import { CtaButton } from '../../components/brand';
-import {
-  aiOrderSuggestions,
-  businessCategories,
-  businesses,
-} from '../../data/mock';
-import { neonShadowStyle, useGochaTheme } from '../../theme';
+import { businessCategories, businesses } from '../../data/mock';
+import { useGochaTheme } from '../../theme';
 import type { DiscoverStackParamList } from '../../navigation/types';
 
 type Props = {
@@ -32,7 +28,6 @@ export function BusinessesScreen({ embedded = false }: Props) {
   const { theme } = useGochaTheme();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
-  const [aiPrompt, setAiPrompt] = useState('');
 
   const filtered = useMemo(() => {
     return businesses.filter((b) => {
@@ -130,96 +125,6 @@ export function BusinessesScreen({ embedded = false }: Props) {
           />
         </View>
 
-        <View
-          style={[
-            styles.aiCard,
-            {
-              backgroundColor: theme.colors.muted,
-              borderRadius: theme.radii.card,
-              borderColor: theme.colors.border,
-            },
-          ]}>
-          <View style={styles.aiTitle}>
-            <Ionicons name="sparkles" size={18} color={theme.colors.primary} />
-            <Text
-              style={{
-                color: theme.colors.cardForeground,
-                fontFamily: theme.typography.sans,
-                fontSize: 17,
-                fontWeight: '600',
-              }}>
-              AI Order Assistant
-            </Text>
-          </View>
-          <Text
-            style={{
-              color: theme.colors.mutedForeground,
-              fontFamily: theme.typography.sans,
-              fontSize: 14,
-            }}>
-            Tell Gocha what you need — it finds the best option and prepares your
-            request.
-          </Text>
-          <View style={styles.aiInputRow}>
-            <TextInput
-              value={aiPrompt}
-              onChangeText={setAiPrompt}
-              placeholder="e.g. Order me lunch, get my usual coffee..."
-              placeholderTextColor={theme.colors.mutedForeground}
-              multiline
-              style={[
-                styles.aiInput,
-                {
-                  backgroundColor: theme.colors.card,
-                  borderRadius: theme.radii.card,
-                  color: theme.colors.cardForeground,
-                  fontFamily: theme.typography.sans,
-                },
-              ]}
-            />
-            <Pressable
-              style={[
-                styles.sendBtn,
-                {
-                  backgroundColor: theme.colors.secondary,
-                  borderRadius: theme.radii.pill,
-                },
-                neonShadowStyle(theme),
-              ]}>
-              <Ionicons
-                name="send"
-                size={18}
-                color={theme.colors.secondaryForeground}
-              />
-            </Pressable>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.suggestionRow}>
-              {aiOrderSuggestions.map((s) => (
-                <Pressable
-                  key={s}
-                  onPress={() => setAiPrompt(s)}
-                  style={[
-                    styles.suggestion,
-                    {
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.radii.pill,
-                    },
-                  ]}>
-                  <Text
-                    style={{
-                      color: theme.colors.cardForeground,
-                      fontFamily: theme.typography.sans,
-                      fontSize: 13,
-                    }}>
-                    {s}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.categories}>
             {businessCategories.map((cat) => {
@@ -302,45 +207,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     minHeight: 44,
     marginBottom: 12,
-  },
-  aiCard: {
-    padding: 14,
-    borderWidth: 1,
-    gap: 10,
-    marginBottom: 12,
-  },
-  aiTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  aiInputRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-end',
-  },
-  aiInput: {
-    flex: 1,
-    minHeight: 72,
-    padding: 12,
-    fontSize: 14,
-    textAlignVertical: 'top',
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingVertical: 4,
-  },
-  suggestion: {
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
   },
   categories: {
     flexDirection: 'row',

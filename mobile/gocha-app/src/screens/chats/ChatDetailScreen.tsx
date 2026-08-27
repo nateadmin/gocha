@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from 'react';
 import {
   FlatList,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -18,6 +19,7 @@ import { CtaButton } from '../../components/brand';
 import { ActionSheet, ChatComposer, MessageBubble } from '../../components/chat';
 import type { ActionSheetItem } from '../../components/chat/ActionSheet';
 import { useChat } from '../../chat/ChatContext';
+import { ORDER_ASSISTANT_SUGGESTIONS } from '../../chat/orderAssistant';
 import type { ChatMessage } from '../../chat/types';
 import { useGochaTheme } from '../../theme';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
@@ -70,9 +72,10 @@ export function ChatDetailScreen() {
       )
     : messages;
 
-  function handleSend() {
-    if (!draft.trim()) return;
-    chatApi.sendTextMessage(route.params.chatId, draft, replyTo?.id);
+  function handleSend(text?: string) {
+    const message = (text ?? draft).trim();
+    if (!message) return;
+    chatApi.sendTextMessage(route.params.chatId, message, replyTo?.id);
     setDraft('');
     setReplyTo(null);
   }
@@ -88,9 +91,13 @@ export function ChatDetailScreen() {
       label: 'Clear chat',
       onPress: () => chatApi.clearChat(route.params.chatId),
     },
-    chat.pinned
-      ? { id: 'unpin', label: 'Unpin', onPress: () => chatApi.unpinChat(chat.id) }
-      : { id: 'pin', label: 'Pin', onPress: () => chatApi.pinChat(chat.id) },
+    ...(chat.isOrderAssistant
+      ? []
+      : [
+          chat.pinned
+            ? { id: 'unpin', label: 'Unpin', onPress: () => chatApi.unpinChat(chat.id) }
+            : { id: 'pin', label: 'Pin', onPress: () => chatApi.pinChat(chat.id) },
+        ]),
     chat.muted
       ? { id: 'unmute', label: 'Unmute', onPress: () => chatApi.unmuteChat(chat.id) }
       : { id: 'mute', label: 'Mute 8 hours', onPress: () => chatApi.muteChat(chat.id, '8h') },
@@ -114,15 +121,19 @@ export function ChatDetailScreen() {
       onPress: () =>
         chat.blocked ? chatApi.unblockChat(chat.id) : chatApi.blockChat(chat.id),
     },
-    {
-      id: 'delete',
-      label: 'Delete chat',
-      destructive: true,
-      onPress: () => {
-        chatApi.deleteChat(chat.id);
-        navigation.goBack();
-      },
-    },
+    ...(chat.isOrderAssistant
+      ? []
+      : [
+          {
+            id: 'delete',
+            label: 'Delete chat',
+            destructive: true,
+            onPress: () => {
+              chatApi.deleteChat(chat.id);
+              navigation.goBack();
+            },
+          },
+        ]),
   ];
 
   const messageMenuItems: ActionSheetItem[] = messageMenu
@@ -199,7 +210,7 @@ export function ChatDetailScreen() {
               fontFamily: theme.typography.sans,
               fontSize: 12,
             }}>
-            {chat.isSecret ? 'Secret chat' : 'Tap for contact info'}
+            {chat.isSecret ? 'Secret chat' : chat.isOrderAssistant ? 'Book, chat, and order' : 'Tap for contact info'}
           </Text>
         </Pressable>
         <View style={styles.headerActions}>
@@ -279,6 +290,36 @@ export function ChatDetailScreen() {
         }
       />
 
+      {chat.isOrderAssistant ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.suggestionRow}>
+          {ORDER_ASSISTANT_SUGGESTIONS.map((suggestion) => (
+            <Pressable
+              key={suggestion}
+              onPress={() => handleSend(suggestion)}
+              style={[
+                styles.suggestionChip,
+                {
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.muted,
+                  borderRadius: theme.radii.pill,
+                },
+              ]}>
+              <Text
+                style={{
+                  color: theme.colors.cardForeground,
+                  fontFamily: theme.typography.sans,
+                  fontSize: 13,
+                }}>
+                {suggestion}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
+
       <ChatComposer
         value={draft}
         onChangeText={setDraft}
@@ -339,4 +380,15 @@ const styles = StyleSheet.create({
   messages: { paddingHorizontal: 16, paddingBottom: 16 },
   datePillWrap: { alignItems: 'center', marginVertical: 12 },
   datePill: { paddingHorizontal: 12, paddingVertical: 6 },
+  suggestionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  suggestionChip: {
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
 });

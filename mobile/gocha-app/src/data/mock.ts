@@ -188,13 +188,6 @@ export const businesses: Business[] = [
   },
 ];
 
-export const aiOrderSuggestions = [
-  'Order me lunch 🥗',
-  'Get my usual coffee ☕',
-  'Groceries for dinner tonight 🛒',
-  'I need a ride to the airport 🚕',
-];
-
 export const discoverableGroups: CommunityGroup[] = [
   {
     id: 'musicians-shore',
