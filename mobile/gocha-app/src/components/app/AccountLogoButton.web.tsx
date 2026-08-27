@@ -1,7 +1,4 @@
 import styled from 'styled-components';
-import Ionicons from '@expo/vector-icons/Ionicons';
-
-import { useGochaTheme } from '../../theme';
 
 type Props = {
   onPress: () => void;
@@ -14,8 +11,6 @@ export function AccountLogoButton({
   accessibilityLabel = 'Switch account',
   logoSize = 40,
 }: Props) {
-  const { theme } = useGochaTheme();
-
   return (
     <LogoButton type="button" onClick={onPress} aria-label={accessibilityLabel}>
       <img
@@ -26,7 +21,6 @@ export function AccountLogoButton({
         width={logoSize}
         height={logoSize}
       />
-      <Ionicons name="chevron-down" size={14} color={theme.colors.primary} />
     </LogoButton>
   );
 }
@@ -37,8 +31,6 @@ const LogoButton = styled.button`
   border: none;
   cursor: pointer;
   display: flex;
-  flex-direction: row;
-  gap: 4px;
   padding: 0;
 
   img {
