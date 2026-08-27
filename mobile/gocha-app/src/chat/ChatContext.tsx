@@ -73,6 +73,7 @@ type ChatContextValue = {
   createLabel: (name: string, color: string) => string;
   deleteLabel: (labelId: string) => void;
   setLabelsEnabled: (enabled: boolean) => void;
+  setListsEnabled: (enabled: boolean) => void;
   setSwipeRight: (action: SwipeAction) => void;
   setSwipeLeft: (action: SwipeAction) => void;
   setHiddenChatsPin: (pin: string | null) => void;
@@ -150,6 +151,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [labels, setLabels] = useState<ChatLabel[]>(INITIAL_LABELS);
   const [preferences, setPreferences] = useState<ChatPreferences>({
     labelsEnabled: true,
+    listsEnabled: false,
     swipeRight: 'pin',
     swipeLeft: 'archive',
     hiddenChatsPin: '4242',
@@ -350,6 +352,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const setLabelsEnabled = useCallback((enabled: boolean) => {
     setPreferences((prev) => ({ ...prev, labelsEnabled: enabled }));
+  }, []);
+
+  const setListsEnabled = useCallback((enabled: boolean) => {
+    setPreferences((prev) => ({ ...prev, listsEnabled: enabled }));
+    if (!enabled) {
+      setActiveFilter('all');
+    }
   }, []);
 
   const setSwipeRight = useCallback((action: SwipeAction) => {
@@ -629,6 +638,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       createLabel,
       deleteLabel,
       setLabelsEnabled,
+      setListsEnabled,
       setSwipeRight,
       setSwipeLeft,
       setHiddenChatsPin,
@@ -699,6 +709,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       createLabel,
       deleteLabel,
       setLabelsEnabled,
+      setListsEnabled,
       setSwipeRight,
       setSwipeLeft,
       setHiddenChatsPin,

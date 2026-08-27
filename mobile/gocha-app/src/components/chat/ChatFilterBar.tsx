@@ -36,7 +36,10 @@ export function ChatFilterBar({ onManageLists, onOpenHidden }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}>
         {filters.map((filter) => {
           const active = activeFilter === filter.id;
           return (
@@ -64,9 +67,9 @@ export function ChatFilterBar({ onManageLists, onOpenHidden }: Props) {
                 style={{
                   color: active
                     ? theme.colors.primaryForeground
-                    : theme.colors.cardForeground,
+                    : theme.colors.mutedForeground,
                   fontFamily: theme.typography.sans,
-                  fontSize: 13,
+                  fontSize: 11,
                 }}>
                 {filter.label}
               </Text>
@@ -77,13 +80,13 @@ export function ChatFilterBar({ onManageLists, onOpenHidden }: Props) {
           onPress={onManageLists}
           style={[
             styles.chip,
+            styles.addChip,
             {
-              backgroundColor: theme.colors.card,
-              borderColor: theme.colors.primary,
+              borderColor: theme.colors.border,
               borderRadius: theme.radii.pill,
             },
           ]}>
-          <Text style={{ color: theme.colors.primary, fontSize: 13 }}>+ List</Text>
+          <Text style={{ color: theme.colors.primary, fontSize: 11 }}>+ List</Text>
         </Pressable>
       </ScrollView>
     </View>
@@ -93,15 +96,18 @@ export function ChatFilterBar({ onManageLists, onOpenHidden }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 6,
   },
   row: {
-    gap: 8,
-    paddingVertical: 4,
+    gap: 6,
+    alignItems: 'center',
   },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  addChip: {
+    backgroundColor: 'transparent',
   },
 });

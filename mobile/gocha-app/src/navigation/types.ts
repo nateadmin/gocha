@@ -27,4 +27,7 @@ export type SettingsStackParamList = {
   ProfileMode: undefined;
   SubmitBusiness: undefined;
   AdminReview: undefined;
+  ChatListsSettings: undefined;
+  ChatLabelsSettings: undefined;
+  HiddenChats: undefined;
 };

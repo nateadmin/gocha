@@ -1,4 +1,5 @@
-import { View, TextInput, StyleSheet } from 'react-native';
+import { forwardRef } from 'react';
+import { View, TextInput, StyleSheet, type TextInput as TextInputType } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useGochaTheme } from '../../theme';
@@ -9,7 +10,10 @@ type Props = {
   placeholder?: string;
 };
 
-export function SearchField({ value, onChangeText, placeholder }: Props) {
+export const SearchField = forwardRef<TextInputType, Props>(function SearchField(
+  { value, onChangeText, placeholder },
+  ref,
+) {
   const { theme } = useGochaTheme();
 
   return (
@@ -23,6 +27,7 @@ export function SearchField({ value, onChangeText, placeholder }: Props) {
       ]}>
       <Ionicons name="search" size={18} color={theme.colors.mutedForeground} />
       <TextInput
+        ref={ref}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -37,7 +42,7 @@ export function SearchField({ value, onChangeText, placeholder }: Props) {
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrap: {

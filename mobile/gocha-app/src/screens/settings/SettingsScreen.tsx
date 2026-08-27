@@ -158,11 +158,7 @@ export function SettingsScreen() {
           },
         ]}>
         <Pressable
-          onPress={() =>
-            navigation.getParent()?.navigate('ChatsTab' as never, {
-              screen: 'ChatLabelsSettings',
-            } as never)
-          }
+          onPress={() => navigation.navigate('ChatLabelsSettings')}
           style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
             Labels, lists & swipe gestures
@@ -170,22 +166,14 @@ export function SettingsScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-        <Pressable
-          onPress={() =>
-            navigation.getParent()?.navigate('ChatsTab' as never, { screen: 'HiddenChats' } as never)
-          }
-          style={styles.linkRow}>
+        <Pressable onPress={() => navigation.navigate('HiddenChats')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
             Hidden chats
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-        <Pressable
-          onPress={() =>
-            navigation.getParent()?.navigate('ChatsTab' as never, { screen: 'ChatListsSettings' } as never)
-          }
-          style={styles.linkRow}>
+        <Pressable onPress={() => navigation.navigate('ChatListsSettings')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
             Manage chat lists
           </Text>

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, View, StyleSheet } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,9 +23,10 @@ export function ChatsScreen() {
   const { theme } = useGochaTheme();
   const insets = useSafeAreaInsets();
   const chat = useChat();
+  const searchRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [contextChat, setContextChat] = useState<ChatRecord | null>(null);
-  const [showFilters, setShowFilters] = useState(true);
+  const [composeOpen, setComposeOpen] = useState(false);
 
   const listData = useMemo(() => {
     if (chat.activeFilter === 'archived') return chat.archivedChats;
@@ -135,34 +136,42 @@ export function ChatsScreen() {
         <BrandLogo size={56} />
         <View style={styles.headerActions}>
           <IconButton
-            icon="filter-outline"
-            accessibilityLabel="Toggle filters"
-            onPress={() => setShowFilters((value) => !value)}
-          />
-          <IconButton
             icon="checkbox-outline"
             accessibilityLabel="Bulk select"
             onPress={() => chat.setBulkMode(!chat.bulkMode)}
           />
-          <IconButton icon="camera-outline" />
-          <IconButton icon="create-outline" tone="primary" />
+          <IconButton icon="camera-outline" accessibilityLabel="Camera" />
+          <IconButton
+            icon="create-outline"
+            tone="primary"
+            accessibilityLabel="New message"
+            onPress={() => {
+              setComposeOpen(true);
+              searchRef.current?.focus();
+            }}
+          />
         </View>
       </View>
 
-      {showFilters ? (
+      <View style={styles.searchWrap}>
+        <SearchField
+          ref={searchRef}
+          value={query}
+          onChangeText={setQuery}
+          placeholder={
+            composeOpen
+              ? 'Search name, email, or phone'
+              : 'Search conversations'
+          }
+        />
+      </View>
+
+      {chat.preferences.listsEnabled ? (
         <ChatFilterBar
           onManageLists={() => navigation.navigate('ChatListsSettings')}
           onOpenHidden={() => navigation.navigate('HiddenChats')}
         />
       ) : null}
-
-      <View style={styles.searchWrap}>
-        <SearchField
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search conversations"
-        />
-      </View>
 
       {chat.bulkMode ? (
         <View
@@ -256,7 +265,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   headerActions: { flexDirection: 'row', gap: 8 },
-  searchWrap: { paddingHorizontal: 16, paddingBottom: 8 },
+  searchWrap: { paddingHorizontal: 16, paddingBottom: 4 },
   list: { paddingBottom: 8 },
   bulkBar: {
     flexDirection: 'row',

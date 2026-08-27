@@ -78,6 +78,7 @@ export type ChatFilterId =
 
 export type ChatPreferences = {
   labelsEnabled: boolean;
+  listsEnabled: boolean;
   swipeRight: SwipeAction;
   swipeLeft: SwipeAction;
   hiddenChatsPin: string | null;

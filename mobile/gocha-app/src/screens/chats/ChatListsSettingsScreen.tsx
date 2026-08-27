@@ -4,13 +4,15 @@ import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { CtaButton } from '../../components/brand';
+import { SettingsToggleRow } from '../../components/app';
 import { useChat } from '../../chat/ChatContext';
 import { useGochaTheme } from '../../theme';
 
 export function ChatListsSettingsScreen() {
   const navigation = useNavigation();
   const { theme } = useGochaTheme();
-  const { lists, createList, deleteList, muteList, unmuteList } = useChat();
+  const { lists, preferences, setListsEnabled, createList, deleteList, muteList, unmuteList } =
+    useChat();
   const [newName, setNewName] = useState('');
 
   return (
@@ -30,11 +32,28 @@ export function ChatListsSettingsScreen() {
         Chat lists
       </Text>
 
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <SettingsToggleRow
+          icon="list-outline"
+          label="Show list filters on Chats"
+          value={preferences.listsEnabled}
+          onValueChange={setListsEnabled}
+        />
+      </View>
+
       {lists.map((list) => (
         <View
           key={list.id}
           style={[
-            styles.card,
+            styles.listCard,
             {
               backgroundColor: theme.colors.card,
               borderColor: theme.colors.border,
@@ -91,7 +110,8 @@ export function ChatListsSettingsScreen() {
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
   back: { marginBottom: 8 },
-  card: {
+  card: { borderWidth: 1, paddingHorizontal: 12, marginBottom: 16 },
+  listCard: {
     borderWidth: 1,
     padding: 14,
     marginBottom: 12,

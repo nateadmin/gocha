@@ -117,7 +117,7 @@ export function ChatListItem({ chat, selected, onPress, onLongPress }: Props) {
                     borderRadius: theme.radii.pill,
                   },
                 ]}>
-                <Text style={{ color: '#fff', fontSize: 10 }}>{label.name}</Text>
+                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '600' }}>{label.name}</Text>
               </View>
             ))}
           </View>
@@ -163,11 +163,11 @@ const styles = StyleSheet.create({
   },
   labelRow: {
     flexDirection: 'row',
-    gap: 6,
-    marginTop: 4,
+    gap: 4,
+    marginTop: 2,
   },
   labelChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
   },
 });
