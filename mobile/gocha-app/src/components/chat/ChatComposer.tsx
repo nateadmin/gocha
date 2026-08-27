@@ -55,6 +55,9 @@ export function ChatComposer({
       ? ({
           outlineStyle: 'none',
           outlineWidth: 0,
+          boxSizing: 'border-box',
+          width: '100%',
+          maxWidth: '100%',
         } as const)
       : {};
 
@@ -74,6 +77,11 @@ export function ChatComposer({
       label: 'Document',
       onPress: () => onAttachFile?.(),
     },
+    {
+      id: 'sticker',
+      label: 'Sticker',
+      onPress: () => setPanel('sticker'),
+    },
   ];
 
   if (panel === 'voice') {
@@ -89,7 +97,7 @@ export function ChatComposer({
   }
 
   return (
-    <View>
+    <View style={styles.root}>
       {replyLabel ? (
         <View
           style={[
@@ -100,7 +108,7 @@ export function ChatComposer({
             },
           ]}>
           <Ionicons name="return-down-forward" size={16} color={theme.colors.primary} />
-          <View style={{ flex: 1 }}>
+          <View style={styles.inputWrap}>
             <TextInput
               editable={false}
               value={replyLabel}
@@ -111,7 +119,7 @@ export function ChatComposer({
               }}
             />
           </View>
-          <Pressable onPress={onCancelReply} hitSlop={8}>
+          <Pressable onPress={onCancelReply} hitSlop={8} style={styles.action}>
             <Ionicons name="close" size={20} color={theme.colors.mutedForeground} />
           </Pressable>
         </View>
@@ -145,53 +153,49 @@ export function ChatComposer({
         ]}>
         <Pressable
           hitSlop={8}
+          style={styles.action}
           onPress={() => {
             setAttachOpen(true);
             setPanel('none');
           }}>
-          <Ionicons name="add" size={26} color={theme.colors.primary} />
+          <Ionicons name="add" size={24} color={theme.colors.primary} />
         </Pressable>
-        <Pressable hitSlop={8} onPress={() => onAttachImage?.()}>
-          <Ionicons name="image-outline" size={24} color={theme.colors.primary} />
-        </Pressable>
+        <View style={styles.inputWrap}>
+          <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="Message"
+            placeholderTextColor={theme.colors.mutedForeground}
+            selectionColor={theme.colors.primary}
+            style={[
+              styles.input,
+              webInputReset,
+              {
+                backgroundColor: theme.colors.muted,
+                color: theme.colors.cardForeground,
+                borderRadius: theme.radii.pill,
+                fontFamily: theme.typography.sans,
+                borderWidth: focused ? 1 : 0,
+                borderColor: theme.colors.primary,
+              },
+            ]}
+          />
+        </View>
         <Pressable
           hitSlop={8}
+          style={styles.action}
           onPress={() => setPanel(panel === 'emoji' ? 'none' : 'emoji')}>
-          <Ionicons name="happy-outline" size={24} color={theme.colors.primary} />
+          <Ionicons name="happy-outline" size={22} color={theme.colors.primary} />
         </Pressable>
-        <Pressable
-          hitSlop={8}
-          onPress={() => setPanel(panel === 'sticker' ? 'none' : 'sticker')}>
-          <Ionicons name="happy" size={24} color={theme.colors.primary} />
-        </Pressable>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder="Message"
-          placeholderTextColor={theme.colors.mutedForeground}
-          selectionColor={theme.colors.primary}
-          style={[
-            styles.input,
-            webInputReset,
-            {
-              backgroundColor: theme.colors.muted,
-              color: theme.colors.cardForeground,
-              borderRadius: theme.radii.pill,
-              fontFamily: theme.typography.sans,
-              borderWidth: focused ? 1 : 0,
-              borderColor: theme.colors.primary,
-            },
-          ]}
-        />
         {value.trim() ? (
-          <Pressable hitSlop={8} onPress={onSend}>
-            <Ionicons name="send" size={24} color={theme.colors.primary} />
+          <Pressable hitSlop={8} style={styles.action} onPress={onSend}>
+            <Ionicons name="send" size={22} color={theme.colors.primary} />
           </Pressable>
         ) : (
-          <Pressable hitSlop={8} onPress={() => setPanel('voice')}>
-            <Ionicons name="mic-outline" size={24} color={theme.colors.primary} />
+          <Pressable hitSlop={8} style={styles.action} onPress={() => setPanel('voice')}>
+            <Ionicons name="mic-outline" size={22} color={theme.colors.primary} />
           </Pressable>
         )}
       </View>
@@ -207,20 +211,37 @@ export function ChatComposer({
 }
 
 const styles = StyleSheet.create({
+  root: {
+    width: '100%',
+    maxWidth: '100%',
+    alignSelf: 'stretch',
+  },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: 6,
+    paddingHorizontal: 10,
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
+    width: '100%',
+    maxWidth: '100%',
+  },
+  inputWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   input: {
-    flex: 1,
     minHeight: 40,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     fontSize: 16,
+  },
+  action: {
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
   },
   replyBar: {
     flexDirection: 'row',
@@ -229,5 +250,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
+    width: '100%',
   },
 });

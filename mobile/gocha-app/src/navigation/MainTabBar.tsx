@@ -20,6 +20,18 @@ export function MainTabBar({ state, descriptors, navigation }: BottomTabBarProps
   const insets = useSafeAreaInsets();
   const { theme } = useGochaTheme();
 
+  const focusedRoute = state.routes[state.index];
+  const tabBarStyle = descriptors[focusedRoute.key]?.options?.tabBarStyle;
+
+  if (
+    tabBarStyle &&
+    typeof tabBarStyle === 'object' &&
+    'display' in tabBarStyle &&
+    tabBarStyle.display === 'none'
+  ) {
+    return null;
+  }
+
   return (
     <View
       style={[

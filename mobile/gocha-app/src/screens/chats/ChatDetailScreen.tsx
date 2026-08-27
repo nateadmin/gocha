@@ -318,7 +318,7 @@ export function ChatDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, width: '100%', maxWidth: '100%', overflow: 'hidden' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
