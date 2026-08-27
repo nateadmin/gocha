@@ -21,6 +21,8 @@ Planned production hostname: `gocha.ai` (live: nginx + Let’s Encrypt on Contab
 - Mobile web shell: https://gocha.ai/
 - API meta: https://gocha.ai/api/meta
 
+GitHub Actions publishes a preview build to the `gh-pages` branch only. That is not what serves https://gocha.ai/. The live web shell is static files on Contabo under `/var/www/html/gocha/public`, updated by `scripts/deploy-web-preview-to-contabo.sh` (also run automatically at the end of `scripts/deploy-to-contabo.sh` when `GOCHA_SSH_KEY` is set).
+
 ## Server (Contabo)
 
 Host: Contabo VPS vmi2918811 (212.47.68.106). Shared with Rydit; see rydit repo `CONNECTION.txt` for stack notes (nginx, PHP 8.3 FPM, MariaDB).
@@ -52,8 +54,11 @@ Run in order before push:
 ### Deploy
 
 1. Push to `main`.
-2. Export SSH key path: `GOCHA_SSH_KEY=/path/to/key ./scripts/deploy-to-contabo.sh`
+2. Export SSH key path and deploy API + web shell:
+   `GOCHA_SSH_KEY=/path/to/key ./scripts/deploy-to-contabo.sh`
+   (Web-only: `./scripts/deploy-web-preview-to-contabo.sh` with the same env var.)
 3. On server: confirm `php artisan route:list --path=api` shows health and version.
+4. Confirm the web bundle changed: view source on https://gocha.ai/ and check the `assets/index-*.js` filename is not `index-CbZMhqcY.js` (stale).
 
 Until `gocha.ai` is live, smoke the API on the server with a short-lived PHP built-in server:
 

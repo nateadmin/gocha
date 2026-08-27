@@ -50,3 +50,9 @@ chmod -R ug+rwx storage bootstrap/cache
 REMOTE
 
 echo "Deploy complete: $COMMIT_SHA"
+
+WEB_DEPLOY_SCRIPT="$ROOT/scripts/deploy-web-preview-to-contabo.sh"
+if [[ -x "$WEB_DEPLOY_SCRIPT" ]]; then
+  echo "Publishing mobile web shell to gocha.ai ..."
+  GOCHA_SSH_KEY="$SSH_KEY" bash "$WEB_DEPLOY_SCRIPT"
+fi
