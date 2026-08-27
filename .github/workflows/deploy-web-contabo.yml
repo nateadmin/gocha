@@ -1,0 +1,60 @@
+name: Deploy web to Contabo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/gocha-app/**'
+      - '.github/workflows/deploy-web-contabo.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-contabo
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ secrets.CONTABO_PRIVATE_SSH_KEY != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/gocha-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile/gocha-app
+        run: npm ci
+
+      - name: Build static web app for gocha.ai
+        working-directory: mobile/gocha-app
+        env:
+          VITE_BASE_PATH: /
+        run: npm run build:web
+
+      - name: Publish to Contabo
+        env:
+          CONTABO_PRIVATE_SSH_KEY: ${{ secrets.CONTABO_PRIVATE_SSH_KEY }}
+          GOCHA_DEPLOY_HOST: ${{ vars.GOCHA_DEPLOY_HOST || '212.47.68.106' }}
+          GOCHA_DEPLOY_USER: ${{ vars.GOCHA_DEPLOY_USER || 'root' }}
+          GOCHA_WEB_APP_PATH: ${{ vars.GOCHA_WEB_APP_PATH || '/var/www/html/gocha/public' }}
+        run: |
+          install -m 600 /dev/null /tmp/gocha-contabo.pem
+          printf '%s\n' "$CONTABO_PRIVATE_SSH_KEY" > /tmp/gocha-contabo.pem
+          chmod 600 /tmp/gocha-contabo.pem
+          rsync -az -e "ssh -i /tmp/gocha-contabo.pem -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+            --exclude 'index.php' \
+            --exclude '.htaccess' \
+            --exclude 'favicon.ico' \
+            mobile/gocha-app/web/dist/ \
+            "${GOCHA_DEPLOY_USER}@${GOCHA_DEPLOY_HOST}:${GOCHA_WEB_APP_PATH}/"
+          rm -f /tmp/gocha-contabo.pem
+
+      - name: Smoke check gocha.ai shell
+        run: |
+          curl -fsS https://gocha.ai/ | grep -q '<title>Gocha</title>'
+          curl -fsS https://gocha.ai/api/health | grep -q '"status"'
