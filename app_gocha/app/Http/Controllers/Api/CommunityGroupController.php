@@ -8,6 +8,7 @@ use App\Support\GroupPrivacy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CommunityGroupController extends Controller
 {
@@ -15,6 +16,7 @@ class CommunityGroupController extends Controller
     {
         $groups = CommunityGroup::query()
             ->where('privacy', GroupPrivacy::PUBLIC)
+            ->where('show_in_around_me', true)
             ->orderByDesc('member_count')
             ->get()
             ->filter(fn (CommunityGroup $group) => $group->isDiscoverableInAroundMe())
@@ -72,6 +74,7 @@ class CommunityGroupController extends Controller
             'address' => $validated['address'] ?? null,
             'city' => $validated['city'] ?? null,
             'state' => $validated['state'] ?? null,
+            'show_in_around_me' => (bool) ($validated['show_in_around_me'] ?? false),
             'avatar_label' => $this->avatarLabel($validated['name']),
             'avatar_color' => $this->avatarColor(),
             'member_count' => 1,
@@ -84,30 +87,68 @@ class CommunityGroupController extends Controller
     {
         $this->authorizeOwner($request, $communityGroup);
 
-        $validated = $this->validateGroup($request, partial: true);
+        $validated = $this->validateGroup($request, partial: true, existing: $communityGroup);
 
         $communityGroup->forceFill([
             'name' => $validated['name'] ?? $communityGroup->name,
             'description' => $validated['description'] ?? $communityGroup->description,
             'privacy' => $validated['privacy'] ?? $communityGroup->privacy,
-            'address' => $validated['address'] ?? $communityGroup->address,
-            'city' => $validated['city'] ?? $communityGroup->city,
-            'state' => $validated['state'] ?? $communityGroup->state,
+            'address' => array_key_exists('address', $validated)
+                ? $validated['address']
+                : $communityGroup->address,
+            'city' => array_key_exists('city', $validated)
+                ? $validated['city']
+                : $communityGroup->city,
+            'state' => array_key_exists('state', $validated)
+                ? $validated['state']
+                : $communityGroup->state,
+            'show_in_around_me' => array_key_exists('show_in_around_me', $validated)
+                ? (bool) $validated['show_in_around_me']
+                : $communityGroup->show_in_around_me,
         ])->save();
 
         return response()->json(['group' => $communityGroup->fresh()->toPayload()]);
     }
 
-    private function validateGroup(Request $request, bool $partial = false): array
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateGroup(Request $request, bool $partial = false, ?CommunityGroup $existing = null): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => [$partial ? 'sometimes' : 'required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
             'privacy' => [$partial ? 'sometimes' : 'required', 'string', Rule::in(GroupPrivacy::all())],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:80'],
             'state' => ['nullable', 'string', 'max:80'],
+            'show_in_around_me' => ['sometimes', 'boolean'],
         ]);
+
+        $privacy = $validated['privacy'] ?? $existing?->privacy;
+        $showInAroundMe = array_key_exists('show_in_around_me', $validated)
+            ? (bool) $validated['show_in_around_me']
+            : (bool) ($existing?->show_in_around_me ?? false);
+        $address = array_key_exists('address', $validated)
+            ? trim((string) ($validated['address'] ?? ''))
+            : trim((string) ($existing?->address ?? ''));
+
+        if ($showInAroundMe && $address === '') {
+            throw ValidationException::withMessages([
+                'address' => ['Enter a street address to show this group in Around Me recommendations.'],
+            ]);
+        }
+
+        if ($showInAroundMe && $privacy === GroupPrivacy::PRIVATE) {
+            throw ValidationException::withMessages([
+                'privacy' => ['Around Me recommendations require a public group.'],
+            ]);
+        }
+
+        $validated['show_in_around_me'] = $showInAroundMe;
+        $validated['address'] = $showInAroundMe ? $address : null;
+
+        return $validated;
     }
 
     private function authorizeOwner(Request $request, CommunityGroup $group): void

@@ -16,15 +16,28 @@ export function CreateGroupScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(false);
+  const [showInAroundMe, setShowInAroundMe] = useState(false);
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function handleAroundMeToggle(value: boolean) {
+    setShowInAroundMe(value);
+    if (value) {
+      setIsPublic(true);
+    }
+    if (!value) {
+      setAddress('');
+    }
+  }
 
   async function submit() {
     if (!name.trim()) {
       setError('Group name is required.');
+      return;
+    }
+    if (showInAroundMe && !address.trim()) {
+      setError('Enter a street address to show this group in Around Me.');
       return;
     }
     setLoading(true);
@@ -34,9 +47,8 @@ export function CreateGroupScreen() {
         name: name.trim(),
         description: description.trim() || undefined,
         privacy: isPublic ? 'public' : 'private',
-        address: address.trim() || undefined,
-        city: city.trim() || undefined,
-        state: state.trim() || undefined,
+        showInAroundMe,
+        address: showInAroundMe ? address.trim() : undefined,
       });
       navigation.replace('GroupSettings', { groupId: group.id });
     } catch (err) {
@@ -80,34 +92,25 @@ export function CreateGroupScreen() {
         value={isPublic}
         onValueChange={setIsPublic}
       />
+
+      <SettingsToggleRow
+        label="Show in Around Me recommendations"
+        value={showInAroundMe}
+        onValueChange={handleAroundMeToggle}
+      />
       <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginBottom: 12 }}>
-        Public groups with a city and state or an address can appear in Around Me.
+        Turn this on to recommend the group to people nearby. Requires a public group and a street address.
       </Text>
 
-      <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Location (for Around Me)</Text>
-      <TextInput
-        value={address}
-        onChangeText={setAddress}
-        placeholder="Street address (optional)"
-        placeholderTextColor={theme.colors.mutedForeground}
-        style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
-      />
-      <View style={styles.row}>
+      {showInAroundMe ? (
         <TextInput
-          value={city}
-          onChangeText={setCity}
-          placeholder="City"
+          value={address}
+          onChangeText={setAddress}
+          placeholder="Street address"
           placeholderTextColor={theme.colors.mutedForeground}
-          style={[styles.input, styles.half, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+          style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
         />
-        <TextInput
-          value={state}
-          onChangeText={setState}
-          placeholder="State"
-          placeholderTextColor={theme.colors.mutedForeground}
-          style={[styles.input, styles.half, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
-        />
-      </View>
+      ) : null}
 
       {error ? <Text style={{ color: theme.colors.destructive, marginBottom: 8 }}>{error}</Text> : null}
       <CtaButton label="Create group" loading={loading} onPress={submit} />
@@ -119,7 +122,6 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
   title: { fontSize: 28, marginBottom: 16 },
-  label: { fontSize: 13, marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
@@ -129,6 +131,4 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
   },
   multiline: { minHeight: 90, textAlignVertical: 'top' },
-  row: { flexDirection: 'row', gap: 10 },
-  half: { flex: 1 },
 });

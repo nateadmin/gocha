@@ -24,9 +24,8 @@ export function GroupSettingsScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(false);
+  const [showInAroundMe, setShowInAroundMe] = useState(false);
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -42,17 +41,30 @@ export function GroupSettingsScreen() {
     setName(match.name);
     setDescription(match.description ?? '');
     setIsPublic(match.privacy === 'public');
+    setShowInAroundMe(match.showInAroundMe);
     setAddress(match.address ?? '');
-    setCity(match.city ?? '');
-    setState(match.state ?? '');
   }, [route.params.groupId]);
 
   useEffect(() => {
     load().catch(() => setError('Could not load group.'));
   }, [load]);
 
+  function handleAroundMeToggle(value: boolean) {
+    setShowInAroundMe(value);
+    if (value) {
+      setIsPublic(true);
+    }
+    if (!value) {
+      setAddress('');
+    }
+  }
+
   async function save() {
     if (!group || !name.trim()) return;
+    if (showInAroundMe && !address.trim()) {
+      setError('Enter a street address to show this group in Around Me.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -61,9 +73,8 @@ export function GroupSettingsScreen() {
         name: name.trim(),
         description: description.trim() || undefined,
         privacy: isPublic ? 'public' : 'private',
-        address: address.trim() || undefined,
-        city: city.trim() || undefined,
-        state: state.trim() || undefined,
+        showInAroundMe,
+        address: showInAroundMe ? address.trim() : undefined,
       });
       setGroup(updated);
       setMessage('Group settings saved.');
@@ -107,35 +118,20 @@ export function GroupSettingsScreen() {
 
       <SettingsToggleRow label="Public group" value={isPublic} onValueChange={setIsPublic} />
 
-      <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Location</Text>
-      <TextInput
-        value={address}
-        onChangeText={setAddress}
-        placeholder="Address"
-        placeholderTextColor={theme.colors.mutedForeground}
-        style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+      <SettingsToggleRow
+        label="Show in Around Me recommendations"
+        value={showInAroundMe}
+        onValueChange={handleAroundMeToggle}
       />
-      <View style={styles.row}>
-        <TextInput
-          value={city}
-          onChangeText={setCity}
-          placeholder="City"
-          placeholderTextColor={theme.colors.mutedForeground}
-          style={[styles.input, styles.half, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
-        />
-        <TextInput
-          value={state}
-          onChangeText={setState}
-          placeholder="State"
-          placeholderTextColor={theme.colors.mutedForeground}
-          style={[styles.input, styles.half, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
-        />
-      </View>
 
-      {group?.isPublic && !group?.hasLocation ? (
-        <Text style={{ color: theme.colors.primary, fontSize: 13, marginBottom: 8 }}>
-          Add a city and state or an address to show this group in Around Me.
-        </Text>
+      {showInAroundMe ? (
+        <TextInput
+          value={address}
+          onChangeText={setAddress}
+          placeholder="Street address"
+          placeholderTextColor={theme.colors.mutedForeground}
+          style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+        />
       ) : null}
 
       {error ? <Text style={{ color: theme.colors.destructive }}>{error}</Text> : null}
@@ -149,7 +145,6 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
   title: { fontSize: 28, marginBottom: 16 },
-  label: { fontSize: 13, marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
@@ -158,6 +153,4 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   multiline: { minHeight: 90, textAlignVertical: 'top' },
-  row: { flexDirection: 'row', gap: 10 },
-  half: { flex: 1 },
 });

@@ -16,6 +16,7 @@ class CommunityGroup extends Model
         'address',
         'city',
         'state',
+        'show_in_around_me',
         'avatar_label',
         'avatar_color',
         'member_count',
@@ -23,6 +24,7 @@ class CommunityGroup extends Model
 
     protected $casts = [
         'member_count' => 'integer',
+        'show_in_around_me' => 'boolean',
     ];
 
     public function owner(): BelongsTo
@@ -48,7 +50,10 @@ class CommunityGroup extends Model
 
     public function isDiscoverableInAroundMe(): bool
     {
-        return $this->isPublic() && $this->hasAroundMeLocation();
+        return $this->show_in_around_me
+            && $this->isPublic()
+            && $this->address
+            && trim($this->address) !== '';
     }
 
     public function toPayload(): array
@@ -61,6 +66,7 @@ class CommunityGroup extends Model
             'address' => $this->address,
             'city' => $this->city,
             'state' => $this->state,
+            'showInAroundMe' => $this->show_in_around_me,
             'avatarLabel' => $this->avatar_label,
             'avatarColor' => $this->avatar_color,
             'memberCount' => $this->member_count,

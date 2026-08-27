@@ -121,14 +121,26 @@ class AccountFoundationTest extends TestCase
         $this->actingAs($user)->postJson('/api/groups', [
             'name' => 'Shore Runners',
             'privacy' => 'public',
-            'city' => 'Asbury Park',
-            'state' => 'NJ',
+            'show_in_around_me' => true,
+            'address' => '123 Ocean Ave',
         ])->assertCreated();
 
         $this->getJson('/api/groups/discover')
             ->assertOk()
             ->assertJsonCount(1, 'groups')
             ->assertJsonPath('groups.0.name', 'Shore Runners');
+    }
+
+    public function test_around_me_group_requires_address_when_enabled(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/groups', [
+            'name' => 'No Address Group',
+            'privacy' => 'public',
+            'show_in_around_me' => true,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['address']);
     }
 
     public function test_private_group_is_hidden_from_discover(): void

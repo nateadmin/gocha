@@ -455,6 +455,7 @@ export type CommunityGroupRecord = {
   address: string | null;
   city: string | null;
   state: string | null;
+  showInAroundMe: boolean;
   avatarLabel: string | null;
   avatarColor: string | null;
   memberCount: number;
@@ -477,13 +478,22 @@ export async function createCommunityGroup(input: {
   name: string;
   description?: string;
   privacy: 'public' | 'private';
+  showInAroundMe?: boolean;
   address?: string;
   city?: string;
   state?: string;
 }): Promise<CommunityGroupRecord> {
   const payload = await apiRequest<{ group: CommunityGroupRecord }>(API_PATHS.groups, {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      name: input.name,
+      description: input.description,
+      privacy: input.privacy,
+      show_in_around_me: input.showInAroundMe ?? false,
+      address: input.address,
+      city: input.city,
+      state: input.state,
+    }),
   });
   return payload.group;
 }
@@ -494,6 +504,7 @@ export async function updateCommunityGroup(
     name: string;
     description?: string;
     privacy: 'public' | 'private';
+    showInAroundMe: boolean;
     address?: string;
     city?: string;
     state?: string;
@@ -501,7 +512,15 @@ export async function updateCommunityGroup(
 ): Promise<CommunityGroupRecord> {
   const payload = await apiRequest<{ group: CommunityGroupRecord }>(`${API_PATHS.groups}/${id}`, {
     method: 'PUT',
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      name: input.name,
+      description: input.description,
+      privacy: input.privacy,
+      show_in_around_me: input.showInAroundMe,
+      address: input.address,
+      city: input.city,
+      state: input.state,
+    }),
   });
   return payload.group;
 }
