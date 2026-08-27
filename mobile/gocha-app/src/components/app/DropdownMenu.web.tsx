@@ -80,6 +80,7 @@ export function DropdownMenu({
 const Backdrop = styled.div`
   inset: 0;
   position: fixed;
+  z-index: 999;
 `;
 
 const MenuPanel = styled.div<{
