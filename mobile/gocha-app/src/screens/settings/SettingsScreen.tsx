@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { ProfileAvatar, SectionLabel, SettingsToggleRow } from '../../components/app';
@@ -36,13 +36,16 @@ export function SettingsScreen() {
 
       <Pressable
         onPress={() => navigation.navigate('ProfileSettings')}
-        style={[
+        accessibilityRole="button"
+        style={({ pressed }) => [
           styles.profileCard,
           {
             backgroundColor: theme.colors.card,
             borderColor: theme.colors.border,
             borderRadius: theme.radii.card,
+            opacity: pressed ? 0.92 : 1,
           },
+          Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null,
         ]}>
         <ProfileAvatar
           avatarUrl={user?.avatarUrl}

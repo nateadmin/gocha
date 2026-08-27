@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 
-import { buildCharacterAvatarDataUri, profileAvatarSeed } from '../../branding/characterAvatar.web';
+import {
+  buildCharacterAvatarDataUri,
+  isSvgAvatarUrl,
+  profileAvatarSeed,
+} from '../../branding/characterAvatarCore';
 import { useGochaTheme } from '../../theme';
 
 type Props = {
@@ -25,39 +29,19 @@ export function ProfileAvatar({
 }: Props) {
   const { theme } = useGochaTheme();
   const [failed, setFailed] = useState(false);
-  const [generatedUri, setGeneratedUri] = useState<string | null>(null);
   const seed = useMemo(
     () => profileAvatarSeed({ email, id: userId, displayName }),
     [displayName, email, userId],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (avatarUrl && !failed) {
-      setGeneratedUri(null);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    buildCharacterAvatarDataUri(seed).then((uri) => {
-      if (!cancelled) {
-        setGeneratedUri(uri);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [avatarUrl, failed, seed]);
-
-  const uri = avatarUrl && !failed ? avatarUrl : generatedUri;
+  const generatedUri = useMemo(() => buildCharacterAvatarDataUri(seed), [seed]);
+  const uploadedUri = avatarUrl && !failed && !isSvgAvatarUrl(avatarUrl) ? avatarUrl : null;
+  const remoteSvgUri = avatarUrl && !failed && isSvgAvatarUrl(avatarUrl) ? avatarUrl : null;
+  const uri = uploadedUri ?? remoteSvgUri ?? generatedUri;
 
   return (
     <img
       alt={accessibilityLabel}
-      src={uri ?? undefined}
+      src={uri}
       onError={() => {
         if (avatarUrl && !failed) {
           setFailed(true);
@@ -71,6 +55,7 @@ export function ProfileAvatar({
         objectFit: 'cover',
         display: 'block',
         flexShrink: 0,
+        pointerEvents: 'none',
         ...style,
       }}
     />

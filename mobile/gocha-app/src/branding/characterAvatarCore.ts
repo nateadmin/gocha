@@ -1,3 +1,5 @@
+import { sha256Hex } from './sha256Hex';
+
 function buildCharacterAvatarSvgFromHash(hash: string): string {
   const primary = `#${hash.slice(0, 6)}`;
   const accent = `#${hash.slice(6, 12)}`;
@@ -29,6 +31,10 @@ export function profileAvatarSeed(input: {
 export function buildCharacterAvatarDataUriFromHash(hash: string): string {
   const svg = buildCharacterAvatarSvgFromHash(hash);
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+export function buildCharacterAvatarDataUri(seed: string): string {
+  return buildCharacterAvatarDataUriFromHash(sha256Hex(seed));
 }
 
 export function isSvgAvatarUrl(url: string | null | undefined): boolean {
