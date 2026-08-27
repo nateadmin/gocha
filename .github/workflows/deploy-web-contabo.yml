@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ secrets.CONTABO_PRIVATE_SSH_KEY != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +36,7 @@ jobs:
         run: npm run build:web
 
       - name: Publish to Contabo
+        if: ${{ secrets.CONTABO_PRIVATE_SSH_KEY != '' }}
         env:
           CONTABO_PRIVATE_SSH_KEY: ${{ secrets.CONTABO_PRIVATE_SSH_KEY }}
           GOCHA_DEPLOY_HOST: ${{ vars.GOCHA_DEPLOY_HOST || '212.47.68.106' }}
@@ -54,7 +54,12 @@ jobs:
             "${GOCHA_DEPLOY_USER}@${GOCHA_DEPLOY_HOST}:${GOCHA_WEB_APP_PATH}/"
           rm -f /tmp/gocha-contabo.pem
 
+      - name: Skip Contabo deploy
+        if: ${{ secrets.CONTABO_PRIVATE_SSH_KEY == '' }}
+        run: echo "CONTABO_PRIVATE_SSH_KEY is not configured; skipped Contabo deploy."
+
       - name: Smoke check gocha.ai shell
+        if: ${{ secrets.CONTABO_PRIVATE_SSH_KEY != '' }}
         run: |
           curl -fsS https://gocha.ai/ | grep -q '<title>Gocha</title>'
           curl -fsS https://gocha.ai/api/health | grep -q '"status"'
