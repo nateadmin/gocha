@@ -45,6 +45,9 @@ while [[ "$attempt" -le "$MAX_ATTEMPTS" ]]; do
     source /tmp/gocha-infisical.env
     set +a
     rm -f /tmp/gocha-infisical.env
+    if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+      return 0
+    fi
     exit 0
   fi
 
