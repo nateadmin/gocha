@@ -73,8 +73,6 @@ const StyledWrapper = styled.div`
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    border-top: solid 1px var(--color-one);
-    border-bottom: solid 1px var(--color-two);
     background: linear-gradient(180deg, var(--color-five), var(--color-four));
     box-shadow:
       inset 0 10px 10px 0 var(--color-three),
