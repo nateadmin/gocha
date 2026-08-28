@@ -678,3 +678,167 @@ export async function markConversationRead(conversationId: number): Promise<void
     method: 'POST',
   });
 }
+
+export type ProfileCardType = 'professional' | 'match' | 'custom';
+export type ProfileCardVisibility = 'public' | 'request' | 'private';
+export type ProfileCardAccessStatus = 'pending' | 'approved' | 'declined';
+
+export type ProfileCardBody = {
+  company?: string;
+  role?: string;
+  location?: string;
+  about?: string;
+  skills?: string;
+  website?: string;
+  lookingFor?: string;
+  interests?: string;
+  details?: string;
+};
+
+export type ProfileCardSummary = {
+  id: number;
+  type: ProfileCardType;
+  title: string;
+  visibility: ProfileCardVisibility;
+  canView: boolean;
+  accessStatus: ProfileCardAccessStatus | null;
+  photoUrl: string | null;
+  headline: string | null;
+};
+
+export type ProfileCardRecord = ProfileCardSummary & {
+  body: ProfileCardBody;
+  pendingRequestCount?: number;
+  owner?: {
+    id: number;
+    displayName: string;
+    username: string | null;
+  };
+};
+
+export type ProfileCardAccessRecord = {
+  id: number;
+  status: ProfileCardAccessStatus;
+  requestedAt: string | null;
+  decidedAt: string | null;
+  cardId: number;
+  cardTitle: string | null;
+  cardType: ProfileCardType | null;
+  viewer: {
+    id: number;
+    displayName: string;
+    username: string | null;
+    avatarUrl: string | null;
+  } | null;
+};
+
+export type ProfileCardOwnerSummary = {
+  id: number;
+  displayName: string;
+  username: string | null;
+  avatarUrl: string | null;
+};
+
+export type ProfileCardWriteInput = {
+  type: ProfileCardType;
+  title?: string;
+  headline?: string;
+  visibility?: ProfileCardVisibility;
+  body?: ProfileCardBody;
+};
+
+export async function fetchMyProfileCards(): Promise<ProfileCardRecord[]> {
+  const payload = await apiRequest<{ cards: ProfileCardRecord[] }>(API_PATHS.profileCards);
+  return payload.cards;
+}
+
+export async function fetchUserProfileCards(userId: number): Promise<{
+  owner: ProfileCardOwnerSummary;
+  cards: ProfileCardSummary[];
+}> {
+  return apiRequest(API_PATHS.userProfileCards(userId));
+}
+
+export async function createProfileCard(input: ProfileCardWriteInput): Promise<ProfileCardRecord> {
+  const payload = await apiRequest<{ card: ProfileCardRecord }>(API_PATHS.profileCards, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return payload.card;
+}
+
+export async function fetchProfileCard(cardId: number): Promise<ProfileCardRecord> {
+  const payload = await apiRequest<{ card: ProfileCardRecord }>(`${API_PATHS.profileCards}/${cardId}`);
+  return payload.card;
+}
+
+export async function updateProfileCard(
+  cardId: number,
+  input: Partial<ProfileCardWriteInput>,
+): Promise<ProfileCardRecord> {
+  const payload = await apiRequest<{ card: ProfileCardRecord }>(`${API_PATHS.profileCards}/${cardId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+  return payload.card;
+}
+
+export async function deleteProfileCard(cardId: number): Promise<void> {
+  await apiRequest(`${API_PATHS.profileCards}/${cardId}`, { method: 'DELETE' });
+}
+
+export async function uploadProfileCardPhoto(
+  cardId: number,
+  file: Blob,
+  filename = 'photo.jpg',
+): Promise<ProfileCardRecord> {
+  const form = new FormData();
+  form.append('photo', file, filename);
+  const payload = await apiRequest<{ card: ProfileCardRecord }>(
+    `${API_PATHS.profileCards}/${cardId}/photo`,
+    { method: 'POST', body: form },
+  );
+  return payload.card;
+}
+
+export async function requestProfileCardAccess(cardId: number): Promise<ProfileCardSummary> {
+  const payload = await apiRequest<{ card: ProfileCardSummary }>(
+    `${API_PATHS.profileCards}/${cardId}/request`,
+    { method: 'POST' },
+  );
+  return payload.card;
+}
+
+export async function grantProfileCardAccess(
+  cardId: number,
+  userId: number,
+): Promise<ProfileCardAccessRecord> {
+  const payload = await apiRequest<{ access: ProfileCardAccessRecord }>(
+    `${API_PATHS.profileCards}/${cardId}/grant`,
+    { method: 'POST', body: JSON.stringify({ userId }) },
+  );
+  return payload.access;
+}
+
+export async function fetchProfileCardRequests(): Promise<ProfileCardAccessRecord[]> {
+  const payload = await apiRequest<{ requests: ProfileCardAccessRecord[] }>(
+    `${API_PATHS.profileCards}/requests`,
+  );
+  return payload.requests;
+}
+
+export async function approveProfileCardAccess(accessId: number): Promise<ProfileCardAccessRecord> {
+  const payload = await apiRequest<{ access: ProfileCardAccessRecord }>(
+    `${API_PATHS.profileCards}/accesses/${accessId}/approve`,
+    { method: 'POST' },
+  );
+  return payload.access;
+}
+
+export async function declineProfileCardAccess(accessId: number): Promise<ProfileCardAccessRecord> {
+  const payload = await apiRequest<{ access: ProfileCardAccessRecord }>(
+    `${API_PATHS.profileCards}/accesses/${accessId}/decline`,
+    { method: 'POST' },
+  );
+  return payload.access;
+}

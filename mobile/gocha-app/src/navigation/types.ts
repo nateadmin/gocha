@@ -1,5 +1,7 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+import type { ProfileCardType } from '../api/client';
+
 export type RootTabParamList = {
   ChatsTab: NavigatorScreenParams<ChatsStackParamList> | undefined;
   CatchUpTab: undefined;
@@ -12,6 +14,7 @@ export type ChatsStackParamList = {
   ChatsList: undefined;
   ChatDetail: { chatId: string };
   ChatInfo: { chatId: string };
+  ProfileCardDetail: { cardId: number };
   ChatLock: { chatId: string };
   CreateGroup: undefined;
   GroupSettings: { groupId: number };
@@ -42,4 +45,8 @@ export type SettingsStackParamList = {
   ChatListsSettings: undefined;
   ChatLabelsSettings: undefined;
   HiddenChats: undefined;
+  ProfileCards: undefined;
+  AddProfileCard: undefined;
+  EditProfileCard: { cardId?: number; type?: ProfileCardType } | undefined;
+  ProfileCardRequests: undefined;
 };

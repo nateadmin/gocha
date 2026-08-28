@@ -13,6 +13,10 @@ import { BlockedChatsScreen } from '../screens/chats/BlockedChatsScreen';
 import { ChatLabelsSettingsScreen } from '../screens/chats/ChatLabelsSettingsScreen';
 import { ChatListsSettingsScreen } from '../screens/chats/ChatListsSettingsScreen';
 import { HiddenChatsScreen } from '../screens/chats/HiddenChatsScreen';
+import { ProfileCardsScreen } from '../screens/settings/ProfileCardsScreen';
+import { AddProfileCardScreen } from '../screens/settings/AddProfileCardScreen';
+import { EditProfileCardScreen } from '../screens/settings/EditProfileCardScreen';
+import { ProfileCardRequestsScreen } from '../screens/settings/ProfileCardRequestsScreen';
 import type { SettingsStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
@@ -33,6 +37,10 @@ export function SettingsStackNavigator() {
       <Stack.Screen name="ChatListsSettings" component={ChatListsSettingsScreen} />
       <Stack.Screen name="ChatLabelsSettings" component={ChatLabelsSettingsScreen} />
       <Stack.Screen name="HiddenChats" component={HiddenChatsScreen} />
+      <Stack.Screen name="ProfileCards" component={ProfileCardsScreen} />
+      <Stack.Screen name="AddProfileCard" component={AddProfileCardScreen} />
+      <Stack.Screen name="EditProfileCard" component={EditProfileCardScreen} />
+      <Stack.Screen name="ProfileCardRequests" component={ProfileCardRequestsScreen} />
     </Stack.Navigator>
   );
 }

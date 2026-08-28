@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CommunityGroupController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\GlobalSearchController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\ProfileCardController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\VersionController;
@@ -71,6 +72,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
     Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
+
+    Route::get('/profile-cards', [ProfileCardController::class, 'index']);
+    Route::post('/profile-cards', [ProfileCardController::class, 'store']);
+    Route::get('/profile-cards/requests', [ProfileCardController::class, 'incomingRequests']);
+    Route::post('/profile-cards/accesses/{profileCardAccess}/approve', [ProfileCardController::class, 'approve']);
+    Route::post('/profile-cards/accesses/{profileCardAccess}/decline', [ProfileCardController::class, 'decline']);
+    Route::get('/profile-cards/{profileCard}', [ProfileCardController::class, 'show']);
+    Route::put('/profile-cards/{profileCard}', [ProfileCardController::class, 'update']);
+    Route::delete('/profile-cards/{profileCard}', [ProfileCardController::class, 'destroy']);
+    Route::post('/profile-cards/{profileCard}/photo', [ProfileCardController::class, 'uploadPhoto']);
+    Route::post('/profile-cards/{profileCard}/request', [ProfileCardController::class, 'requestAccess']);
+    Route::post('/profile-cards/{profileCard}/grant', [ProfileCardController::class, 'grant']);
+    Route::get('/users/{user}/profile-cards', [ProfileCardController::class, 'listedForUser']);
 
     Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
     Route::post('/auth/device-token', [AuthOtpController::class, 'issueDeviceToken']);

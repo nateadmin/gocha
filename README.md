@@ -73,6 +73,7 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/health` → 200 JSON `status: ok`
 - GET `https://gocha.ai/api/version` → 200, `version` equals `origin/main` HEAD after deploy
 - GET `https://gocha.ai/` → 200 mobile web shell (HTML)
+- GET `https://gocha.ai/api/profile-cards` as an authenticated session → 200 JSON `{ cards: [] }` or a card list (401 without a session is expected)
 
 ### Log check
 
