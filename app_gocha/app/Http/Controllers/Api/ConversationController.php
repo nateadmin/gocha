@@ -18,6 +18,7 @@ class ConversationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        $this->markIncomingMessagesDelivered($user);
 
         $conversations = Conversation::query()
             ->whereHas('participantRows', fn ($query) => $query->where('user_id', $user->id))
@@ -87,6 +88,7 @@ class ConversationController extends Controller
     {
         $user = $request->user();
         $this->authorizeParticipant($user, $conversation);
+        $this->markIncomingMessagesDelivered($user, $conversation);
 
         $messages = $conversation->messages()
             ->orderBy('created_at')
@@ -158,13 +160,27 @@ class ConversationController extends Controller
         $user = $request->user();
         $this->authorizeParticipant($user, $conversation);
 
+        $now = now();
+
         ConversationParticipant::query()
             ->where('conversation_id', $conversation->id)
             ->where('user_id', $user->id)
             ->update([
-                'last_read_at' => now(),
+                'last_read_at' => $now,
                 'unread_count' => 0,
             ]);
+
+        Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('sender_user_id', '!=', $user->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => $now]);
+
+        Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('sender_user_id', '!=', $user->id)
+            ->whereNull('delivered_at')
+            ->update(['delivered_at' => $now]);
 
         return response()->json(['ok' => true]);
     }
@@ -234,8 +250,44 @@ class ConversationController extends Controller
             'sentAt' => $message->created_at?->toIso8601String(),
             'senderUserId' => $senderUserId,
             'isOutgoing' => $senderUserId === (int) $viewer->id,
-            'status' => 'sent',
+            'status' => $this->receiptStatus($message),
         ];
+    }
+
+    private function receiptStatus(Message $message): string
+    {
+        if ($message->read_at) {
+            return 'read';
+        }
+
+        if ($message->delivered_at) {
+            return 'delivered';
+        }
+
+        return 'sent';
+    }
+
+    private function markIncomingMessagesDelivered(User $user, ?Conversation $conversation = null): void
+    {
+        $query = Message::query()
+            ->where('sender_user_id', '!=', $user->id)
+            ->whereNull('delivered_at');
+
+        if ($conversation) {
+            $query->where('conversation_id', $conversation->id);
+        } else {
+            $conversationIds = ConversationParticipant::query()
+                ->where('user_id', $user->id)
+                ->pluck('conversation_id');
+
+            if ($conversationIds->isEmpty()) {
+                return;
+            }
+
+            $query->whereIn('conversation_id', $conversationIds);
+        }
+
+        $query->update(['delivered_at' => now()]);
     }
 
     private function avatarLabel(string $name): string

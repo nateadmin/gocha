@@ -13,10 +13,14 @@ class Message extends Model
         'type',
         'body',
         'metadata',
+        'delivered_at',
+        'read_at',
     ];
 
     protected $casts = [
         'metadata' => 'array',
+        'delivered_at' => 'datetime',
+        'read_at' => 'datetime',
     ];
 
     public function conversation(): BelongsTo

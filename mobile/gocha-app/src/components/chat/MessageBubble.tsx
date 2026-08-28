@@ -2,6 +2,7 @@ import { Image, Pressable, View, Text, StyleSheet, Platform } from 'react-native
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import type { ChatMessage } from '../../chat/types';
+import { receiptTicks } from '../../chat/receiptTicks';
 import { useChat } from '../../chat/ChatContext';
 import { VoiceMessagePlayer } from './VoiceMessagePlayer';
 import { useGochaTheme } from '../../theme';
@@ -16,6 +17,7 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
   const { theme } = useGochaTheme();
   const { stickerEmoji } = useChat();
   const outgoing = message.isOutgoing;
+  const ticks = outgoing ? receiptTicks(message.status) : null;
 
   const bubbleContent = (() => {
     switch (message.type) {
@@ -177,11 +179,15 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
           }}>
           {message.sentAt}
         </Text>
-        {outgoing && message.status ? (
+        {ticks ? (
           <Ionicons
-            name={message.status === 'read' ? 'checkmark-done' : 'checkmark'}
+            name={ticks.icon}
             size={14}
-            color={theme.colors.secondary}
+            color={
+              ticks.tone === 'highlight'
+                ? theme.colors.primary
+                : theme.colors.mutedForeground
+            }
           />
         ) : null}
       </View>

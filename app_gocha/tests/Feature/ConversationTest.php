@@ -98,4 +98,58 @@ class ConversationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('conversations.0.preview', 'Hi Bob');
     }
+
+    public function test_outgoing_message_status_is_sent_until_recipient_sees_then_reads_it(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+
+        $conversationId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'participantUserId' => $bob->id,
+        ])->json('conversation.id');
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'Receipts',
+        ])->assertCreated()
+            ->assertJsonPath('message.status', 'sent');
+
+        $this->actingAs($alice)->getJson('/api/conversations')->assertOk();
+        $this->actingAs($alice)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.0.status', 'sent');
+
+        $this->actingAs($bob)->getJson('/api/conversations')->assertOk();
+
+        $this->actingAs($alice)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.0.status', 'delivered');
+
+        $this->actingAs($bob)->postJson("/api/conversations/{$conversationId}/read")
+            ->assertOk();
+
+        $this->actingAs($alice)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.0.status', 'read');
+    }
+
+    public function test_fetching_messages_as_recipient_marks_them_delivered(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+
+        $conversationId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'participantUserId' => $bob->id,
+        ])->json('conversation.id');
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'Direct open',
+        ])->assertCreated();
+
+        $this->actingAs($bob)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk();
+
+        $this->actingAs($alice)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.0.status', 'delivered');
+    }
 }
