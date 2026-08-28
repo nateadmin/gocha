@@ -12,19 +12,19 @@ class GlobalSearchTest extends TestCase
 
     public function test_global_search_returns_contacts_messages_and_discoverable_people(): void
     {
-        $alice = User::factory()->create(['display_name' => 'Alice Searcher']);
+        $alice = User::factory()->create(['name' => 'Alice Searcher']);
         $bob = User::factory()->create([
-            'display_name' => 'Bob Contact',
+            'name' => 'Bob Contact',
             'email' => 'bob.contact@example.com',
             'discoverable' => true,
         ]);
         $carol = User::factory()->create([
-            'display_name' => 'Carol Discover',
+            'name' => 'Carol Discover',
             'phone' => '+15551234567',
             'discoverable' => true,
         ]);
         User::factory()->create([
-            'display_name' => 'Hidden Dana',
+            'name' => 'Hidden Dana',
             'email' => 'dana.hidden@example.com',
             'discoverable' => false,
         ]);
@@ -61,5 +61,25 @@ class GlobalSearchTest extends TestCase
         $phoneSearch
             ->assertOk()
             ->assertJsonPath('people.0.displayName', 'Carol Discover');
+    }
+
+    public function test_discoverable_user_is_findable_by_updated_name(): void
+    {
+        $searcher = User::factory()->create();
+        $target = User::factory()->create([
+            'name' => 'Nate Mandel',
+            'discoverable' => true,
+        ]);
+
+        $this->actingAs($target)->postJson('/api/profile/update', [
+            'displayName' => 'giggly goo',
+            'discoverable' => true,
+        ])->assertOk()
+            ->assertJsonPath('user.displayName', 'giggly goo');
+
+        $this->actingAs($searcher)->getJson('/api/search?q=Giggly')
+            ->assertOk()
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.displayName', 'giggly goo');
     }
 }

@@ -58,12 +58,23 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { accounts, activeAccountId, removeAccount, patchAccountDeviceToken, registerAccount } =
+  const { accounts, activeAccountId, removeAccount, patchAccountDeviceToken, registerAccount, syncAccountProfile } =
     useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasBootstrapped = useRef(false);
+
+  const syncUserToStoredAccount = useCallback(
+    (nextUser: AuthUser) => {
+      syncAccountProfile(nextUser.id, {
+        displayName: nextUser.displayName,
+        avatarUrl: nextUser.avatarUrl,
+        label: nextUser.email ?? nextUser.phone ?? 'This device',
+      });
+    },
+    [syncAccountProfile],
+  );
 
   const refresh = useCallback(
     async (options?: { background?: boolean }) => {
@@ -77,6 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const nextUser = await fetchCurrentUser();
         setUser(nextUser);
         setError(null);
+
+        if (nextUser) {
+          syncUserToStoredAccount(nextUser);
+        }
 
         if (nextUser && !getActiveDeviceToken()) {
           try {
@@ -113,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [activeAccountId, patchAccountDeviceToken, removeAccount],
+    [activeAccountId, patchAccountDeviceToken, removeAccount, syncUserToStoredAccount],
   );
 
   useEffect(() => {
@@ -146,8 +161,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setUser(payload.user);
       setError(null);
+      syncUserToStoredAccount(payload.user);
     },
-    [registerAccount],
+    [registerAccount, syncUserToStoredAccount],
   );
 
   const finishOnboarding = useCallback(
@@ -161,8 +177,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       const nextUser = await completeOnboarding(input);
       setUser(nextUser);
+      syncUserToStoredAccount(nextUser);
     },
-    [],
+    [syncUserToStoredAccount],
   );
 
   const updateProfile = useCallback(
@@ -175,14 +192,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       const nextUser = await apiUpdateProfile(input);
       setUser(nextUser);
+      syncUserToStoredAccount(nextUser);
     },
-    [],
+    [syncUserToStoredAccount],
   );
 
   const uploadProfileAvatar = useCallback(async (file: Blob, filename?: string) => {
     const nextUser = await uploadAvatar(file, filename);
     setUser(nextUser);
-  }, []);
+    syncUserToStoredAccount(nextUser);
+  }, [syncUserToStoredAccount]);
 
   const signOut = useCallback(async (): Promise<'auth' | 'switched'> => {
     if (!user) {

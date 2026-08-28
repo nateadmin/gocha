@@ -56,7 +56,7 @@ class GlobalSearchController extends Controller
             ->filter(function (array $row) use ($needle, $needleLower) {
                 $other = $row['other'];
 
-                if (str_contains(mb_strtolower($other->chatDisplayName()), $needleLower)) {
+                if (str_contains(mb_strtolower($other->publicDisplayName()), $needleLower)) {
                     return true;
                 }
 
@@ -74,7 +74,7 @@ class GlobalSearchController extends Controller
             ->map(fn (array $row) => [
                 'conversationId' => $row['conversation']->id,
                 'userId' => $row['other']->id,
-                'displayName' => $row['other']->chatDisplayName(),
+                'displayName' => $row['other']->publicDisplayName(),
                 'username' => $row['other']->username,
                 'avatarUrl' => $row['other']->avatarUrl(),
             ])
@@ -120,13 +120,12 @@ class GlobalSearchController extends Controller
             ->where('discoverable', true)
             ->when($excludeUserIds !== [], fn ($query) => $query->whereNotIn('id', $excludeUserIds))
             ->where(function ($query) use ($needle) {
-                $query->where('display_name', 'like', '%'.$needle.'%')
-                    ->orWhere('name', 'like', '%'.$needle.'%')
+                $query->where('name', 'like', '%'.$needle.'%')
                     ->orWhere('username', 'like', '%'.$needle.'%')
                     ->orWhere('email', 'like', '%'.$needle.'%')
                     ->orWhere('phone', 'like', '%'.$needle.'%');
             })
-            ->orderBy('display_name')
+            ->orderBy('name')
             ->limit(20)
             ->get()
             ->map(fn (User $match) => $match->toPublicProfilePayload())

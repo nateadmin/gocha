@@ -12,6 +12,7 @@ import {
   readActiveAccountId,
   readStoredAccounts,
   updateStoredAccountDeviceToken,
+  updateStoredAccountProfile,
   writeActiveAccountId,
   writeStoredAccounts,
   type StoredAccount,
@@ -28,6 +29,10 @@ type AccountsContextValue = {
   switchAccount: (userId: number) => void;
   removeAccount: (userId: number) => void;
   patchAccountDeviceToken: (userId: number, deviceToken: string) => void;
+  syncAccountProfile: (
+    userId: number,
+    profile: Pick<StoredAccount, 'displayName' | 'avatarUrl' | 'label'>,
+  ) => void;
 };
 
 const AccountsContext = createContext<AccountsContextValue | null>(null);
@@ -116,6 +121,18 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     }
   }, [activeAccountId]);
 
+  const syncAccountProfile = useCallback(
+    (userId: number, profile: Pick<StoredAccount, 'displayName' | 'avatarUrl' | 'label'>) => {
+      setAccounts((prev) => {
+        if (!prev.some((entry) => entry.userId === userId)) {
+          return prev;
+        }
+        return updateStoredAccountProfile(userId, profile);
+      });
+    },
+    [],
+  );
+
   const beginAddAccount = useCallback(() => setIsAddingAccount(true), []);
   const cancelAddAccount = useCallback(() => setIsAddingAccount(false), []);
 
@@ -130,6 +147,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       switchAccount,
       removeAccount,
       patchAccountDeviceToken,
+      syncAccountProfile,
     }),
     [
       accounts,
@@ -141,6 +159,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       switchAccount,
       removeAccount,
       patchAccountDeviceToken,
+      syncAccountProfile,
     ],
   );
 

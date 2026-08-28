@@ -25,7 +25,6 @@ class ProvisionUserCommand extends Command
             ['email' => $email],
             [
                 'name' => $displayName,
-                'display_name' => $displayName,
                 'password' => Str::password(32),
                 'discoverable' => (bool) $this->option('discoverable'),
                 'onboarding_completed_at' => now(),

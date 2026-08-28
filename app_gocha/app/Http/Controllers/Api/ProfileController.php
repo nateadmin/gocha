@@ -49,7 +49,6 @@ class ProfileController extends Controller
         ]);
 
         $user->forceFill([
-            'display_name' => $validated['displayName'],
             'name' => $validated['displayName'],
             'username' => isset($validated['username'])
                 ? strtolower($validated['username'])
@@ -84,7 +83,6 @@ class ProfileController extends Controller
         ]);
 
         $user->forceFill([
-            'display_name' => $validated['displayName'],
             'name' => $validated['displayName'],
             'status' => $validated['status'] ?? null,
             'bio' => $validated['bio'] ?? null,
@@ -221,13 +219,12 @@ class ProfileController extends Controller
             ->where('id', '!=', $request->user()->id)
             ->where('discoverable', true)
             ->where(function ($query) use ($needle) {
-                $query->where('display_name', 'like', '%'.$needle.'%')
-                    ->orWhere('name', 'like', '%'.$needle.'%')
+                $query->where('name', 'like', '%'.$needle.'%')
                     ->orWhere('username', 'like', '%'.$needle.'%')
                     ->orWhere('email', 'like', '%'.$needle.'%')
                     ->orWhere('phone', 'like', '%'.$needle.'%');
             })
-            ->orderBy('display_name')
+            ->orderBy('name')
             ->limit(20)
             ->get()
             ->map(fn (User $user) => $user->toPublicProfilePayload())

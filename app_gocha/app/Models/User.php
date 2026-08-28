@@ -20,7 +20,6 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
-        'display_name',
         'username',
         'email',
         'password',
@@ -125,7 +124,9 @@ class User extends Authenticatable
 
     public function publicDisplayName(): string
     {
-        return $this->display_name ?: $this->name ?: 'Gocha user';
+        $name = trim((string) ($this->name ?? ''));
+
+        return $name !== '' ? $name : 'Gocha user';
     }
 
     public function avatarUrl(): ?string
@@ -172,7 +173,7 @@ class User extends Authenticatable
         return [
             'id' => $this->id,
             'username' => $this->username,
-            'displayName' => $this->chatDisplayName(),
+            'displayName' => $this->publicDisplayName(),
             'status' => $this->status,
             'bio' => $this->bio,
             'avatarUrl' => $this->avatarUrl(),
@@ -188,7 +189,7 @@ class User extends Authenticatable
         return [
             'id' => $this->id,
             'label' => $this->loginLabel(),
-            'displayName' => $this->chatDisplayName(),
+            'displayName' => $this->publicDisplayName(),
             'avatarUrl' => $this->avatarUrl(),
             'primaryLoginChannel' => $this->primary_login_channel,
         ];

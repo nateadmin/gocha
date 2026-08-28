@@ -135,7 +135,7 @@ class AuthOtpTest extends TestCase
         $user = User::factory()->create([
             'email' => 'resume@example.com',
             'onboarding_completed_at' => null,
-            'display_name' => 'Partial Neo',
+            'name' => 'Partial Neo',
         ]);
 
         $code = '654321';
@@ -202,7 +202,7 @@ class AuthOtpTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'edit@example.com',
-            'display_name' => 'Old Name',
+            'name' => 'Old Name',
             'onboarding_completed_at' => now(),
         ]);
 
@@ -243,14 +243,14 @@ class AuthOtpTest extends TestCase
     public function test_search_returns_only_discoverable_users(): void
     {
         User::factory()->create([
-            'display_name' => 'Visible Neo',
+            'name' => 'Visible Neo',
             'email' => 'visible@example.com',
             'discoverable' => true,
             'onboarding_completed_at' => now(),
         ]);
 
         User::factory()->create([
-            'display_name' => 'Hidden Neo',
+            'name' => 'Hidden Neo',
             'email' => 'hidden@example.com',
             'discoverable' => false,
             'onboarding_completed_at' => now(),

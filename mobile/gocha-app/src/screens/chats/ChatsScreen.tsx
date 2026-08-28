@@ -99,24 +99,37 @@ export function ChatsScreen() {
   }, [trimmedQuery]);
 
   const switcherAccounts = useMemo(() => {
+    const withLiveProfile = accounts.map((account) => {
+      if (!user || account.userId !== user.id) {
+        return account;
+      }
+
+      return {
+        ...account,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        label: user.email ?? user.phone ?? account.label,
+      };
+    });
+
     if (!user) {
-      return accounts;
+      return withLiveProfile;
     }
 
-    if (accounts.some((account) => account.userId === user.id)) {
-      return accounts;
+    if (withLiveProfile.some((account) => account.userId === user.id)) {
+      return withLiveProfile;
     }
 
     return [
       {
         userId: user.id,
         label: user.email ?? user.phone ?? 'This device',
-        displayName: user.chatDisplayName ?? user.displayName,
+        displayName: user.displayName,
         avatarUrl: user.avatarUrl,
         deviceToken: '',
         primaryLoginChannel: user.primaryLoginChannel,
       },
-      ...accounts,
+      ...withLiveProfile,
     ];
   }, [accounts, user]);
 
