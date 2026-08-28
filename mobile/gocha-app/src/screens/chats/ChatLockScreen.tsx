@@ -13,10 +13,13 @@ export function ChatLockScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<ChatsStackParamList, 'ChatLock'>>();
   const { theme } = useGochaTheme();
-  const { verifyLockPin, getChat } = useChat();
+  const { verifyLockPin, getChat, preferences, setChatLockPin } = useChat();
   const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [setupMode, setSetupMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const chat = getChat(route.params.chatId);
+  const needsSetup = !preferences.chatLockPin;
 
   function unlock() {
     if (verifyLockPin(pin)) {
@@ -24,6 +27,20 @@ export function ChatLockScreen() {
       return;
     }
     setError('Incorrect PIN.');
+  }
+
+  function savePin() {
+    if (pin.length < 4) {
+      setError('PIN must be at least 4 digits.');
+      return;
+    }
+    if (pin !== confirmPin) {
+      setError('PINs do not match.');
+      return;
+    }
+    setChatLockPin(pin);
+    setError(null);
+    navigation.replace('ChatDetail', { chatId: route.params.chatId });
   }
 
   return (
@@ -41,31 +58,74 @@ export function ChatLockScreen() {
         Locked chat
       </Text>
       <Text style={{ color: theme.colors.mutedForeground, marginBottom: 24 }}>
-        Enter your chat lock PIN to open {chat?.name ?? 'this chat'}.
+        {needsSetup || setupMode
+          ? 'Create a chat lock PIN to open protected conversations.'
+          : `Enter your chat lock PIN to open ${chat?.name ?? 'this chat'}.`}
       </Text>
-      <TextInput
-        value={pin}
-        onChangeText={setPin}
-        keyboardType="number-pad"
-        secureTextEntry
-        maxLength={6}
-        placeholder="PIN"
-        placeholderTextColor={theme.colors.mutedForeground}
-        style={[
-          styles.input,
-          {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.colors.border,
-            color: theme.colors.cardForeground,
-            borderRadius: theme.radii.card,
-          },
-        ]}
-      />
+
+      {needsSetup || setupMode ? (
+        <>
+          <TextInputField
+            value={pin}
+            onChangeText={setPin}
+            placeholder="New PIN"
+            theme={theme}
+          />
+          <TextInputField
+            value={confirmPin}
+            onChangeText={setConfirmPin}
+            placeholder="Confirm PIN"
+            theme={theme}
+          />
+          <CtaButton label="Save PIN and open" onPress={savePin} />
+        </>
+      ) : (
+        <>
+          <TextInputField value={pin} onChangeText={setPin} placeholder="PIN" theme={theme} />
+          <CtaButton label="Unlock" onPress={unlock} />
+          <Pressable onPress={() => setSetupMode(true)} style={{ marginTop: 16 }}>
+            <Text style={{ color: theme.colors.primary, textAlign: 'center' }}>Reset PIN</Text>
+          </Pressable>
+        </>
+      )}
+
       {error ? (
-        <Text style={{ color: theme.colors.destructive, marginBottom: 12 }}>{error}</Text>
+        <Text style={{ color: theme.colors.destructive, marginTop: 12 }}>{error}</Text>
       ) : null}
-      <CtaButton label="Unlock" onPress={unlock} />
     </View>
+  );
+}
+
+function TextInputField({
+  value,
+  onChangeText,
+  placeholder,
+  theme,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+  theme: ReturnType<typeof useGochaTheme>['theme'];
+}) {
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      keyboardType="number-pad"
+      secureTextEntry
+      maxLength={6}
+      placeholder={placeholder}
+      placeholderTextColor={theme.colors.mutedForeground}
+      style={[
+        styles.input,
+        {
+          backgroundColor: theme.colors.card,
+          borderColor: theme.colors.border,
+          color: theme.colors.cardForeground,
+          borderRadius: theme.radii.card,
+        },
+      ]}
+    />
   );
 }
 

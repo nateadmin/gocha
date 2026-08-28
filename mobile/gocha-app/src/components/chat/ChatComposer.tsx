@@ -12,7 +12,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { PickedMedia } from '../../chat/pickMedia';
 import { pickCameraPhoto, pickDocument } from '../../chat/pickMedia';
 import type { RecordedVoice } from '../../chat/voiceRecording';
-import { StickerPickerPanel } from './StickerPickerPanel';
+import { EmojiStickerPickerPanel } from './EmojiStickerPickerPanel';
 import { VoiceRecorderBar } from './VoiceRecorderBar';
 import { useGochaTheme } from '../../theme';
 
@@ -134,8 +134,12 @@ export function ChatComposer({
       ) : null}
 
       {panel === 'sticker' ? (
-        <StickerPickerPanel
-          onPick={(key) => {
+        <EmojiStickerPickerPanel
+          onPickEmoji={(emoji) => {
+            onSendEmoji?.(emoji);
+            setPanel('none');
+          }}
+          onPickSticker={(key) => {
             onSendSticker?.(key);
             setPanel('none');
           }}
@@ -164,7 +168,7 @@ export function ChatComposer({
           <Pressable
             hitSlop={6}
             style={[styles.inlineAction, webActionStyle]}
-            accessibilityLabel="Stickers"
+            accessibilityLabel="Emoji and stickers"
             onPress={() => setPanel(panel === 'sticker' ? 'none' : 'sticker')}>
             <Ionicons name="happy-outline" size={22} color={theme.colors.primary} />
           </Pressable>

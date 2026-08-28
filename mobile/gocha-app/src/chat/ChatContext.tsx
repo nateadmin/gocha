@@ -10,6 +10,14 @@ import {
 } from 'react';
 
 import {
+  readStoredChatLabels,
+  readStoredChatLists,
+  readStoredChatPreferences,
+  writeStoredChatLabels,
+  writeStoredChatLists,
+  writeStoredChatPreferences,
+} from './chatPreferencesStore';
+import {
   EMOJI_GRID,
   STICKER_EMOJI,
   createOrderAssistantChat,
@@ -58,7 +66,7 @@ type ChatContextValue = {
   unpinChat: (chatId: string) => void;
   archiveChat: (chatId: string) => void;
   unarchiveChat: (chatId: string) => void;
-  muteChat: (chatId: string, duration: MuteDuration) => void;
+  muteChat: (chatId: string, duration: MuteDuration | number) => void;
   unmuteChat: (chatId: string) => void;
   markChatRead: (chatId: string) => void;
   markChatUnread: (chatId: string) => void;
@@ -175,17 +183,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({
     [orderAssistantChat.id]: orderAssistantMessages,
   });
-  const [lists, setLists] = useState<ChatList[]>([]);
-  const [labels, setLabels] = useState<ChatLabel[]>([]);
-  const [preferences, setPreferences] = useState<ChatPreferences>({
-    labelsEnabled: true,
-    listsEnabled: false,
-    swipeRight: 'pin',
-    swipeLeft: 'archive',
-    hiddenChatsPin: null,
-    chatLockPin: null,
-    showArchived: true,
-  });
+  const [lists, setLists] = useState<ChatList[]>(() => readStoredChatLists());
+  const [labels, setLabels] = useState<ChatLabel[]>(() => readStoredChatLabels());
+  const [preferences, setPreferences] = useState<ChatPreferences>(() => readStoredChatPreferences());
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const loadedMessageChatsRef = useRef<Set<string>>(new Set());
   const chatsRef = useRef(chats);
@@ -193,6 +193,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [activeFilter, setActiveFilter] = useState<ChatFilterId | string>('all');
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
+
+  useEffect(() => {
+    writeStoredChatPreferences(preferences);
+  }, [preferences]);
+
+  useEffect(() => {
+    writeStoredChatLists(lists);
+  }, [lists]);
+
+  useEffect(() => {
+    writeStoredChatLabels(labels);
+  }, [labels]);
 
   const refreshConversations = useCallback(async () => {
     if (!user) {
@@ -343,8 +355,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const unhideChat = useCallback((chatId: string) => updateChat(chatId, { hidden: false }), [updateChat]);
 
   const muteChat = useCallback(
-    (chatId: string, duration: MuteDuration) => {
-      updateChat(chatId, { muted: true, muteUntil: muteUntilFor(duration) });
+    (chatId: string, duration: MuteDuration | number) => {
+      const muteUntil =
+        typeof duration === 'number'
+          ? Date.now() + duration * 1000
+          : muteUntilFor(duration);
+      updateChat(chatId, { muted: true, muteUntil });
     },
     [updateChat],
   );
@@ -499,12 +515,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const verifyHiddenPin = useCallback(
-    (pin: string) => preferences.hiddenChatsPin === pin,
+    (pin: string) => Boolean(preferences.hiddenChatsPin && preferences.hiddenChatsPin === pin),
     [preferences.hiddenChatsPin],
   );
 
   const verifyLockPin = useCallback(
-    (pin: string) => preferences.chatLockPin === pin,
+    (pin: string) => Boolean(preferences.chatLockPin && preferences.chatLockPin === pin),
     [preferences.chatLockPin],
   );
 

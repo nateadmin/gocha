@@ -1,4 +1,4 @@
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 
 import { useChat } from '../../chat/ChatContext';
 import { STICKER_PACKS } from '../../chat/seedData';
@@ -21,26 +21,32 @@ export function StickerPickerPanel({ onPick }: Props) {
           borderTopColor: theme.colors.border,
         },
       ]}>
-      {STICKER_PACKS.map((pack) => (
-        <View key={pack.id} style={styles.pack}>
-          <Text
-            style={{
-              color: theme.colors.mutedForeground,
-              fontFamily: theme.typography.sans,
-              fontSize: 12,
-              marginBottom: 8,
-            }}>
-            {pack.name}
-          </Text>
-          <View style={styles.grid}>
-            {pack.stickers.map((key) => (
-              <Pressable key={key} onPress={() => onPick(key)} style={styles.cell}>
-                <Text style={{ fontSize: 32 }}>{stickerEmoji[key] ?? '⭐'}</Text>
-              </Pressable>
-            ))}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator
+        nestedScrollEnabled>
+        {STICKER_PACKS.map((pack) => (
+          <View key={pack.id} style={styles.pack}>
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.typography.sans,
+                fontSize: 12,
+                marginBottom: 8,
+              }}>
+              {pack.name}
+            </Text>
+            <View style={styles.grid}>
+              {pack.stickers.map((key) => (
+                <Pressable key={key} onPress={() => onPick(key)} style={styles.cell}>
+                  <Text style={{ fontSize: 32 }}>{stickerEmoji[key] ?? '⭐'}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
-      ))}
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -49,7 +55,13 @@ const styles = StyleSheet.create({
   panel: {
     borderTopWidth: StyleSheet.hairlineWidth,
     padding: 12,
-    maxHeight: 220,
+    height: 260,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 8,
   },
   pack: {
     marginBottom: 12,

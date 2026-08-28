@@ -16,11 +16,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar, HeaderOverflowMenu, type DropdownMenuItem } from '../../components/app';
 import { CtaButton } from '../../components/brand';
-import { ActionSheet, ChatComposer, MessageBubble } from '../../components/chat';
+import { ActionSheet, ChatComposer, DurationPickerSheet, MessageBubble } from '../../components/chat';
 import type { ActionSheetItem } from '../../components/chat/ActionSheet';
 import { useChat } from '../../chat/ChatContext';
 import { ORDER_ASSISTANT_SUGGESTIONS } from '../../chat/orderAssistant';
 import type { ChatMessage } from '../../chat/types';
+import { copyText } from '../../utils/copyText';
 import { useGochaTheme } from '../../theme';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 
@@ -40,6 +41,8 @@ export function ChatDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [messageMenu, setMessageMenu] = useState<ChatMessage | null>(null);
+  const [mutePickerOpen, setMutePickerOpen] = useState(false);
+  const [disappearPickerOpen, setDisappearPickerOpen] = useState(false);
 
   useEffect(() => {
     void chatApi.ensureMessagesLoaded(route.params.chatId);
@@ -126,9 +129,9 @@ export function ChatDetailScreen() {
         }
       : {
           id: 'mute',
-          label: 'Mute 8 hours',
+          label: 'Mute notifications',
           icon: 'volume-mute-outline',
-          onPress: () => chatApi.muteChat(chat.id, '8h'),
+          onPress: () => setMutePickerOpen(true),
         },
     chat.isSecret
       ? {
@@ -143,17 +146,26 @@ export function ChatDetailScreen() {
           icon: 'lock-closed-outline',
           onPress: () => chatApi.toggleSecretChat(chat.id),
         },
+    chat.hidden
+      ? {
+          id: 'unhide',
+          label: 'Unhide chat',
+          icon: 'eye-outline',
+          onPress: () => chatApi.unhideChat(chat.id),
+        }
+      : {
+          id: 'hide',
+          label: 'Hide chat',
+          icon: 'eye-off-outline',
+          onPress: () => chatApi.hideChat(chat.id),
+        },
     {
       id: 'disappear',
       label: chat.disappearingTimerSec
-        ? 'Turn off disappearing messages'
-        : 'Disappearing messages (1 min)',
+        ? `Disappearing: ${formatDurationLabel(chat.disappearingTimerSec)}`
+        : 'Disappearing messages',
       icon: 'timer-outline',
-      onPress: () =>
-        chatApi.setDisappearingTimer(
-          chat.id,
-          chat.disappearingTimerSec ? null : 60,
-        ),
+      onPress: () => setDisappearPickerOpen(true),
     },
     {
       id: 'block',
@@ -188,7 +200,12 @@ export function ChatDetailScreen() {
         {
           id: 'copy',
           label: 'Copy',
-          onPress: () => {},
+          onPress: () => {
+            const text =
+              messageMenu.text ??
+              (messageMenu.stickerKey ? chatApi.stickerEmoji[messageMenu.stickerKey] : '');
+            void copyText(text ?? '');
+          },
         },
         messageMenu.starred
           ? {
@@ -408,8 +425,42 @@ export function ChatDetailScreen() {
         items={messageMenuItems}
         onClose={() => setMessageMenu(null)}
       />
+
+      <DurationPickerSheet
+        visible={mutePickerOpen}
+        title="Mute notifications"
+        showOff={false}
+        onClose={() => setMutePickerOpen(false)}
+        onSelect={(seconds) => {
+          if (seconds !== null) {
+            chatApi.muteChat(chat.id, seconds);
+          }
+        }}
+      />
+
+      <DurationPickerSheet
+        visible={disappearPickerOpen}
+        title="Disappearing messages"
+        showOff
+        offLabel="Turn off disappearing messages"
+        onClose={() => setDisappearPickerOpen(false)}
+        onSelect={(seconds) => chatApi.setDisappearingTimer(chat.id, seconds)}
+      />
     </View>
   );
+}
+
+function formatDurationLabel(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  if (seconds < 3600) {
+    return `${Math.round(seconds / 60)} min`;
+  }
+  if (seconds < 86400) {
+    return `${Math.round(seconds / 3600)} hr`;
+  }
+  return `${Math.round(seconds / 86400)} day`;
 }
 
 const styles = StyleSheet.create({

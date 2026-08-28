@@ -1,4 +1,4 @@
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { ScrollView, Pressable, Text, View, StyleSheet } from 'react-native';
 
 import { useChat } from '../../chat/ChatContext';
 import { useGochaTheme } from '../../theme';
@@ -20,13 +20,17 @@ export function EmojiPickerPanel({ onPick }: Props) {
           borderTopColor: theme.colors.border,
         },
       ]}>
-      <View style={styles.grid}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.grid}
+        showsVerticalScrollIndicator
+        nestedScrollEnabled>
         {emojiGrid.map((emoji) => (
           <Pressable key={emoji} onPress={() => onPick(emoji)} style={styles.cell}>
             <Text style={{ fontSize: 26 }}>{emoji}</Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -35,7 +39,10 @@ const styles = StyleSheet.create({
   panel: {
     borderTopWidth: StyleSheet.hairlineWidth,
     padding: 12,
-    maxHeight: 200,
+    height: 220,
+  },
+  scroll: {
+    flex: 1,
   },
   grid: {
     flexDirection: 'row',

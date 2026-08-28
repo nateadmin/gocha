@@ -28,22 +28,10 @@ type Props = {
   style?: ViewStyle;
 };
 
-export function SwipeableRow({
-  children,
-  onSwipeRight,
-  onSwipeLeft,
-  rightLabel = 'Pin',
-  leftLabel = 'Archive',
-  rightIcon = 'pin-outline',
-  leftIcon = 'archive-outline',
-  style,
-}: Props) {
-  const { theme } = useGochaTheme();
-
-  if (Platform.OS === 'web') {
-    return <View style={style}>{children}</View>;
-  }
-
+function useSwipeHandlers(
+  onSwipeRight?: () => void,
+  onSwipeLeft?: () => void,
+) {
   const translateX = useRef(new Animated.Value(0)).current;
 
   const panResponder = useRef(
@@ -75,6 +63,22 @@ export function SwipeableRow({
     }),
   ).current;
 
+  return { translateX, panHandlers: panResponder.panHandlers };
+}
+
+export function SwipeableRow({
+  children,
+  onSwipeRight,
+  onSwipeLeft,
+  rightLabel = 'Pin',
+  leftLabel = 'Archive',
+  rightIcon = 'pin-outline',
+  leftIcon = 'archive-outline',
+  style,
+}: Props) {
+  const { theme } = useGochaTheme();
+  const { translateX, panHandlers } = useSwipeHandlers(onSwipeRight, onSwipeLeft);
+
   return (
     <View style={[styles.wrap, style]}>
       <View style={styles.actions} pointerEvents="none">
@@ -96,7 +100,7 @@ export function SwipeableRow({
           styles.foreground,
           { backgroundColor: theme.colors.card, transform: [{ translateX }] },
         ]}
-        {...panResponder.panHandlers}>
+        {...panHandlers}>
         {children}
       </Animated.View>
     </View>

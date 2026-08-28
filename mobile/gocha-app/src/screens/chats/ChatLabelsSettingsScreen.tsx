@@ -61,6 +61,11 @@ export function ChatLabelsSettingsScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState(LABEL_COLORS[0]);
+  const [hiddenPin, setHiddenPin] = useState('');
+  const [lockPin, setLockPin] = useState('');
+  const [swipePicker, setSwipePicker] = useState<'right' | 'left' | null>(null);
+
+  const swipeActions = ['pin', 'read', 'archive', 'mute', 'delete'] as const;
 
   function startEditing(labelId: string) {
     const label = labels.find((item) => item.id === labelId);
@@ -204,16 +209,127 @@ export function ChatLabelsSettingsScreen() {
       ) : null}
 
       <Text style={[styles.section, { color: theme.colors.mutedForeground }]}>
+        Security PINs
+      </Text>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <Text style={{ color: theme.colors.mutedForeground, marginBottom: 8, fontSize: 13 }}>
+          Hidden chats PIN {preferences.hiddenChatsPin ? '(set)' : '(not set)'}
+        </Text>
+        <TextInput
+          value={hiddenPin}
+          onChangeText={setHiddenPin}
+          secureTextEntry
+          keyboardType="number-pad"
+          maxLength={6}
+          placeholder="New hidden chats PIN"
+          placeholderTextColor={theme.colors.mutedForeground}
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+              color: theme.colors.cardForeground,
+              borderRadius: theme.radii.card,
+            },
+          ]}
+        />
+        <Pressable
+          onPress={() => {
+            if (hiddenPin.length >= 4) {
+              setHiddenChatsPin(hiddenPin);
+              setHiddenPin('');
+            }
+          }}>
+          <Text style={{ color: theme.colors.primary }}>Save hidden chats PIN</Text>
+        </Pressable>
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            marginTop: 16,
+            marginBottom: 8,
+            fontSize: 13,
+          }}>
+          Chat lock PIN {preferences.chatLockPin ? '(set)' : '(not set)'}
+        </Text>
+        <TextInput
+          value={lockPin}
+          onChangeText={setLockPin}
+          secureTextEntry
+          keyboardType="number-pad"
+          maxLength={6}
+          placeholder="New chat lock PIN"
+          placeholderTextColor={theme.colors.mutedForeground}
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+              color: theme.colors.cardForeground,
+              borderRadius: theme.radii.card,
+            },
+          ]}
+        />
+        <Pressable
+          onPress={() => {
+            if (lockPin.length >= 4) {
+              setChatLockPin(lockPin);
+              setLockPin('');
+            }
+          }}>
+          <Text style={{ color: theme.colors.primary }}>Save chat lock PIN</Text>
+        </Pressable>
+      </View>
+
+      <Text style={[styles.section, { color: theme.colors.mutedForeground }]}>
         Swipe gestures
       </Text>
       <View style={styles.gestureRow}>
-        <Pressable onPress={() => setSwipeRight('pin')}>
+        <Pressable onPress={() => setSwipePicker('right')}>
           <Text style={{ color: theme.colors.primary }}>Right: {preferences.swipeRight}</Text>
         </Pressable>
-        <Pressable onPress={() => setSwipeLeft('archive')}>
+        <Pressable onPress={() => setSwipePicker('left')}>
           <Text style={{ color: theme.colors.primary }}>Left: {preferences.swipeLeft}</Text>
         </Pressable>
       </View>
+
+      {swipePicker ? (
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.border,
+              borderRadius: theme.radii.card,
+            },
+          ]}>
+          {swipeActions.map((action) => (
+            <Pressable
+              key={action}
+              onPress={() => {
+                if (swipePicker === 'right') {
+                  setSwipeRight(action);
+                } else {
+                  setSwipeLeft(action);
+                }
+                setSwipePicker(null);
+              }}
+              style={{ paddingVertical: 10 }}>
+              <Text style={{ color: theme.colors.cardForeground }}>{action}</Text>
+            </Pressable>
+          ))}
+          <Pressable onPress={() => setSwipePicker(null)}>
+            <Text style={{ color: theme.colors.mutedForeground }}>Cancel</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

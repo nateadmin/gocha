@@ -182,6 +182,15 @@ export function ChatsScreen() {
       record.favorite
         ? { id: 'unfav', label: 'Remove from Favorites', onPress: () => chat.unfavoriteChat(record.id) }
         : { id: 'fav', label: 'Add to Favorites', onPress: () => chat.favoriteChat(record.id) },
+      record.hidden
+        ? { id: 'unhide', label: 'Unhide chat', onPress: () => chat.unhideChat(record.id) }
+        : { id: 'hide', label: 'Hide chat', onPress: () => chat.hideChat(record.id) },
+      record.pinned
+        ? { id: 'unpin', label: 'Unpin', onPress: () => chat.unpinChat(record.id) }
+        : { id: 'pin', label: 'Pin', onPress: () => chat.pinChat(record.id) },
+      record.archived
+        ? { id: 'unarchive', label: 'Unarchive', onPress: () => chat.unarchiveChat(record.id) }
+        : { id: 'archive', label: 'Archive', onPress: () => chat.archiveChat(record.id) },
       {
         id: 'lists',
         label: 'Add to List',
@@ -265,12 +274,12 @@ export function ChatsScreen() {
             Archived conversations
           </Text>
         </View>
-      ) : chat.preferences.listsEnabled ? (
+      ) : (
         <ChatFilterBar
           onManageLists={() => navigation.navigate('ChatListsSettings')}
           onOpenHidden={() => navigation.navigate('HiddenChats')}
         />
-      ) : null}
+      )}
 
       {showingUserSearch ? (
         <View style={{ backgroundColor: theme.colors.card, flex: 1 }}>
