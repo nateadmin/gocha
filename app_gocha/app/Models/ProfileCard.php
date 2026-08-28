@@ -16,6 +16,7 @@ class ProfileCard extends Model
         'user_id',
         'type',
         'title',
+        'slug',
         'headline',
         'photo_path',
         'visibility',
@@ -119,6 +120,7 @@ class ProfileCard extends Model
             'id' => $this->id,
             'type' => $this->type,
             'title' => $this->title,
+            'slug' => $this->slug,
             'visibility' => $this->visibility,
             'canView' => $canView,
             'accessStatus' => $access?->status,
@@ -140,6 +142,30 @@ class ProfileCard extends Model
                 'displayName' => $this->owner->publicDisplayName(),
                 'username' => $this->owner->username,
             ],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function toPublicPagePayload(?User $viewer): array
+    {
+        $this->loadMissing('owner');
+        $ownerId = (int) $this->user_id;
+
+        return [
+            'id' => $this->id,
+            'type' => $this->type,
+            'title' => $this->title,
+            'slug' => $this->slug,
+            'headline' => $this->headline,
+            'photoUrl' => $this->photoUrl(),
+            'body' => $this->normalizedBody(),
+            'owner' => [
+                'id' => $ownerId,
+                'displayName' => $this->owner?->publicDisplayName() ?? 'Gocha',
+                'username' => $this->owner?->username,
+                'avatarUrl' => $this->owner?->avatarUrl(),
+            ],
+            'viewerIsOwner' => $viewer !== null && (int) $viewer->id === $ownerId,
         ];
     }
 

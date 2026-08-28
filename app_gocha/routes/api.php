@@ -43,6 +43,8 @@ Route::get('/groups/search', [CommunityGroupController::class, 'search']);
 Route::get('/businesses', [BusinessListingController::class, 'index']);
 Route::get('/businesses/industries', [BusinessListingController::class, 'industries']);
 Route::get('/businesses/{slug}', [BusinessListingController::class, 'show']);
+Route::get('/c/{slug}', [ProfileCardController::class, 'showPublic'])
+    ->where('slug', '[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*');
 
 Route::prefix('auth/otp')
     ->withoutMiddleware([ThrottleRequests::class.':api'])

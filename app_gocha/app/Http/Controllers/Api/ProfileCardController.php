@@ -35,6 +35,13 @@ class ProfileCardController extends Controller
         return response()->json(['card' => $card->toOwnerPayload()], 201);
     }
 
+    public function showPublic(Request $request, string $slug): JsonResponse
+    {
+        $card = $this->cards->findBySlug($slug);
+
+        return response()->json(['card' => $card->toPublicPagePayload($request->user())]);
+    }
+
     public function show(Request $request, ProfileCard $profileCard): JsonResponse
     {
         $this->cards->assertCanViewDetail($profileCard, $request->user());
@@ -155,6 +162,7 @@ class ProfileCardController extends Controller
         $rules = [
             'type' => [$creating ? 'required' : 'sometimes', 'string', Rule::in(ProfileCardType::all())],
             'title' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:48'],
             'headline' => ['sometimes', 'nullable', 'string', 'max:160'],
             'visibility' => [$creating ? 'sometimes' : 'sometimes', 'string', Rule::in(ProfileCardVisibility::all())],
             'body' => ['sometimes', 'array'],

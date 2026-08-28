@@ -25,9 +25,73 @@ class ProfileCardTest extends TestCase
             ->assertJsonPath('card.visibility', 'request')
             ->assertJsonPath('card.body.company', 'Gocha');
 
-        $this->actingAs($alice)->getJson('/api/profile-cards')
+        $slug = $this->actingAs($alice)->getJson('/api/profile-cards')
             ->assertOk()
-            ->assertJsonCount(1, 'cards');
+            ->assertJsonCount(1, 'cards')
+            ->json('cards.0.slug');
+
+        $this->assertNotEmpty($slug);
+    }
+
+    public function test_public_share_page_is_visible_without_auth(): void
+    {
+        $alice = User::factory()->create(['username' => 'alice']);
+
+        $slug = $this->actingAs($alice)->postJson('/api/profile-cards', [
+            'type' => 'professional',
+            'visibility' => 'private',
+            'headline' => 'Product lead',
+            'body' => ['company' => 'Gocha', 'role' => 'Lead'],
+        ])->json('card.slug');
+
+        $this->assertSame('alice-professional', $slug);
+
+        $this->app['auth']->forgetGuards();
+
+        $this->getJson("/api/c/{$slug}")
+            ->assertOk()
+            ->assertJsonPath('card.slug', 'alice-professional')
+            ->assertJsonPath('card.headline', 'Product lead')
+            ->assertJsonPath('card.body.company', 'Gocha')
+            ->assertJsonPath('card.owner.displayName', $alice->name)
+            ->assertJsonPath('card.viewerIsOwner', false);
+
+        $this->getJson('/api/c/missing-card')->assertNotFound();
+    }
+
+    public function test_owner_can_customize_share_slug(): void
+    {
+        $alice = User::factory()->create(['username' => 'alice']);
+        $bob = User::factory()->create(['username' => 'bob']);
+
+        $cardId = $this->actingAs($alice)->postJson('/api/profile-cards', [
+            'type' => 'match',
+        ])->json('card.id');
+
+        $this->actingAs($alice)->putJson("/api/profile-cards/{$cardId}", [
+            'slug' => 'Alice Dating!!',
+        ])->assertOk()
+            ->assertJsonPath('card.slug', 'alice-dating');
+
+        $this->actingAs($bob)->postJson('/api/profile-cards', [
+            'type' => 'custom',
+            'slug' => 'alice-dating',
+        ])->assertUnprocessable();
+    }
+
+    public function test_owner_payload_marks_viewer_as_owner_on_share_page(): void
+    {
+        $alice = User::factory()->create(['username' => 'nate']);
+
+        $slug = $this->actingAs($alice)->postJson('/api/profile-cards', [
+            'type' => 'custom',
+            'title' => 'Personal',
+        ])->json('card.slug');
+
+        $this->actingAs($alice)->getJson("/api/c/{$slug}")
+            ->assertOk()
+            ->assertJsonPath('card.viewerIsOwner', true)
+            ->assertJsonPath('card.slug', 'nate-custom');
     }
 
     public function test_public_card_detail_is_visible_without_a_request(): void

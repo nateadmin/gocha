@@ -23,6 +23,7 @@ class ProfileCardService
             'user_id' => $owner->id,
             'type' => $type,
             'title' => $title,
+            'slug' => $this->allocateSlug($owner, $type, $input['slug'] ?? null),
             'headline' => $this->nullableString($input['headline'] ?? null),
             'visibility' => $input['visibility'] ?? ProfileCardVisibility::REQUEST,
             'body' => $this->sanitizeBody($type, $input['body'] ?? []),
@@ -33,14 +34,23 @@ class ProfileCardService
 
     public function update(ProfileCard $card, array $input): ProfileCard
     {
+        $card->loadMissing('owner');
         $type = $input['type'] ?? $card->type;
         $title = array_key_exists('title', $input)
             ? (trim((string) $input['title']) ?: ProfileCardType::defaultTitle($type))
             : $card->title;
+        $owner = $card->owner;
+        if (! $owner) {
+            throw new AccessDeniedHttpException('You do not own this profile.');
+        }
+        $slug = array_key_exists('slug', $input)
+            ? $this->allocateSlug($owner, $type, $input['slug'], $card->id)
+            : ($card->slug ?: $this->allocateSlug($owner, $type, null, $card->id));
 
         $card->forceFill([
             'type' => $type,
             'title' => $title,
+            'slug' => $slug,
             'headline' => array_key_exists('headline', $input)
                 ? $this->nullableString($input['headline'])
                 : $card->headline,
@@ -198,6 +208,81 @@ class ProfileCardService
                 'details' => mb_substr($string('details'), 0, 2000),
             ],
         };
+    }
+
+    public function findBySlug(string $slug): ProfileCard
+    {
+        $normalized = $this->normalizeSlug($slug);
+        if ($normalized === '') {
+            abort(404, 'Profile not found.');
+        }
+
+        $card = ProfileCard::query()
+            ->where('slug', $normalized)
+            ->with('owner')
+            ->first();
+
+        if (! $card) {
+            abort(404, 'Profile not found.');
+        }
+
+        return $card;
+    }
+
+    public function allocateSlug(User $owner, string $type, mixed $requested, ?int $ignoreCardId = null): string
+    {
+        $custom = is_string($requested) ? $this->normalizeSlug($requested) : '';
+        if ($custom !== '') {
+            if ($this->slugTaken($custom, $ignoreCardId)) {
+                throw ValidationException::withMessages([
+                    'slug' => ['That link is already taken.'],
+                ]);
+            }
+
+            return $custom;
+        }
+
+        $base = $this->defaultSlugBase($owner, $type);
+        $candidate = $base;
+        $n = 2;
+        while ($this->slugTaken($candidate, $ignoreCardId)) {
+            $suffix = '-'.$n;
+            $candidate = substr($base, 0, 48 - strlen($suffix)).$suffix;
+            $n++;
+        }
+
+        return $candidate;
+    }
+
+    public function normalizeSlug(string $value): string
+    {
+        $slug = strtolower(trim($value));
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug) ?: '';
+        $slug = trim($slug, '-');
+
+        return substr($slug, 0, 48);
+    }
+
+    private function defaultSlugBase(User $owner, string $type): string
+    {
+        $prefix = $this->normalizeSlug((string) $owner->username);
+        if ($prefix === '') {
+            $prefix = 'u'.$owner->id;
+        }
+        $typePart = $this->normalizeSlug($type) ?: 'card';
+        $base = $this->normalizeSlug($prefix.'-'.$typePart);
+
+        return $base !== '' ? $base : 'card';
+    }
+
+    private function slugTaken(string $slug, ?int $ignoreCardId): bool
+    {
+        $query = ProfileCard::query()->where('slug', $slug);
+        if ($ignoreCardId) {
+            $query->where('id', '!=', $ignoreCardId);
+        }
+
+        return $query->exists();
     }
 
     private function nullableString(mixed $value): ?string

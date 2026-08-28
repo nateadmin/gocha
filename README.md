@@ -74,6 +74,8 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/version` → 200, `version` equals `origin/main` HEAD after deploy
 - GET `https://gocha.ai/` → 200 mobile web shell (HTML)
 - GET `https://gocha.ai/api/profile-cards` as an authenticated session → 200 JSON `{ cards: [] }` or a card list (401 without a session is expected)
+- GET `https://gocha.ai/api/c/{slug}` → 200 JSON `{ card: ... }` for a real share slug, or 404 JSON `NOT_FOUND` when the slug is unknown
+- GET `https://gocha.ai/c/{slug}` → 200 mobile web shell (HTML) for a share page; Chat on that page requires a signed-in account
 
 ### Log check
 

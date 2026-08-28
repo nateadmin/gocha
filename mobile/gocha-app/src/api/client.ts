@@ -699,6 +699,7 @@ export type ProfileCardSummary = {
   id: number;
   type: ProfileCardType;
   title: string;
+  slug?: string | null;
   visibility: ProfileCardVisibility;
   canView: boolean;
   accessStatus: ProfileCardAccessStatus | null;
@@ -739,13 +740,33 @@ export type ProfileCardOwnerSummary = {
   avatarUrl: string | null;
 };
 
+export type PublicProfileCardRecord = {
+  id: number;
+  type: ProfileCardType;
+  title: string;
+  slug: string;
+  headline: string | null;
+  photoUrl: string | null;
+  body: ProfileCardBody;
+  owner: ProfileCardOwnerSummary;
+  viewerIsOwner: boolean;
+};
+
 export type ProfileCardWriteInput = {
   type: ProfileCardType;
   title?: string;
+  slug?: string;
   headline?: string;
   visibility?: ProfileCardVisibility;
   body?: ProfileCardBody;
 };
+
+export async function fetchPublicProfileCard(slug: string): Promise<PublicProfileCardRecord> {
+  const payload = await apiRequest<{ card: PublicProfileCardRecord }>(
+    API_PATHS.publicProfileCard(slug),
+  );
+  return payload.card;
+}
 
 export async function fetchMyProfileCards(): Promise<ProfileCardRecord[]> {
   const payload = await apiRequest<{ cards: ProfileCardRecord[] }>(API_PATHS.profileCards);

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import type { OtpAuthMode } from '../../api/client';
 import { useAccounts } from '../context/AccountsContext';
+import { consumeStartSignIn } from '../profileCards/postAuthIntent';
 import { AuthWelcomeScreen } from '../screens/auth/AuthWelcomeScreen';
 import { EmailScreen } from '../screens/auth/EmailScreen';
 import { OtpScreen } from '../screens/auth/OtpScreen';
@@ -18,6 +19,11 @@ export function AuthNavigator() {
     if (isAddingAccount) {
       setStep('email');
       setMode('signup');
+      return;
+    }
+    if (consumeStartSignIn()) {
+      setMode('signin');
+      setStep('email');
     }
   }, [isAddingAccount]);
 

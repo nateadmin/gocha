@@ -27,9 +27,12 @@ import {
   type ProfileCardVisibility,
   type PublicUserProfile,
 } from '../../api/client';
+import { copyText } from '../../utils/copyText';
 import { ConfirmDialog, LoadingShell } from '../../components/app';
 import { BrandInput, CtaButton } from '../../components/brand';
 import { PROFILE_CARD_TYPES } from '../../profileCards/profileCardMeta';
+import { profileCardShareUrl } from '../../profileCards/shareUrl';
+import { openPublicProfileCard } from '../../navigation/rootNavigation';
 import type { SettingsStackParamList } from '../../navigation/types';
 import { useGochaTheme } from '../../theme';
 
@@ -54,6 +57,7 @@ export function EditProfileCardScreen() {
 
   const [type, setType] = useState<ProfileCardType>(initialType);
   const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
   const [headline, setHeadline] = useState('');
   const [visibility, setVisibility] = useState<ProfileCardVisibility>('request');
   const [body, setBody] = useState<ProfileCardBody>({});
@@ -75,6 +79,7 @@ export function EditProfileCardScreen() {
       .then((card) => {
         setType(card.type);
         setTitle(card.title);
+        setSlug(card.slug ?? '');
         setHeadline(card.headline ?? '');
         setVisibility(card.visibility);
         setBody(card.body ?? {});
@@ -126,6 +131,7 @@ export function EditProfileCardScreen() {
       const payload = {
         type,
         title: title.trim() || undefined,
+        slug: slug.trim() || undefined,
         headline: headline.trim() || undefined,
         visibility,
         body,
@@ -140,6 +146,7 @@ export function EditProfileCardScreen() {
       }
 
       setMessage('Profile saved.');
+      setSlug(saved.slug ?? slug);
       if (!cardId) {
         navigation.replace('EditProfileCard', { cardId: saved.id });
       }
@@ -219,6 +226,37 @@ export function EditProfileCardScreen() {
 
       <FieldLabel label="Headline" />
       <BrandInput value={headline} onChangeText={setHeadline} placeholder="Short intro" />
+
+      {cardId && slug ? (
+        <>
+          <FieldLabel label="Link" />
+          <BrandInput
+            value={slug}
+            onChangeText={setSlug}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 6 }}>
+            {profileCardShareUrl(slug)}
+          </Text>
+          <View style={styles.linkActions}>
+            <CtaButton
+              label={message === 'Copied' ? 'Copied' : 'Copy link'}
+              compact
+              onPress={() => {
+                void copyText(profileCardShareUrl(slug)).then((ok) => {
+                  if (ok) setMessage('Copied');
+                });
+              }}
+            />
+            <CtaButton
+              label="View page"
+              compact
+              onPress={() => openPublicProfileCard(slug)}
+            />
+          </View>
+        </>
+      ) : null}
 
       {type === 'professional' ? (
         <>
@@ -379,6 +417,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
+  },
+  linkActions: {
+    marginTop: 12,
+    gap: 10,
   },
   shareRow: {
     flexDirection: 'row',

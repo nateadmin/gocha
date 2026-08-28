@@ -2,6 +2,11 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 import type { ProfileCardType } from '../api/client';
 
+export type AppStackParamList = {
+  Main: undefined;
+  PublicProfileCard: { slug: string };
+};
+
 export type RootTabParamList = {
   ChatsTab: NavigatorScreenParams<ChatsStackParamList> | undefined;
   CatchUpTab: undefined;

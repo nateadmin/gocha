@@ -23,6 +23,7 @@ import {
   type ActionSheetItem,
 } from '../../components/chat';
 import { useChat } from '../../chat/ChatContext';
+import { takePendingDirectChatUserId } from '../../profileCards/postAuthIntent';
 import {
   searchLocalContacts,
   searchLocalConversations,
@@ -133,15 +134,24 @@ export function ChatsScreen() {
     ];
   }, [accounts, user]);
 
-  const { refreshConversations } = chat;
+  const { refreshConversations, startDirectMessage, openChat: markChatOpen } = chat;
   useFocusEffect(
     useCallback(() => {
+      const pendingUserId = takePendingDirectChatUserId();
+      if (pendingUserId) {
+        void startDirectMessage(pendingUserId)
+          .then((chatId) => {
+            markChatOpen(chatId);
+            navigation.navigate('ChatDetail', { chatId });
+          })
+          .catch(() => undefined);
+      }
       void refreshConversations();
       const interval = setInterval(() => {
         void refreshConversations();
       }, 8000);
       return () => clearInterval(interval);
-    }, [refreshConversations]),
+    }, [refreshConversations, startDirectMessage, markChatOpen, navigation]),
   );
 
   const listData = useMemo(() => {

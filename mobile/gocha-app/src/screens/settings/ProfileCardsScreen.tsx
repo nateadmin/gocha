@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, Text, View, StyleSheet, Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,6 +8,8 @@ import { formatApiError } from '../../api/formatApiError';
 import { fetchMyProfileCards, fetchProfileCardRequests, type ProfileCardRecord } from '../../api/client';
 import { LoadingShell, SectionLabel } from '../../components/app';
 import { profileCardIcon, visibilityLabel } from '../../profileCards/profileCardMeta';
+import { profileCardShareUrl } from '../../profileCards/shareUrl';
+import { copyText } from '../../utils/copyText';
 import type { SettingsStackParamList } from '../../navigation/types';
 import { useGochaTheme } from '../../theme';
 
@@ -17,6 +19,7 @@ export function ProfileCardsScreen() {
   const [cards, setCards] = useState<ProfileCardRecord[] | null>(null);
   const [requestCount, setRequestCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -106,9 +109,8 @@ export function ProfileCardsScreen() {
         </Text>
       ) : (
         (cards ?? []).map((card) => (
-          <Pressable
+          <View
             key={card.id}
-            onPress={() => navigation.navigate('EditProfileCard', { cardId: card.id })}
             style={[
               styles.cardRow,
               {
@@ -117,23 +119,66 @@ export function ProfileCardsScreen() {
                 borderRadius: theme.radii.card,
               },
             ]}>
-            <Ionicons name={profileCardIcon(card.type)} size={22} color={theme.colors.primary} />
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  color: theme.colors.cardForeground,
-                  fontFamily: theme.typography.sans,
-                  fontWeight: '600',
-                }}>
-                {card.title}
-              </Text>
-              <Text style={{ color: theme.colors.mutedForeground, fontSize: 13 }}>
-                {visibilityLabel(card.visibility)}
-                {card.pendingRequestCount ? ` · ${card.pendingRequestCount} pending` : ''}
-              </Text>
-            </View>
+            <Pressable
+              onPress={() => navigation.navigate('EditProfileCard', { cardId: card.id })}
+              style={styles.cardMain}>
+              <Ionicons name={profileCardIcon(card.type)} size={22} color={theme.colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: theme.colors.cardForeground,
+                    fontFamily: theme.typography.sans,
+                    fontWeight: '600',
+                  }}>
+                  {card.title}
+                </Text>
+                <Text style={{ color: theme.colors.mutedForeground, fontSize: 13 }}>
+                  {visibilityLabel(card.visibility)}
+                  {card.pendingRequestCount ? ` · ${card.pendingRequestCount} pending` : ''}
+                </Text>
+              </View>
+            </Pressable>
+            {card.slug ? (
+              Platform.OS === 'web' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void copyText(profileCardShareUrl(card.slug ?? '')).then((ok) => {
+                      if (ok) setCopiedId(card.id);
+                    });
+                  }}
+                  aria-label="Copy link"
+                  style={{
+                    background: 'transparent',
+                    border: 0,
+                    padding: 8,
+                    cursor: 'pointer',
+                    color: copiedId === card.id ? theme.colors.primary : theme.colors.mutedForeground,
+                  }}>
+                  <Ionicons
+                    name={copiedId === card.id ? 'checkmark' : 'copy-outline'}
+                    size={18}
+                    color={copiedId === card.id ? theme.colors.primary : theme.colors.mutedForeground}
+                  />
+                </button>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    void copyText(profileCardShareUrl(card.slug ?? '')).then((ok) => {
+                      if (ok) setCopiedId(card.id);
+                    });
+                  }}
+                  style={{ padding: 8 }}>
+                  <Ionicons
+                    name={copiedId === card.id ? 'checkmark' : 'copy-outline'}
+                    size={18}
+                    color={copiedId === card.id ? theme.colors.primary : theme.colors.mutedForeground}
+                  />
+                </Pressable>
+              )
+            ) : null}
             <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
-          </Pressable>
+          </View>
         ))
       )}
 
@@ -178,10 +223,16 @@ const styles = StyleSheet.create({
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
     padding: 14,
     borderWidth: 1,
     marginBottom: 10,
+  },
+  cardMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   addRow: {
     flexDirection: 'row',
