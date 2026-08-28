@@ -11,6 +11,26 @@ const BASE_PX = 100;
 export function UniversalLoader({ size = 1 }: Props) {
   const maskId = `gocha-loader-mask-${useId().replace(/:/g, '')}`;
   const visualSize = BASE_PX * size;
+  const compact = size < 0.5;
+
+  if (compact) {
+    return (
+      <CompactLoader
+        style={{ width: visualSize, height: visualSize }}
+        role="status"
+        aria-label="Loading">
+        <svg viewBox="0 0 24 24" aria-hidden>
+          <defs>
+            <linearGradient id={`${maskId}-fill`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="30%" stopColor="#ffbf48" />
+              <stop offset="70%" stopColor="#be4a1d" />
+            </linearGradient>
+          </defs>
+          <polygon points="12,4 20,20 4,20" fill={`url(#${maskId}-fill)`} />
+        </svg>
+      </CompactLoader>
+    );
+  }
 
   return (
     <StyledWrapper
@@ -48,6 +68,36 @@ export function UniversalLoader({ size = 1 }: Props) {
     </StyledWrapper>
   );
 }
+
+const CompactLoader = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  background: transparent;
+  flex-shrink: 0;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    animation: compact-spin 0.9s linear infinite;
+    transform-origin: center center;
+  }
+
+  @keyframes compact-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`;
 
 const StyledWrapper = styled.div`
   display: inline-flex;
