@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     marginBottom: 8,
   },
-  list: { maxHeight: 320 },
+  list: { maxHeight: 420 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
