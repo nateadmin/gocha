@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -106,6 +107,19 @@ class Handler extends ExceptionHandler
                 'retryable' => true,
                 'timestamp' => now()->toIso8601String(),
             ], 419);
+        }
+
+        if ($e instanceof TooManyRequestsHttpException) {
+            $retryAfter = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+
+            return response()->json([
+                'code' => 'RATE_LIMITED',
+                'message' => 'Too many sign-in attempts. Try again in '.$retryAfter.' seconds.',
+                'retryAfterSeconds' => $retryAfter,
+                'correlationId' => CorrelationId::current(),
+                'retryable' => true,
+                'timestamp' => now()->toIso8601String(),
+            ], 429, ['Retry-After' => (string) $retryAfter]);
         }
 
         $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;

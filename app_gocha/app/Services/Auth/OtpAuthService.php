@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Services\Mail\ResendMailer;
 use App\Services\Profile\CharacterAvatarService;
 use App\Support\AccountChannel;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -19,6 +18,7 @@ class OtpAuthService
         private readonly ResendMailer $mailer,
         private readonly CharacterAvatarService $avatars,
         private readonly AccountIdentifierService $identifiers,
+        private readonly OtpResendCooldown $cooldown,
     ) {}
 
     public function requestCode(string $channel, string $identifier, string $mode = 'signin'): array
@@ -62,8 +62,7 @@ class OtpAuthService
             }
         }
 
-        $cooldownKey = $this->cooldownKey($channel, $identifier);
-        if (Cache::has($cooldownKey)) {
+        if ($this->cooldown->isActive($channel, $identifier)) {
             return $this->cooldownPayload($channel, $identifier, $mode);
         }
 
@@ -81,11 +80,7 @@ class OtpAuthService
             'expires_at' => now()->addMinutes((int) config('gocha.auth.otp_ttl_minutes', 10)),
         ]);
 
-        Cache::put(
-            $cooldownKey,
-            true,
-            now()->addSeconds((int) config('gocha.auth.otp_resend_cooldown_seconds', 60)),
-        );
+        $this->cooldown->markSent($channel, $identifier);
 
         if ($channel === AccountChannel::EMAIL) {
             $this->mailer->sendLoginCode($identifier, $code);
@@ -201,17 +196,9 @@ class OtpAuthService
         return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     }
 
-    private function cooldownKey(string $channel, string $identifier): string
-    {
-        return 'gocha:otp:cooldown:'.hash('sha256', $channel.':'.$identifier);
-    }
-
     private function cooldownPayload(string $channel, string $identifier, string $mode): array
     {
-        $cooldownKey = $this->cooldownKey($channel, $identifier);
-        $retryAfter = Cache::has($cooldownKey)
-            ? (int) config('gocha.auth.otp_resend_cooldown_seconds', 60)
-            : 0;
+        $retryAfter = $this->cooldown->remainingSeconds($channel, $identifier);
 
         $message = $mode === 'signup'
             ? config('gocha.auth.otp_signup_request_message')

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View, StyleSheet } from 'react-native';
 
 import { ApiError } from '../../api/client';
@@ -23,8 +23,22 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
 
   const isSignUp = mode === 'signup';
+  const blocked = retryAfterSeconds > 0;
+
+  useEffect(() => {
+    if (retryAfterSeconds <= 0) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setRetryAfterSeconds((value) => Math.max(0, value - 1));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [retryAfterSeconds]);
 
   async function handleContinue() {
     const trimmed = email.trim().toLowerCase();
@@ -33,19 +47,23 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
       return;
     }
 
+    if (blocked) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      await requestAuthCode(trimmed, mode);
+      const payload = await requestAuthCode(trimmed, mode);
+      if (payload.resendAvailableInSeconds > 0) {
+        setRetryAfterSeconds(payload.resendAvailableInSeconds);
+      }
       onCodeSent(trimmed);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
-        if (err.body.code === 'EMAIL_NOT_FOUND' && !isSignUp) {
-          // hint handled in message
-        }
-        if (err.body.code === 'EMAIL_ALREADY_REGISTERED' && isSignUp) {
-          // hint handled in message
+        if (err.body.code === 'RATE_LIMITED' && err.body.retryAfterSeconds) {
+          setRetryAfterSeconds(err.body.retryAfterSeconds);
         }
       } else {
         setError('Could not send a code.');
@@ -86,9 +104,16 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
             </BrandText>
           ) : null}
 
+          {blocked ? (
+            <BrandText muted style={{ marginBottom: 8, textAlign: 'center' }}>
+              You can request another code in {retryAfterSeconds}s.
+            </BrandText>
+          ) : null}
+
           <CtaButton
             label={isSignUp ? 'Send verification code' : 'Send sign-in code'}
             loading={loading}
+            disabled={blocked}
             onPress={handleContinue}
           />
 

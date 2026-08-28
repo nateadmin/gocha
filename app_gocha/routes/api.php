@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\VersionController;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'show']);
@@ -42,7 +43,9 @@ Route::get('/businesses', [BusinessListingController::class, 'index']);
 Route::get('/businesses/industries', [BusinessListingController::class, 'industries']);
 Route::get('/businesses/{slug}', [BusinessListingController::class, 'show']);
 
-Route::prefix('auth/otp')->group(function () {
+Route::prefix('auth/otp')
+    ->withoutMiddleware([ThrottleRequests::class.':api'])
+    ->group(function () {
     Route::post('/request', [AuthOtpController::class, 'request'])
         ->middleware('throttle:otp-request');
     Route::post('/verify', [AuthOtpController::class, 'verify'])

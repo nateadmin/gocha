@@ -48,6 +48,7 @@ export type ApiErrorBody = {
   message: string;
   correlationId?: string;
   retryable?: boolean;
+  retryAfterSeconds?: number;
   errors?: Record<string, string[]>;
 };
 
@@ -107,6 +108,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
         message: payload.message ?? 'Request failed.',
         correlationId: payload.correlationId,
         retryable: payload.retryable,
+        retryAfterSeconds: payload.retryAfterSeconds,
         errors: payload.errors,
       },
       response.status,

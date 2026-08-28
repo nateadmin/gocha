@@ -87,6 +87,9 @@ export function OtpScreen({ email, mode, onBack }: Props) {
       setSubmitError(
         err instanceof ApiError ? err.message : 'Could not resend the code.',
       );
+      if (err instanceof ApiError && err.body.code === 'RATE_LIMITED' && err.body.retryAfterSeconds) {
+        setCooldown(err.body.retryAfterSeconds);
+      }
     }
   }
 

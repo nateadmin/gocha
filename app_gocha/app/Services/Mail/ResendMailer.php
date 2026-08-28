@@ -11,7 +11,7 @@ class ResendMailer
     public function sendLoginCode(string $to, string $code): void
     {
         $apiKey = config('gocha.resend.api_key');
-        if (! $apiKey) {
+        if (! $apiKey || app()->environment('testing')) {
             if (app()->environment('local', 'testing')) {
                 logger()->info('OTP code for '.$to.': '.$code.' (Resend not configured)');
 

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Auth\OtpResendCooldown;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
@@ -31,12 +32,22 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('otp-request', function (Request $request) {
             $channel = strtolower((string) $request->input('channel', 'email'));
             $identifier = strtolower((string) $request->input('identifier', $request->input('email', '')));
-            $key = $identifier !== '' ? $channel.':'.$identifier : $request->ip();
+            $cooldown = app(OtpResendCooldown::class);
 
-            return [
-                Limit::perMinute(5)->by($key),
-                Limit::perMinute(20)->by($request->ip()),
-            ];
+            if ($identifier !== '' && $cooldown->isActive($channel, $identifier)) {
+                return [];
+            }
+
+            $limits = [];
+            if ($identifier !== '') {
+                $limits[] = Limit::perMinute((int) config('gocha.auth.otp_request_per_email_per_minute', 10))
+                    ->by($channel.':'.$identifier);
+            }
+
+            $limits[] = Limit::perMinute((int) config('gocha.auth.otp_request_per_ip_per_minute', 40))
+                ->by($request->ip());
+
+            return $limits;
         });
 
         RateLimiter::for('otp-verify', function (Request $request) {
