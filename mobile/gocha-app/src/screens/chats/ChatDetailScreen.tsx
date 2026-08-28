@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar, HeaderOverflowMenu, type DropdownMenuItem } from '../../components/app';
-import { CtaButton } from '../../components/brand';
 import { ActionSheet, ChatComposer, DurationPickerSheet, MessageBubble } from '../../components/chat';
 import type { ActionSheetItem } from '../../components/chat/ActionSheet';
 import { useChat } from '../../chat/ChatContext';
@@ -36,6 +35,7 @@ export function ChatDetailScreen() {
   const chatId = route.params.chatId;
   const chat = chatApi.getChat(chatId);
   const messages = chatApi.messagesFor(chatId);
+  const listRef = useRef<FlatList<ChatMessage>>(null);
   const [draft, setDraft] = useState(() => chatApi.getChatDraft(chatId));
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -333,10 +333,16 @@ export function ChatDetailScreen() {
       ) : null}
 
       <FlatList
+        ref={listRef}
         data={visibleMessages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messages}
         style={{ flex: 1, backgroundColor: theme.colors.card }}
+        onContentSizeChange={() => {
+          if (!searchOpen) {
+            listRef.current?.scrollToEnd({ animated: false });
+          }
+        }}
         renderItem={({ item }) => {
           const replySource = item.replyToId
             ? messages.find((message) => message.id === item.replyToId)

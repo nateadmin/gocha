@@ -133,14 +133,15 @@ export function ChatsScreen() {
     ];
   }, [accounts, user]);
 
+  const { refreshConversations } = chat;
   useFocusEffect(
     useCallback(() => {
-      void chat.refreshConversations();
+      void refreshConversations();
       const interval = setInterval(() => {
-        void chat.refreshConversations();
+        void refreshConversations();
       }, 8000);
       return () => clearInterval(interval);
-    }, [chat.refreshConversations]),
+    }, [refreshConversations]),
   );
 
   const listData = useMemo(() => {

@@ -27,6 +27,12 @@ export function resolveIsOutgoing(
   return false;
 }
 
+function parseSentAtMs(iso: string | null | undefined): number | undefined {
+  if (!iso) return undefined;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? undefined : ms;
+}
+
 export function mapMessageRecord(
   record: ConversationMessageRecord,
   viewerUserId?: number | null,
@@ -36,6 +42,7 @@ export function mapMessageRecord(
     type: record.type === 'emoji' ? 'emoji' : 'text',
     text: record.text ?? undefined,
     sentAt: formatTimeLabel(record.sentAt),
+    sentAtMs: parseSentAtMs(record.sentAt),
     isOutgoing: resolveIsOutgoing(record, viewerUserId),
     status: record.status ?? 'sent',
   };
@@ -63,6 +70,35 @@ export function previewForMessage(message: ChatMessage): string {
 export function listPreviewForMessage(message: ChatMessage): string {
   const body = previewForMessage(message);
   return message.isOutgoing ? `You: ${body}` : body;
+}
+
+/**
+ * Merges server records with local state so a refresh never destroys
+ * optimistic sends, device-local media messages, local deletions, or local
+ * flags such as starred/reply metadata.
+ */
+export function mergeMessages(
+  previous: ChatMessage[],
+  server: ChatMessage[],
+  deletedIds: ReadonlySet<string>,
+): ChatMessage[] {
+  const previousById = new Map(previous.map((message) => [message.id, message]));
+  const serverIds = new Set(server.map((record) => record.id));
+
+  const merged = server
+    .filter((record) => !deletedIds.has(record.id))
+    .map((record) => {
+      const prior = previousById.get(record.id);
+      if (!prior) return record;
+      return {
+        ...record,
+        ...(prior.starred ? { starred: true } : {}),
+        ...(prior.replyToId ? { replyToId: prior.replyToId } : {}),
+      };
+    });
+
+  const localOnly = previous.filter((message) => !serverIds.has(message.id));
+  return localOnly.length > 0 ? [...merged, ...localOnly] : merged;
 }
 
 export function previewFromMessages(messages: ChatMessage[]): string {

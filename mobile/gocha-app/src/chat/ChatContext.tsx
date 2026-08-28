@@ -31,6 +31,7 @@ import {
 } from './seedData';
 import {
   listPreviewForMessage,
+  mergeMessages,
   previewFromMessages,
 } from './messageMapping';
 import {
@@ -38,6 +39,7 @@ import {
   loadConversations,
   markChatReadOnServer,
   openDirectConversation,
+  postEmojiMessage,
   postTextMessage,
 } from './conversationApi';
 import { isOrderAssistantChat } from './orderAssistant';
@@ -200,8 +202,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [drafts, setDrafts] = useState<Record<string, ChatDraft>>(() => readStoredChatDrafts());
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const loadedMessageChatsRef = useRef<Set<string>>(new Set());
+  const messageLoadPromisesRef = useRef<Map<string, Promise<void>>>(new Map());
+  const deletedMessageIdsRef = useRef<Set<string>>(new Set());
   const chatsRef = useRef(chats);
   chatsRef.current = chats;
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const [activeFilter, setActiveFilter] = useState<ChatFilterId | string>('all');
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
@@ -226,18 +232,31 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setConversationsLoading(true);
+    const isFirstLoad = chatsRef.current.filter((chat) => !isOrderAssistantChat(chat.id)).length === 0;
+    if (isFirstLoad) {
+      setConversationsLoading(true);
+    }
     try {
       const existing = chatsRef.current.filter((chat) => !isOrderAssistantChat(chat.id));
       const apiChats = await loadConversations(existing);
-      setChats([orderAssistantChat, ...apiChats]);
+      // Keep local-only chats (e.g. broadcasts) that the server does not know about.
+      const apiIds = new Set(apiChats.map((chat) => chat.id));
+      const localOnly = existing.filter(
+        (chat) => !/^\d+$/.test(chat.id) && !apiIds.has(chat.id),
+      );
+      setChats([orderAssistantChat, ...apiChats, ...localOnly]);
+    } catch {
+      // Transient failure; keep the current list and let the next poll retry.
     } finally {
-      setConversationsLoading(false);
+      if (isFirstLoad) {
+        setConversationsLoading(false);
+      }
     }
   }, [orderAssistantChat, orderAssistantMessages, user]);
 
   useEffect(() => {
     loadedMessageChatsRef.current = new Set();
+    deletedMessageIdsRef.current = new Set();
     void refreshConversations();
   }, [user?.id, refreshConversations]);
 
@@ -252,7 +271,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         return [assistant, chat, ...rest];
       });
       setMessages((prev) => ({ ...prev, [chat.id]: prev[chat.id] ?? [] }));
-      loadedMessageChatsRef.current.add(chat.id);
       return chat.id;
     },
     [orderAssistantChat],
@@ -265,21 +283,49 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const syncChatFromMessages = useCallback(
-    (chatId: string, records: ChatMessage[], options?: { markRead?: boolean }) => {
+    (chatId: string, records: ChatMessage[]) => {
       const last = records[records.length - 1];
       if (!last) {
         return;
       }
 
+      const activityAt = last.sentAtMs ?? Date.now();
       updateChat(chatId, {
         preview: listPreviewForMessage(last),
-        dateLabel: activityDateLabel(),
-        lastActivityAt: Date.now(),
-        ...(options?.markRead && !last.isOutgoing ? { unreadCount: 0, markedUnread: false } : {}),
+        dateLabel: activityDateLabel(activityAt),
+        lastActivityAt: activityAt,
         ...(last.isOutgoing ? { unreadCount: 0 } : {}),
       });
     },
     [updateChat],
+  );
+
+  const applyServerMessages = useCallback(
+    (chatId: string, records: ChatMessage[]): void => {
+      const previous = messagesRef.current[chatId] ?? [];
+      const merged = mergeMessages(previous, records, deletedMessageIdsRef.current);
+      const unchanged =
+        merged.length === previous.length &&
+        previous.every((message, index) => message.id === merged[index]?.id);
+      if (unchanged) {
+        return;
+      }
+
+      setMessages((prev) => ({ ...prev, [chatId]: merged }));
+      syncChatFromMessages(chatId, merged);
+
+      // Only tell the server we read it when a new incoming message arrived
+      // while this chat is being actively refreshed (i.e. it is open).
+      const previousIds = new Set(previous.map((message) => message.id));
+      const hasNewIncoming = records.some(
+        (record) => !record.isOutgoing && !previousIds.has(record.id),
+      );
+      if (hasNewIncoming) {
+        updateChat(chatId, { unreadCount: 0, markedUnread: false });
+        void markChatReadOnServer(chatId).catch(() => undefined);
+      }
+    },
+    [syncChatFromMessages, updateChat],
   );
 
   const ensureMessagesLoaded = useCallback(
@@ -288,12 +334,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (loadedMessageChatsRef.current.has(chatId)) return;
       if (!/^\d+$/.test(chatId)) return;
 
-      const records = await loadConversationMessages(chatId, user?.id);
-      loadedMessageChatsRef.current.add(chatId);
-      setMessages((prev) => ({ ...prev, [chatId]: records }));
-      syncChatFromMessages(chatId, records);
+      const inFlight = messageLoadPromisesRef.current.get(chatId);
+      if (inFlight) {
+        return inFlight;
+      }
+
+      const load = (async () => {
+        try {
+          const records = await loadConversationMessages(chatId, user?.id);
+          loadedMessageChatsRef.current.add(chatId);
+          applyServerMessages(chatId, records);
+        } catch {
+          // Leave the chat unloaded so the next open or poll retries.
+        } finally {
+          messageLoadPromisesRef.current.delete(chatId);
+        }
+      })();
+
+      messageLoadPromisesRef.current.set(chatId, load);
+      return load;
     },
-    [syncChatFromMessages, user?.id],
+    [applyServerMessages, user?.id],
   );
 
   const refreshMessagesForChat = useCallback(
@@ -301,22 +362,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (isOrderAssistantChat(chatId)) return;
       if (!/^\d+$/.test(chatId)) return;
 
-      const records = await loadConversationMessages(chatId, user?.id);
-      loadedMessageChatsRef.current.add(chatId);
-      setMessages((prev) => {
-        const previous = prev[chatId] ?? [];
-        if (
-          previous.length === records.length &&
-          previous.every((message, index) => message.id === records[index]?.id)
-        ) {
-          return prev;
-        }
-        return { ...prev, [chatId]: records };
-      });
-      syncChatFromMessages(chatId, records, { markRead: true });
-      void markChatReadOnServer(chatId).catch(() => undefined);
+      try {
+        const records = await loadConversationMessages(chatId, user?.id);
+        loadedMessageChatsRef.current.add(chatId);
+        applyServerMessages(chatId, records);
+      } catch {
+        // Transient failure; the next poll retries.
+      }
     },
-    [syncChatFromMessages, user?.id],
+    [applyServerMessages, user?.id],
   );
 
   const getChat = useCallback(
@@ -453,6 +507,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearChat = useCallback((chatId: string) => {
+    // Remember cleared ids so background refreshes do not resurrect them.
+    for (const message of messagesRef.current[chatId] ?? []) {
+      deletedMessageIdsRef.current.add(message.id);
+    }
     setMessages((prev) => ({ ...prev, [chatId]: [] }));
     updateChat(chatId, { preview: 'Messages cleared', unreadCount: 0 });
   }, [updateChat]);
@@ -749,17 +807,61 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [updateChat],
   );
 
+  /**
+   * Appends an optimistic message, then reconciles it with the saved server
+   * copy. If a background refresh replaced the message list while the POST
+   * was in flight, the saved message is appended instead of silently lost.
+   */
+  const deliverMessage = useCallback(
+    (chatId: string, optimistic: ChatMessage, send: () => Promise<ChatMessage>) => {
+      appendMessage(chatId, optimistic);
+
+      void send()
+        .then((savedRecord) => {
+          const saved: ChatMessage = {
+            ...savedRecord,
+            ...(optimistic.replyToId ? { replyToId: optimistic.replyToId } : {}),
+          };
+          setMessages((prev) => {
+            const current = (prev[chatId] ?? []).filter(
+              (message) => message.id !== optimistic.id && message.id !== saved.id,
+            );
+            return { ...prev, [chatId]: [...current, saved] };
+          });
+          updateChat(chatId, {
+            preview: listPreviewForMessage(saved),
+            dateLabel: activityDateLabel(saved.sentAtMs ?? Date.now()),
+            lastActivityAt: saved.sentAtMs ?? Date.now(),
+            unreadCount: 0,
+          });
+        })
+        .catch(() => {
+          setMessages((prev) => {
+            const remaining = (prev[chatId] ?? []).filter(
+              (message) => message.id !== optimistic.id,
+            );
+            updateChat(chatId, {
+              preview: previewFromMessages(remaining),
+            });
+            return { ...prev, [chatId]: remaining };
+          });
+        });
+    },
+    [appendMessage, updateChat],
+  );
+
   const sendTextMessage = useCallback(
     (chatId: string, text: string, replyToId?: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
 
-      if (isOrderAssistantChat(chatId)) {
+      if (isOrderAssistantChat(chatId) || !/^\d+$/.test(chatId)) {
         appendMessage(chatId, {
           id: `m-${Date.now()}`,
           type: 'text',
           text: trimmed,
           sentAt: formatTimeLabel(),
+          sentAtMs: Date.now(),
           isOutgoing: true,
           status: 'sent',
           replyToId,
@@ -767,78 +869,90 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (!/^\d+$/.test(chatId)) {
-        return;
-      }
-
-      const optimisticId = `pending-${Date.now()}`;
-      appendMessage(chatId, {
-        id: optimisticId,
-        type: 'text',
-        text: trimmed,
-        sentAt: formatTimeLabel(),
-        isOutgoing: true,
-        status: 'sent',
-        replyToId,
-      });
-
-      void postTextMessage(chatId, trimmed, user?.id)
-        .then((saved) => {
-          setMessages((prev) => ({
-            ...prev,
-            [chatId]: (prev[chatId] ?? []).map((message) =>
-              message.id === optimisticId ? saved : message,
-            ),
-          }));
-          updateChat(chatId, {
-            preview: listPreviewForMessage(saved),
-            dateLabel: activityDateLabel(),
-            lastActivityAt: Date.now(),
-            unreadCount: 0,
-          });
-        })
-        .catch(() => {
-          setMessages((prev) => {
-            const remaining = (prev[chatId] ?? []).filter((message) => message.id !== optimisticId);
-            updateChat(chatId, {
-              preview: previewFromMessages(remaining),
-            });
-            return {
-              ...prev,
-              [chatId]: remaining,
-            };
-          });
-        });
+      deliverMessage(
+        chatId,
+        {
+          id: `pending-${Date.now()}`,
+          type: 'text',
+          text: trimmed,
+          sentAt: formatTimeLabel(),
+          sentAtMs: Date.now(),
+          isOutgoing: true,
+          status: 'sent',
+          replyToId,
+        },
+        () => postTextMessage(chatId, trimmed, user?.id),
+      );
     },
-    [appendMessage, updateChat, user?.id],
+    [appendMessage, deliverMessage, user?.id],
   );
 
   const sendEmojiMessage = useCallback(
     (chatId: string, emoji: string) => {
-      appendMessage(chatId, {
-        id: `m-${Date.now()}`,
-        type: 'emoji',
-        text: emoji,
-        sentAt: formatTimeLabel(),
-        isOutgoing: true,
-        status: 'sent',
-      });
+      if (isOrderAssistantChat(chatId) || !/^\d+$/.test(chatId)) {
+        appendMessage(chatId, {
+          id: `m-${Date.now()}`,
+          type: 'emoji',
+          text: emoji,
+          sentAt: formatTimeLabel(),
+          sentAtMs: Date.now(),
+          isOutgoing: true,
+          status: 'sent',
+        });
+        return;
+      }
+
+      deliverMessage(
+        chatId,
+        {
+          id: `pending-${Date.now()}`,
+          type: 'emoji',
+          text: emoji,
+          sentAt: formatTimeLabel(),
+          sentAtMs: Date.now(),
+          isOutgoing: true,
+          status: 'sent',
+        },
+        () => postEmojiMessage(chatId, emoji, user?.id),
+      );
     },
-    [appendMessage],
+    [appendMessage, deliverMessage, user?.id],
   );
 
   const sendStickerMessage = useCallback(
     (chatId: string, stickerKey: string) => {
-      appendMessage(chatId, {
-        id: `m-${Date.now()}`,
-        type: 'sticker',
-        stickerKey,
-        sentAt: formatTimeLabel(),
-        isOutgoing: true,
-        status: 'sent',
-      });
+      const stickerGlyph = STICKER_EMOJI[stickerKey] ?? '⭐';
+
+      if (isOrderAssistantChat(chatId) || !/^\d+$/.test(chatId)) {
+        appendMessage(chatId, {
+          id: `m-${Date.now()}`,
+          type: 'sticker',
+          stickerKey,
+          sentAt: formatTimeLabel(),
+          sentAtMs: Date.now(),
+          isOutgoing: true,
+          status: 'sent',
+        });
+        return;
+      }
+
+      // Stickers are delivered to the other user as their emoji glyph so the
+      // message persists on the server and renders on every platform.
+      deliverMessage(
+        chatId,
+        {
+          id: `pending-${Date.now()}`,
+          type: 'sticker',
+          stickerKey,
+          sentAt: formatTimeLabel(),
+          sentAtMs: Date.now(),
+          isOutgoing: true,
+          status: 'sent',
+        },
+        () => postEmojiMessage(chatId, stickerGlyph, user?.id),
+      );
     },
-    [appendMessage],
+    [appendMessage, deliverMessage, user?.id],
   );
 
   const sendVoiceMessage = useCallback(
@@ -853,6 +967,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         mediaUrl: voice.mediaUrl,
         mimeType: voice.mimeType,
         sentAt: formatTimeLabel(),
+        sentAtMs: Date.now(),
         isOutgoing: true,
         status: 'sent',
       });
@@ -874,6 +989,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         mediaUrl: media?.mediaUrl,
         mimeType: media?.mimeType,
         sentAt: formatTimeLabel(),
+        sentAtMs: Date.now(),
         isOutgoing: true,
         status: 'sent',
       });
@@ -883,6 +999,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const deleteMessage = useCallback(
     (chatId: string, messageId: string, _forEveryone?: boolean) => {
+      // Remember the deletion so background refreshes do not resurrect it.
+      deletedMessageIdsRef.current.add(messageId);
       setMessages((prev) => ({
         ...prev,
         [chatId]: (prev[chatId] ?? []).filter((message) => message.id !== messageId),

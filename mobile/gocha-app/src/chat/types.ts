@@ -19,6 +19,7 @@ export type ChatMessage = {
   mimeType?: string;
   durationSec?: number;
   sentAt: string;
+  sentAtMs?: number;
   isOutgoing: boolean;
   status?: MessageStatus;
   replyToId?: string;

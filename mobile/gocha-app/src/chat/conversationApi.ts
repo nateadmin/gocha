@@ -4,7 +4,6 @@ import {
   fetchConversations,
   markConversationRead,
   sendConversationMessage,
-  type ConversationMessageRecord,
   type ConversationRecord,
 } from '../api/client';
 import { mapMessageRecord } from './messageMapping';
@@ -86,6 +85,15 @@ export async function postTextMessage(
   viewerUserId?: number | null,
 ) {
   const record = await sendConversationMessage(Number(chatId), text);
+  return mapMessageRecord(record, viewerUserId);
+}
+
+export async function postEmojiMessage(
+  chatId: string,
+  emoji: string,
+  viewerUserId?: number | null,
+) {
+  const record = await sendConversationMessage(Number(chatId), emoji, 'emoji');
   return mapMessageRecord(record, viewerUserId);
 }
 

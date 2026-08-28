@@ -28,8 +28,9 @@ export function VoiceMessagePlayer({ mediaUrl, durationSec = 0, outgoing }: Prop
   }, [playbackRate]);
 
   useEffect(() => {
+    const audio = audioRef.current;
     return () => {
-      audioRef.current?.pause();
+      audio?.pause();
     };
   }, []);
 
@@ -94,7 +95,6 @@ export function VoiceMessagePlayer({ mediaUrl, durationSec = 0, outgoing }: Prop
         </Text>
       </Pressable>
 
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audioRef}
         src={mediaUrl}
