@@ -7,13 +7,13 @@ import { useGochaTheme } from '../theme';
 
 const TAB_META: Record<
   string,
-  { label: string; icon: keyof typeof Ionicons.glyphMap }
+  { label: string; icon: keyof typeof Ionicons.glyphMap; rootScreen?: string }
 > = {
-  ChatsTab: { label: 'Chats', icon: 'chatbubble-outline' },
+  ChatsTab: { label: 'Chats', icon: 'chatbubble-outline', rootScreen: 'ChatsList' },
   CatchUpTab: { label: 'Catch up', icon: 'sparkles-outline' },
-  DiscoverTab: { label: 'Discover', icon: 'compass-outline' },
+  DiscoverTab: { label: 'Discover', icon: 'compass-outline', rootScreen: 'DiscoverHub' },
   CallsTab: { label: 'Calls', icon: 'call-outline' },
-  SettingsTab: { label: 'Settings', icon: 'settings-outline' },
+  SettingsTab: { label: 'Settings', icon: 'settings-outline', rootScreen: 'SettingsHome' },
 };
 
 export function MainTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -53,7 +53,16 @@ export function MainTabBar({ state, descriptors, navigation }: BottomTabBarProps
             target: route.key,
             canPreventDefault: true,
           });
-          if (!isFocused && !event.defaultPrevented) {
+          if (event.defaultPrevented) {
+            return;
+          }
+
+          if (meta?.rootScreen) {
+            navigation.navigate(route.name, { screen: meta.rootScreen });
+            return;
+          }
+
+          if (!isFocused) {
             navigation.navigate(route.name);
           }
         };

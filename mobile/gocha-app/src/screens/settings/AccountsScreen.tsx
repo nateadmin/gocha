@@ -20,7 +20,7 @@ export function AccountsScreen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       contentContainerStyle={styles.content}>
-      <Pressable onPress={() => navigation.goBack()} style={styles.back}>
+      <Pressable onPress={() => navigation.navigate('SettingsHome')} style={styles.back}>
         <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />
         <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>Settings</Text>
       </Pressable>
