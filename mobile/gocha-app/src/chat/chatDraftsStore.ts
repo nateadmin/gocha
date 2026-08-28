@@ -38,9 +38,16 @@ export function upsertStoredChatDraft(chatId: string, text: string): Record<stri
   const trimmed = text.trim();
   if (!trimmed) {
     delete drafts[chatId];
-  } else {
-    drafts[chatId] = { text, updatedAt: Date.now() };
+    writeStoredChatDrafts(drafts);
+    return drafts;
   }
+
+  const existing = drafts[chatId];
+  if (existing?.text === text) {
+    return drafts;
+  }
+
+  drafts[chatId] = { text, updatedAt: Date.now() };
   writeStoredChatDrafts(drafts);
   return drafts;
 }

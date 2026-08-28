@@ -696,7 +696,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const setChatDraft = useCallback((chatId: string, text: string) => {
-    setDrafts(upsertStoredChatDraft(chatId, text));
+    setDrafts((prev) => {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        if (!prev[chatId]) {
+          return prev;
+        }
+        return removeStoredChatDraft(chatId);
+      }
+      if (prev[chatId]?.text === text) {
+        return prev;
+      }
+      return upsertStoredChatDraft(chatId, text);
+    });
   }, []);
 
   const clearChatDraft = useCallback((chatId: string) => {

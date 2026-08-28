@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -33,10 +33,12 @@ export function ChatDetailScreen() {
   const { theme } = useGochaTheme();
   const insets = useSafeAreaInsets();
   const chatApi = useChat();
-  const chat = chatApi.getChat(route.params.chatId);
   const chatId = route.params.chatId;
+  const chat = chatApi.getChat(chatId);
   const messages = chatApi.messagesFor(chatId);
   const [draft, setDraft] = useState(() => chatApi.getChatDraft(chatId));
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,19 +49,18 @@ export function ChatDetailScreen() {
 
   useEffect(() => {
     setDraft(chatApi.getChatDraft(chatId));
-  }, [chatApi, chatId]);
-
-  useEffect(() => {
-    const handle = setTimeout(() => {
-      chatApi.setChatDraft(chatId, draft);
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [chatApi, chatId, draft]);
+    return () => {
+      chatApi.setChatDraft(chatId, draftRef.current);
+    };
+    // Draft load/save is tied to the active conversation only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]);
 
   useEffect(() => {
     void chatApi.ensureMessagesLoaded(chatId);
     chatApi.openChat(chatId);
-  }, [chatApi, chatId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]);
 
   useLayoutEffect(() => {
     if (!tabNavigation) {
@@ -402,28 +403,26 @@ export function ChatDetailScreen() {
         value={draft}
         onChangeText={setDraft}
         onSend={handleSend}
-        onDraftBlur={() => chatApi.setChatDraft(chatId, draft)}
-        onSendEmoji={(emoji) => chatApi.sendEmojiMessage(route.params.chatId, emoji)}
-        onSendSticker={(key) => chatApi.sendStickerMessage(route.params.chatId, key)}
-        onSendVoice={(voice) =>
-          chatApi.sendVoiceMessage(route.params.chatId, voice)
-        }
+        onDraftBlur={() => chatApi.setChatDraft(chatId, draftRef.current)}
+        onSendEmoji={(emoji) => chatApi.sendEmojiMessage(chatId, emoji)}
+        onSendSticker={(key) => chatApi.sendStickerMessage(chatId, key)}
+        onSendVoice={(voice) => chatApi.sendVoiceMessage(chatId, voice)}
         onAttachImage={(media) =>
-          chatApi.sendMediaMessage(route.params.chatId, 'image', {
+          chatApi.sendMediaMessage(chatId, 'image', {
             fileName: media.fileName,
             mediaUrl: media.uri,
             mimeType: media.mimeType,
           })
         }
         onAttachVideo={(media) =>
-          chatApi.sendMediaMessage(route.params.chatId, 'video', {
+          chatApi.sendMediaMessage(chatId, 'video', {
             fileName: media.fileName,
             mediaUrl: media.uri,
             mimeType: media.mimeType,
           })
         }
         onAttachFile={(media) =>
-          chatApi.sendMediaMessage(route.params.chatId, 'file', {
+          chatApi.sendMediaMessage(chatId, 'file', {
             fileName: media.fileName,
             mediaUrl: media.uri,
             mimeType: media.mimeType,
