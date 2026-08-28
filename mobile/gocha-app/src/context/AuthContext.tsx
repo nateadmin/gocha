@@ -58,7 +58,8 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { accounts, removeAccount, patchAccountDeviceToken, registerAccount } = useAccounts();
+  const { accounts, activeAccountId, removeAccount, patchAccountDeviceToken, registerAccount } =
+    useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +91,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           removeAccount(activeAccountId);
         }
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Could not load your session.');
+        if (
+          err instanceof ApiError &&
+          (err.status === 401 ||
+            err.status === 419 ||
+            err.body.code === 'UNAUTHENTICATED' ||
+            err.body.code === 'CSRF_MISMATCH')
+        ) {
+          setUser(null);
+          if (activeAccountId !== null) {
+            removeAccount(activeAccountId);
+          }
+          setError(null);
+        } else {
+          setUser(null);
+          setError(err instanceof ApiError ? err.message : 'Could not load your session.');
+        }
       } finally {
         if (!background) {
           setLoading(false);

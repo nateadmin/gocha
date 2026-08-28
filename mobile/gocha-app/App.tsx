@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { BootstrapErrorBoundary } from './src/components/app/BootstrapErrorBoundary';
 import { AccountsProvider, useAccounts } from './src/context/AccountsContext';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -66,17 +67,19 @@ function AppShell() {
 
 function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AccountsProvider>
-          <AuthProvider>
-            <ChatProvider>
-              <AppShell />
-            </ChatProvider>
-          </AuthProvider>
-        </AccountsProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <BootstrapErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AccountsProvider>
+            <AuthProvider>
+              <ChatProvider>
+                <AppShell />
+              </ChatProvider>
+            </AuthProvider>
+          </AccountsProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </BootstrapErrorBoundary>
   );
 }
 

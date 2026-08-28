@@ -63,6 +63,10 @@ export class ApiError extends Error {
 let activeDeviceToken: string | null = null;
 let csrfPrimed = false;
 
+export function resetCsrfPrimed(): void {
+  csrfPrimed = false;
+}
+
 export function setActiveDeviceToken(token: string | null): void {
   activeDeviceToken = token;
 }
@@ -148,12 +152,23 @@ export async function apiRequest<T>(
   return parseResponse<T>(response);
 }
 
+function isAuthFailure(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 401 ||
+      error.status === 419 ||
+      error.body.code === 'UNAUTHENTICATED' ||
+      error.body.code === 'CSRF_MISMATCH')
+  );
+}
+
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   try {
     const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.me);
     return payload.user;
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 401 || error.body.code === 'UNAUTHENTICATED')) {
+    if (isAuthFailure(error)) {
+      resetCsrfPrimed();
       return null;
     }
     throw error;
@@ -197,7 +212,7 @@ export async function logout(options?: { deviceOnly?: boolean }): Promise<void> 
     method: 'POST',
     body: JSON.stringify({ device_only: options?.deviceOnly ?? false }),
   });
-  csrfPrimed = false;
+  resetCsrfPrimed();
 }
 
 export async function issueDeviceToken(): Promise<{ deviceToken: string; account: AccountSwitcherEntry }> {
