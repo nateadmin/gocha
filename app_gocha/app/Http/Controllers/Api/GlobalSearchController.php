@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Profile\DiscoverableUserSearch;
 use App\Support\ConversationType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,10 @@ use Illuminate\Support\Collection;
 
 class GlobalSearchController extends Controller
 {
+    public function __construct(
+        private readonly DiscoverableUserSearch $discoverableUserSearch,
+    ) {}
+
     public function search(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -115,19 +120,8 @@ class GlobalSearchController extends Controller
      */
     private function searchDiscoverablePeople(User $user, string $needle, array $excludeUserIds): Collection
     {
-        return User::query()
-            ->where('id', '!=', $user->id)
-            ->where('discoverable', true)
-            ->when($excludeUserIds !== [], fn ($query) => $query->whereNotIn('id', $excludeUserIds))
-            ->where(function ($query) use ($needle) {
-                $query->where('name', 'like', '%'.$needle.'%')
-                    ->orWhere('username', 'like', '%'.$needle.'%')
-                    ->orWhere('email', 'like', '%'.$needle.'%')
-                    ->orWhere('phone', 'like', '%'.$needle.'%');
-            })
-            ->orderBy('name')
-            ->limit(20)
-            ->get()
+        return $this->discoverableUserSearch
+            ->search($user, $needle, $excludeUserIds)
             ->map(fn (User $match) => $match->toPublicProfilePayload())
             ->values();
     }

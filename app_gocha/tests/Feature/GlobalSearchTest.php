@@ -51,35 +51,55 @@ class GlobalSearchTest extends TestCase
             ->assertJsonCount(1, 'contacts')
             ->assertJsonPath('contacts.0.userId', $bob->id);
 
-        $peopleSearch = $this->actingAs($alice)->getJson('/api/search?q=Carol');
+        $this->actingAs($alice)->getJson('/api/search?q=Carol')
+            ->assertOk()
+            ->assertJsonCount(0, 'people');
+
+        $peopleSearch = $this->actingAs($alice)->getJson('/api/search?q='.urlencode('Carol Discover'));
         $peopleSearch
             ->assertOk()
             ->assertJsonCount(1, 'people')
             ->assertJsonPath('people.0.displayName', 'Carol Discover');
 
-        $phoneSearch = $this->actingAs($alice)->getJson('/api/search?q=555123');
-        $phoneSearch
+        $this->actingAs($alice)->getJson('/api/search?q=555123')
             ->assertOk()
-            ->assertJsonPath('people.0.displayName', 'Carol Discover');
+            ->assertJsonCount(0, 'people');
     }
 
-    public function test_discoverable_user_is_findable_by_updated_name(): void
+    public function test_discoverable_user_requires_exact_full_name(): void
     {
         $searcher = User::factory()->create();
-        $target = User::factory()->create([
-            'name' => 'Nate Mandel',
+        User::factory()->create([
+            'name' => 'giggly goo',
             'discoverable' => true,
         ]);
 
-        $this->actingAs($target)->postJson('/api/profile/update', [
-            'displayName' => 'giggly goo',
-            'discoverable' => true,
-        ])->assertOk()
-            ->assertJsonPath('user.displayName', 'giggly goo');
-
         $this->actingAs($searcher)->getJson('/api/search?q=Giggly')
+            ->assertOk()
+            ->assertJsonCount(0, 'people');
+
+        $this->actingAs($searcher)->getJson('/api/search?q='.urlencode('giggly goo'))
             ->assertOk()
             ->assertJsonCount(1, 'people')
             ->assertJsonPath('people.0.displayName', 'giggly goo');
+    }
+
+    public function test_discoverable_user_can_be_found_by_exact_username_with_at_prefix(): void
+    {
+        $searcher = User::factory()->create();
+        User::factory()->create([
+            'name' => 'Hidden From Partial',
+            'username' => 'gigglygoo',
+            'discoverable' => true,
+        ]);
+
+        $this->actingAs($searcher)->getJson('/api/search?q=giggly')
+            ->assertOk()
+            ->assertJsonCount(0, 'people');
+
+        $this->actingAs($searcher)->getJson('/api/search?q=@gigglygoo')
+            ->assertOk()
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.username', 'gigglygoo');
     }
 }

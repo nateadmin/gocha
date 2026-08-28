@@ -244,20 +244,18 @@ class AuthOtpTest extends TestCase
     {
         User::factory()->create([
             'name' => 'Visible Neo',
-            'email' => 'visible@example.com',
             'discoverable' => true,
             'onboarding_completed_at' => now(),
         ]);
 
         User::factory()->create([
             'name' => 'Hidden Neo',
-            'email' => 'hidden@example.com',
             'discoverable' => false,
             'onboarding_completed_at' => now(),
         ]);
 
         $user = User::factory()->create();
-        $response = $this->actingAs($user)->getJson('/api/users/search?q=Neo');
+        $response = $this->actingAs($user)->getJson('/api/users/search?q='.urlencode('Visible Neo'));
 
         $response
             ->assertOk()

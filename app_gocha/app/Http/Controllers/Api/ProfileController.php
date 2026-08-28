@@ -7,6 +7,7 @@ use App\Models\BusinessListing;
 use App\Models\User;
 use App\Services\Business\BusinessListingService;
 use App\Services\Profile\CharacterAvatarService;
+use App\Services\Profile\DiscoverableUserSearch;
 use App\Support\ProfileMode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class ProfileController extends Controller
     public function __construct(
         private readonly CharacterAvatarService $avatars,
         private readonly BusinessListingService $businesses,
+        private readonly DiscoverableUserSearch $discoverableUserSearch,
     ) {}
 
     public function me(Request $request): JsonResponse
@@ -215,18 +217,8 @@ class ProfileController extends Controller
 
         $needle = $validated['q'];
 
-        $results = User::query()
-            ->where('id', '!=', $request->user()->id)
-            ->where('discoverable', true)
-            ->where(function ($query) use ($needle) {
-                $query->where('name', 'like', '%'.$needle.'%')
-                    ->orWhere('username', 'like', '%'.$needle.'%')
-                    ->orWhere('email', 'like', '%'.$needle.'%')
-                    ->orWhere('phone', 'like', '%'.$needle.'%');
-            })
-            ->orderBy('name')
-            ->limit(20)
-            ->get()
+        $results = $this->discoverableUserSearch
+            ->search($request->user(), $needle)
             ->map(fn (User $user) => $user->toPublicProfilePayload())
             ->values();
 

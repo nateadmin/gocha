@@ -228,7 +228,7 @@ export function GlobalSearchResults({
           }}>
           {trimmed.length < 2
             ? 'Keep typing to search messages and discoverable people.'
-            : 'No matches yet. Try a name, email, phone number, or message keyword.'}
+            : 'No matches yet. For new people, type the full name exactly or use @username.'}
         </Text>
       </View>
     );
@@ -302,7 +302,7 @@ export function GlobalSearchResults({
       {people.length > 0 ? (
         <SearchSection
           title="People on Gocha"
-          subtitle="Discoverable by name, email, or phone">
+          subtitle="Type the full name exactly, or search with @username">
           {people.map((person) => (
             <ContactRow
               key={person.id}

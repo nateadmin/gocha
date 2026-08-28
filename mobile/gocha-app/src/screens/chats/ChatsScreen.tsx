@@ -296,7 +296,7 @@ export function ChatsScreen() {
             ref={searchRef}
             value={query}
             onChangeText={setQuery}
-            placeholder="Search chats, messages, and people"
+            placeholder="Search chats, messages, people, or @username"
           />
         </View>
       </View>
