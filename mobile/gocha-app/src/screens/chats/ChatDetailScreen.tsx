@@ -374,8 +374,8 @@ export function ChatDetailScreen() {
         onSend={handleSend}
         onSendEmoji={(emoji) => chatApi.sendEmojiMessage(route.params.chatId, emoji)}
         onSendSticker={(key) => chatApi.sendStickerMessage(route.params.chatId, key)}
-        onSendVoice={(duration) =>
-          chatApi.sendVoiceMessage(route.params.chatId, duration)
+        onSendVoice={(voice) =>
+          chatApi.sendVoiceMessage(route.params.chatId, voice)
         }
         onAttachImage={(media) =>
           chatApi.sendMediaMessage(route.params.chatId, 'image', {

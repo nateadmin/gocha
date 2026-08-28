@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import type { ChatMessage } from '../../chat/types';
 import { useChat } from '../../chat/ChatContext';
+import { VoiceMessagePlayer } from './VoiceMessagePlayer';
 import { useGochaTheme } from '../../theme';
 
 type Props = {
@@ -20,38 +21,11 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
     switch (message.type) {
       case 'voice':
         return (
-          <View style={styles.voiceRow}>
-            <Ionicons
-              name="play"
-              size={18}
-              color={outgoing ? theme.colors.primaryForeground : theme.colors.primary}
-            />
-            <View style={styles.waveform}>
-              {[...Array(12)].map((_, index) => (
-                <View
-                  key={index}
-                  style={{
-                    width: 3,
-                    height: 6 + (index % 4) * 4,
-                    backgroundColor: outgoing
-                      ? theme.colors.primaryForeground
-                      : theme.colors.primary,
-                    borderRadius: 2,
-                  }}
-                />
-              ))}
-            </View>
-            <Text
-              style={{
-                color: outgoing
-                  ? theme.colors.primaryForeground
-                  : theme.colors.cardForeground,
-                fontFamily: theme.typography.mono,
-                fontSize: 13,
-              }}>
-              {message.durationSec ?? 0}s
-            </Text>
-          </View>
+          <VoiceMessagePlayer
+            mediaUrl={message.mediaUrl}
+            durationSec={message.durationSec}
+            outgoing={outgoing}
+          />
         );
       case 'video':
         if (message.mediaUrl) {

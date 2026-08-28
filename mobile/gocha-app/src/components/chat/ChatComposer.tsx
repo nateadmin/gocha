@@ -11,11 +11,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import type { PickedMedia } from '../../chat/pickMedia';
 import { pickCameraPhoto, pickDocument } from '../../chat/pickMedia';
+import type { RecordedVoice } from '../../chat/voiceRecording';
 import { StickerPickerPanel } from './StickerPickerPanel';
 import { VoiceRecorderBar } from './VoiceRecorderBar';
 import { useGochaTheme } from '../../theme';
 
-type Panel = 'none' | 'emoji' | 'sticker' | 'voice';
+type Panel = 'none' | 'sticker' | 'voice';
 
 type Props = {
   value: string;
@@ -23,7 +24,7 @@ type Props = {
   onSend?: () => void;
   onSendEmoji?: (emoji: string) => void;
   onSendSticker?: (key: string) => void;
-  onSendVoice?: (durationSec: number) => void;
+  onSendVoice?: (voice: RecordedVoice) => void;
   onAttachImage?: (media: PickedMedia) => void;
   onAttachVideo?: (media: PickedMedia) => void;
   onAttachFile?: (media: PickedMedia) => void;
@@ -94,8 +95,8 @@ export function ChatComposer({
   if (panel === 'voice') {
     return (
       <VoiceRecorderBar
-        onComplete={(duration) => {
-          onSendVoice?.(duration);
+        onComplete={(voice) => {
+          onSendVoice?.(voice);
           setPanel('none');
         }}
         onCancel={() => setPanel('none')}
@@ -132,14 +133,6 @@ export function ChatComposer({
         </View>
       ) : null}
 
-      {panel === 'emoji' ? (
-        <EmojiPickerPanel
-          onPick={(emoji) => {
-            onSendEmoji?.(emoji);
-            setPanel('none');
-          }}
-        />
-      ) : null}
       {panel === 'sticker' ? (
         <StickerPickerPanel
           onPick={(key) => {

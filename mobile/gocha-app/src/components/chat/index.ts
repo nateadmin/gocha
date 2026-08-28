@@ -7,4 +7,5 @@ export { ChatFilterBar } from './ChatFilterBar';
 export { SwipeableRow } from './SwipeableRow';
 export { EmojiPickerPanel } from './EmojiPickerPanel';
 export { StickerPickerPanel } from './StickerPickerPanel';
+export { VoiceMessagePlayer } from './VoiceMessagePlayer';
 export { VoiceRecorderBar } from './VoiceRecorderBar';

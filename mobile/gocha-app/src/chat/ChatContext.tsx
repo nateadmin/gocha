@@ -106,7 +106,10 @@ type ChatContextValue = {
   sendTextMessage: (chatId: string, text: string, replyToId?: string) => void;
   sendEmojiMessage: (chatId: string, emoji: string) => void;
   sendStickerMessage: (chatId: string, stickerKey: string) => void;
-  sendVoiceMessage: (chatId: string, durationSec: number) => void;
+  sendVoiceMessage: (
+    chatId: string,
+    voice: { durationSec: number; mediaUrl?: string; mimeType?: string },
+  ) => void;
   sendMediaMessage: (
     chatId: string,
     type: 'image' | 'video' | 'file',
@@ -715,11 +718,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const sendVoiceMessage = useCallback(
-    (chatId: string, durationSec: number) => {
+    (
+      chatId: string,
+      voice: { durationSec: number; mediaUrl?: string; mimeType?: string },
+    ) => {
       appendMessage(chatId, {
         id: `m-${Date.now()}`,
         type: 'voice',
-        durationSec,
+        durationSec: voice.durationSec,
+        mediaUrl: voice.mediaUrl,
+        mimeType: voice.mimeType,
         sentAt: formatTimeLabel(),
         isOutgoing: true,
         status: 'sent',
