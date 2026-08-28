@@ -111,6 +111,16 @@ const StyledWrapper = styled.div<{
     font-size: inherit;
     font-weight: inherit;
     line-height: inherit;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  button span.text > * {
+    border: 0;
+    outline: 0;
+    box-shadow: none;
   }
 
   button:hover:not(:disabled) span.text {

@@ -6,16 +6,25 @@ type Props = {
   size?: number;
 };
 
+const BASE_PX = 100;
+
 export function UniversalLoader({ size = 1 }: Props) {
   const maskId = `gocha-loader-mask-${useId().replace(/:/g, '')}`;
+  const visualSize = BASE_PX * size;
 
   return (
     <StyledWrapper
-      style={{ '--loader-scale': String(size) } as CSSProperties}
+      style={
+        {
+          '--loader-scale': String(size),
+          width: visualSize,
+          height: visualSize,
+        } as CSSProperties
+      }
       role="status"
       aria-label="Loading">
       <div className="loader">
-        <svg width={100} height={100} viewBox="0 0 100 100" aria-hidden>
+        <svg width={BASE_PX} height={BASE_PX} viewBox="0 0 100 100" aria-hidden>
           <defs>
             <mask id={maskId}>
               <polygon points="0,0 100,0 100,100 0,100" fill="black" />
@@ -41,56 +50,48 @@ export function UniversalLoader({ size = 1 }: Props) {
 }
 
 const StyledWrapper = styled.div`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  background: transparent;
+  flex-shrink: 0;
 
   .loader {
     --loader-scale: 1;
     --color-one: #ffbf48;
     --color-two: #be4a1d;
-    --color-three: #ffbf4780;
-    --color-four: #bf4a1d80;
-    --color-five: #ffbf4740;
     --time-animation: 2s;
-    --size: var(--loader-scale, 1);
     position: relative;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    transform: scale(var(--size));
-    box-shadow:
-      0 0 25px 0 var(--color-three),
-      0 20px 50px 0 var(--color-four);
+    width: ${BASE_PX}px;
+    height: ${BASE_PX}px;
+    transform: scale(var(--loader-scale));
+    transform-origin: center center;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    background: transparent;
     animation: colorize calc(var(--time-animation) * 3) ease-in-out infinite;
   }
 
-  .loader::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: linear-gradient(180deg, var(--color-five), var(--color-four));
-    box-shadow:
-      inset 0 10px 10px 0 var(--color-three),
-      inset 0 -10px 10px 0 var(--color-four);
-  }
-
   .loader .box {
-    width: 100px;
-    height: 100px;
-    background: linear-gradient(
-      180deg,
-      var(--color-one) 30%,
-      var(--color-two) 70%
-    );
+    width: ${BASE_PX}px;
+    height: ${BASE_PX}px;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    background: linear-gradient(180deg, var(--color-one) 30%, var(--color-two) 70%);
   }
 
   .loader svg {
     position: absolute;
+    inset: 0;
+    border: 0;
+    outline: 0;
+    pointer-events: none;
   }
 
   .loader svg mask {
