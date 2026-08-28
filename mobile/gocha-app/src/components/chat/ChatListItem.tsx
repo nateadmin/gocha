@@ -6,6 +6,21 @@ import type { ChatRecord } from '../../chat/types';
 import { useChat } from '../../chat/ChatContext';
 import { useGochaTheme } from '../../theme';
 
+function formatDraftDateLabel(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  return date.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
+}
+
 type Props = {
   chat: ChatRecord;
   selected?: boolean;
@@ -15,7 +30,14 @@ type Props = {
 
 export function ChatListItem({ chat, selected, onPress, onLongPress }: Props) {
   const { theme } = useGochaTheme();
-  const { labels, preferences } = useChat();
+  const { labels, preferences, getChatDraft, getChatDraftUpdatedAt } = useChat();
+
+  const draftText = getChatDraft(chat.id).trim();
+  const draftUpdatedAt = getChatDraftUpdatedAt(chat.id);
+  const hasDraft = draftText.length > 0;
+  const previewText = hasDraft ? `Draft: ${draftText}` : chat.preview;
+  const dateLabel =
+    hasDraft && draftUpdatedAt ? formatDraftDateLabel(draftUpdatedAt) : chat.dateLabel;
 
   const chatLabels = preferences.labelsEnabled
     ? labels.filter((label) => chat.labelIds.includes(label.id))
@@ -74,7 +96,7 @@ export function ChatListItem({ chat, selected, onPress, onLongPress }: Props) {
               fontFamily: theme.typography.sans,
               fontSize: 12,
             }}>
-            {chat.dateLabel}
+            {dateLabel}
           </Text>
         </View>
         <View style={styles.previewRow}>
@@ -82,11 +104,12 @@ export function ChatListItem({ chat, selected, onPress, onLongPress }: Props) {
             numberOfLines={1}
             style={{
               flex: 1,
-              color: theme.colors.mutedForeground,
+              color: hasDraft ? theme.colors.primary : theme.colors.mutedForeground,
               fontFamily: theme.typography.sans,
               fontSize: 15,
+              fontStyle: hasDraft ? 'italic' : 'normal',
             }}>
-            {chat.preview}
+            {previewText}
           </Text>
           {(chat.unreadCount > 0 || chat.markedUnread) ? (
             <View

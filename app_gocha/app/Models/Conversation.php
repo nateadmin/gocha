@@ -13,6 +13,7 @@ class Conversation extends Model
         'type',
         'last_message_body',
         'last_message_at',
+        'last_message_sender_user_id',
     ];
 
     protected $casts = [

@@ -27,18 +27,23 @@ export function mapConversationRecord(
   record: ConversationRecord,
   existing?: ChatRecord,
 ): ChatRecord {
-  const lastActivityAt = record.lastActivityAt
+  const apiLastActivityAt = record.lastActivityAt
     ? new Date(record.lastActivityAt).getTime()
     : Date.now();
+
+  const useExistingActivity =
+    existing !== undefined && existing.lastActivityAt >= apiLastActivityAt;
 
   return {
     id: String(record.id),
     name: record.name,
     avatarLabel: record.avatarLabel,
     avatarColor: record.avatarColor,
-    preview: record.preview,
-    dateLabel: formatDateLabel(record.lastActivityAt),
-    lastActivityAt,
+    preview: useExistingActivity ? existing.preview : record.preview,
+    dateLabel: useExistingActivity
+      ? existing.dateLabel
+      : formatDateLabel(record.lastActivityAt),
+    lastActivityAt: useExistingActivity ? existing.lastActivityAt : apiLastActivityAt,
     unreadCount: record.unreadCount,
     pinned: existing?.pinned ?? false,
     archived: existing?.archived ?? false,

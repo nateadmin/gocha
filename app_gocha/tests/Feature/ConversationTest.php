@@ -75,4 +75,26 @@ class ConversationTest extends TestCase
         $this->actingAs($bob)->getJson('/api/conversations')
             ->assertJsonPath('conversations.0.unreadCount', 0);
     }
+
+    public function test_conversation_list_shows_you_prefix_for_outgoing_last_message(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+
+        $conversationId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'participantUserId' => $bob->id,
+        ])->json('conversation.id');
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'Hi Bob',
+        ])->assertCreated();
+
+        $this->actingAs($alice)->getJson('/api/conversations')
+            ->assertOk()
+            ->assertJsonPath('conversations.0.preview', 'You: Hi Bob');
+
+        $this->actingAs($bob)->getJson('/api/conversations')
+            ->assertOk()
+            ->assertJsonPath('conversations.0.preview', 'Hi Bob');
+    }
 }

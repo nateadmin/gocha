@@ -30,6 +30,7 @@ type Props = {
   onAttachFile?: (media: PickedMedia) => void;
   replyLabel?: string;
   onCancelReply?: () => void;
+  onDraftBlur?: () => void;
 };
 
 export function ChatComposer({
@@ -44,6 +45,7 @@ export function ChatComposer({
   onAttachFile,
   replyLabel,
   onCancelReply,
+  onDraftBlur,
 }: Props) {
   const { theme } = useGochaTheme();
   const insets = useSafeAreaInsets();
@@ -209,7 +211,10 @@ export function ChatComposer({
               value={value}
               onChangeText={onChangeText}
               onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
+              onBlur={() => {
+                setFocused(false);
+                onDraftBlur?.();
+              }}
               placeholder="Message"
               placeholderTextColor={theme.colors.mutedForeground}
               selectionColor={theme.colors.primary}

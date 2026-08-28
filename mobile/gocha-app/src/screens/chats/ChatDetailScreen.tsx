@@ -34,8 +34,9 @@ export function ChatDetailScreen() {
   const insets = useSafeAreaInsets();
   const chatApi = useChat();
   const chat = chatApi.getChat(route.params.chatId);
-  const messages = chatApi.messagesFor(route.params.chatId);
-  const [draft, setDraft] = useState('');
+  const chatId = route.params.chatId;
+  const messages = chatApi.messagesFor(chatId);
+  const [draft, setDraft] = useState(() => chatApi.getChatDraft(chatId));
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,9 +46,20 @@ export function ChatDetailScreen() {
   const [disappearPickerOpen, setDisappearPickerOpen] = useState(false);
 
   useEffect(() => {
-    void chatApi.ensureMessagesLoaded(route.params.chatId);
-    chatApi.openChat(route.params.chatId);
-  }, [chatApi, route.params.chatId]);
+    setDraft(chatApi.getChatDraft(chatId));
+  }, [chatApi, chatId]);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      chatApi.setChatDraft(chatId, draft);
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [chatApi, chatId, draft]);
+
+  useEffect(() => {
+    void chatApi.ensureMessagesLoaded(chatId);
+    chatApi.openChat(chatId);
+  }, [chatApi, chatId]);
 
   useLayoutEffect(() => {
     if (!tabNavigation) {
@@ -83,7 +95,8 @@ export function ChatDetailScreen() {
   function handleSend(text?: string) {
     const message = (text ?? draft).trim();
     if (!message) return;
-    chatApi.sendTextMessage(route.params.chatId, message, replyTo?.id);
+    chatApi.sendTextMessage(chatId, message, replyTo?.id);
+    chatApi.clearChatDraft(chatId);
     setDraft('');
     setReplyTo(null);
   }
@@ -389,6 +402,7 @@ export function ChatDetailScreen() {
         value={draft}
         onChangeText={setDraft}
         onSend={handleSend}
+        onDraftBlur={() => chatApi.setChatDraft(chatId, draft)}
         onSendEmoji={(emoji) => chatApi.sendEmojiMessage(route.params.chatId, emoji)}
         onSendSticker={(key) => chatApi.sendStickerMessage(route.params.chatId, key)}
         onSendVoice={(voice) =>

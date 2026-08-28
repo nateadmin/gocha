@@ -129,6 +129,7 @@ class ConversationController extends Controller
             $conversation->forceFill([
                 'last_message_body' => $body,
                 'last_message_at' => $message->created_at,
+                'last_message_sender_user_id' => $user->id,
             ])->save();
 
             ConversationParticipant::query()
@@ -198,6 +199,12 @@ class ConversationController extends Controller
 
         $displayName = $other?->chatDisplayName() ?? 'Conversation';
         $preview = $conversation->last_message_body ?? 'No messages yet';
+        if (
+            $preview !== 'No messages yet' &&
+            $conversation->last_message_sender_user_id === $viewer->id
+        ) {
+            $preview = 'You: '.$preview;
+        }
         $lastActivityAt = ($conversation->last_message_at ?? $conversation->updated_at)?->toIso8601String();
 
         return [

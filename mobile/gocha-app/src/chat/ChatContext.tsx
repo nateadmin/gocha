@@ -18,6 +18,12 @@ import {
   writeStoredChatPreferences,
 } from './chatPreferencesStore';
 import {
+  readStoredChatDrafts,
+  removeStoredChatDraft,
+  upsertStoredChatDraft,
+  type ChatDraft,
+} from './chatDraftsStore';
+import {
   EMOJI_GRID,
   STICKER_EMOJI,
   createOrderAssistantChat,
@@ -123,6 +129,10 @@ type ChatContextValue = {
     type: 'image' | 'video' | 'file',
     media?: { fileName?: string; mediaUrl?: string; mimeType?: string },
   ) => void;
+  getChatDraft: (chatId: string) => string;
+  getChatDraftUpdatedAt: (chatId: string) => number | null;
+  setChatDraft: (chatId: string, text: string) => void;
+  clearChatDraft: (chatId: string) => void;
   deleteMessage: (chatId: string, messageId: string, forEveryone?: boolean) => void;
   starMessage: (chatId: string, messageId: string) => void;
   unstarMessage: (chatId: string, messageId: string) => void;
@@ -156,6 +166,21 @@ function muteUntilFor(duration: MuteDuration): number | null {
   }
 }
 
+function activityDateLabel(timestamp = Date.now()): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  return date.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
+}
+
 function previewForMessage(message: ChatMessage): string {
   switch (message.type) {
     case 'voice':
@@ -175,6 +200,19 @@ function previewForMessage(message: ChatMessage): string {
   }
 }
 
+function listPreviewForMessage(message: ChatMessage): string {
+  const body = previewForMessage(message);
+  return message.isOutgoing ? `You: ${body}` : body;
+}
+
+function previewFromMessages(messages: ChatMessage[]): string {
+  const last = messages[messages.length - 1];
+  if (!last) {
+    return 'No messages yet';
+  }
+  return listPreviewForMessage(last);
+}
+
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const orderAssistantChat = useMemo(() => createOrderAssistantChat(), []);
@@ -186,6 +224,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [lists, setLists] = useState<ChatList[]>(() => readStoredChatLists());
   const [labels, setLabels] = useState<ChatLabel[]>(() => readStoredChatLabels());
   const [preferences, setPreferences] = useState<ChatPreferences>(() => readStoredChatPreferences());
+  const [drafts, setDrafts] = useState<Record<string, ChatDraft>>(() => readStoredChatDrafts());
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const loadedMessageChatsRef = useRef<Set<string>>(new Set());
   const chatsRef = useRef(chats);
@@ -277,9 +316,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (isOrderAssistantChat(a.id)) return -1;
       if (isOrderAssistantChat(b.id)) return 1;
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+
+      const aDraft = drafts[a.id]?.text.trim();
+      const bDraft = drafts[b.id]?.text.trim();
+      if (aDraft && !bDraft) return -1;
+      if (!aDraft && bDraft) return 1;
+      if (aDraft && bDraft) {
+        return (drafts[b.id]?.updatedAt ?? 0) - (drafts[a.id]?.updatedAt ?? 0);
+      }
+
       return b.lastActivityAt - a.lastActivityAt;
     });
-  }, [chats]);
+  }, [chats, drafts]);
 
   const filteredChats = useMemo(() => {
     let pool = sortedChats.filter((chat) => !chat.hidden && !chat.archived && !chat.blocked);
@@ -637,6 +685,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return id;
   }, []);
 
+  const getChatDraft = useCallback(
+    (chatId: string) => drafts[chatId]?.text ?? '',
+    [drafts],
+  );
+
+  const getChatDraftUpdatedAt = useCallback(
+    (chatId: string) => drafts[chatId]?.updatedAt ?? null,
+    [drafts],
+  );
+
+  const setChatDraft = useCallback((chatId: string, text: string) => {
+    setDrafts(upsertStoredChatDraft(chatId, text));
+  }, []);
+
+  const clearChatDraft = useCallback((chatId: string) => {
+    setDrafts(removeStoredChatDraft(chatId));
+  }, []);
+
   const appendMessage = useCallback(
     (chatId: string, message: ChatMessage) => {
       setMessages((prev) => ({
@@ -644,13 +710,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         [chatId]: [...(prev[chatId] ?? []), message],
       }));
       updateChat(chatId, {
-        preview: previewForMessage(message),
-        dateLabel: formatDateLabel(),
+        preview: listPreviewForMessage(message),
+        dateLabel: activityDateLabel(),
         lastActivityAt: Date.now(),
-        unreadCount: message.isOutgoing ? 0 : (getChat(chatId)?.unreadCount ?? 0),
+        ...(message.isOutgoing ? { unreadCount: 0 } : {}),
       });
     },
-    [getChat, updateChat],
+    [updateChat],
   );
 
   const sendTextMessage = useCallback(
@@ -694,15 +760,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               message.id === optimisticId ? saved : message,
             ),
           }));
+          updateChat(chatId, {
+            preview: listPreviewForMessage(saved),
+            dateLabel: activityDateLabel(),
+            lastActivityAt: Date.now(),
+            unreadCount: 0,
+          });
         })
         .catch(() => {
-          setMessages((prev) => ({
-            ...prev,
-            [chatId]: (prev[chatId] ?? []).filter((message) => message.id !== optimisticId),
-          }));
+          setMessages((prev) => {
+            const remaining = (prev[chatId] ?? []).filter((message) => message.id !== optimisticId);
+            updateChat(chatId, {
+              preview: previewFromMessages(remaining),
+            });
+            return {
+              ...prev,
+              [chatId]: remaining,
+            };
+          });
         });
     },
-    [appendMessage],
+    [appendMessage, updateChat],
   );
 
   const sendEmojiMessage = useCallback(
@@ -890,6 +968,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       sendStickerMessage,
       sendVoiceMessage,
       sendMediaMessage,
+      getChatDraft,
+      getChatDraftUpdatedAt,
+      setChatDraft,
+      clearChatDraft,
       deleteMessage,
       starMessage,
       unstarMessage,
@@ -968,6 +1050,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       sendStickerMessage,
       sendVoiceMessage,
       sendMediaMessage,
+      getChatDraft,
+      getChatDraftUpdatedAt,
+      setChatDraft,
+      clearChatDraft,
       deleteMessage,
       starMessage,
       unstarMessage,
