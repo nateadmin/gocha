@@ -4,6 +4,7 @@ import {
   mergeMessages,
   previewFromMessages,
   resolveIsOutgoing,
+  sameMessageList,
 } from '../src/chat/messageMapping';
 import type { ConversationMessageRecord } from '../src/api/client';
 import type { ChatMessage } from '../src/chat/types';
@@ -107,5 +108,36 @@ describe('mergeMessages', () => {
     const server = [msg('1'), msg('2')];
 
     expect(mergeMessages([msg('1')], server, noDeleted).map((m) => m.id)).toEqual(['1', '2']);
+  });
+});
+
+describe('sameMessageList', () => {
+  function msg(id: string, overrides: Partial<ChatMessage> = {}): ChatMessage {
+    return {
+      id,
+      type: 'text',
+      text: `body-${id}`,
+      sentAt: '9:00 AM',
+      isOutgoing: false,
+      ...overrides,
+    };
+  }
+
+  it('treats identical lists as the same', () => {
+    expect(sameMessageList([msg('1'), msg('2')], [msg('1'), msg('2')])).toBe(true);
+  });
+
+  it('detects flipped isOutgoing even when ids match (account switch)', () => {
+    const before = [msg('1', { isOutgoing: true }), msg('2', { isOutgoing: true })];
+    const after = [msg('1', { isOutgoing: false }), msg('2', { isOutgoing: false })];
+
+    expect(sameMessageList(before, after)).toBe(false);
+  });
+
+  it('detects added, removed, and edited messages', () => {
+    expect(sameMessageList([msg('1')], [msg('1'), msg('2')])).toBe(false);
+    expect(sameMessageList([msg('1'), msg('2')], [msg('1')])).toBe(false);
+    expect(sameMessageList([msg('1')], [msg('1', { text: 'changed' })])).toBe(false);
+    expect(sameMessageList([msg('1')], [msg('1', { status: 'read' })])).toBe(false);
   });
 });

@@ -33,6 +33,7 @@ import {
   listPreviewForMessage,
   mergeMessages,
   previewFromMessages,
+  sameMessageList,
 } from './messageMapping';
 import {
   loadConversationMessages,
@@ -224,8 +225,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     writeStoredChatLabels(labels);
   }, [labels]);
 
+  const userIdRef = useRef<number | null>(user?.id ?? null);
+  userIdRef.current = user?.id ?? null;
+
   const refreshConversations = useCallback(async () => {
-    if (!user) {
+    if (userIdRef.current === null) {
       setChats([orderAssistantChat]);
       setMessages({ [orderAssistantChat.id]: orderAssistantMessages });
       loadedMessageChatsRef.current = new Set();
@@ -252,13 +256,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         setConversationsLoading(false);
       }
     }
-  }, [orderAssistantChat, orderAssistantMessages, user]);
+  }, [orderAssistantChat, orderAssistantMessages]);
 
   useEffect(() => {
+    // Chats and messages are viewer-relative (isOutgoing, "You:" previews,
+    // unread counts). When the signed-in user changes, the previous account's
+    // cache must be dropped entirely, not refreshed in place.
     loadedMessageChatsRef.current = new Set();
     deletedMessageIdsRef.current = new Set();
+    const freshChats = [orderAssistantChat];
+    const freshMessages = { [orderAssistantChat.id]: orderAssistantMessages };
+    chatsRef.current = freshChats;
+    messagesRef.current = freshMessages;
+    setChats(freshChats);
+    setMessages(freshMessages);
     void refreshConversations();
-  }, [user?.id, refreshConversations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, refreshConversations, orderAssistantChat, orderAssistantMessages]);
 
   const startDirectMessage = useCallback(
     async (userId: number) => {
@@ -304,10 +318,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     (chatId: string, records: ChatMessage[]): void => {
       const previous = messagesRef.current[chatId] ?? [];
       const merged = mergeMessages(previous, records, deletedMessageIdsRef.current);
-      const unchanged =
-        merged.length === previous.length &&
-        previous.every((message, index) => message.id === merged[index]?.id);
-      if (unchanged) {
+      if (sameMessageList(previous, merged)) {
         return;
       }
 

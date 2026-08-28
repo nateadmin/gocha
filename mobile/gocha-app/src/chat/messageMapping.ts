@@ -101,6 +101,28 @@ export function mergeMessages(
   return localOnly.length > 0 ? [...merged, ...localOnly] : merged;
 }
 
+/**
+ * Compares two message lists by identity AND viewer-relative content. Ids
+ * alone are not enough: after an account switch the same ids come back with
+ * flipped isOutgoing, and that change must not be discarded as a no-op.
+ */
+export function sameMessageList(previous: ChatMessage[], next: ChatMessage[]): boolean {
+  if (previous.length !== next.length) {
+    return false;
+  }
+
+  return previous.every((message, index) => {
+    const other = next[index];
+    return (
+      other !== undefined &&
+      message.id === other.id &&
+      message.isOutgoing === other.isOutgoing &&
+      message.text === other.text &&
+      message.status === other.status
+    );
+  });
+}
+
 export function previewFromMessages(messages: ChatMessage[]): string {
   const last = messages[messages.length - 1];
   if (!last) {
