@@ -1,0 +1,33 @@
+---
+description: Web and mobile are one app; every feature must work the same on both
+alwaysApply: true
+---
+
+# Web and mobile parity
+
+Gocha is one React Native app shipped to iOS, Android, and the web (https://gocha.ai/) from `mobile/gocha-app/`. Web is not a separate product, demo, or degraded shell. Treat every prompt as requiring full parity unless the owner explicitly scopes to one platform.
+
+## Default assumption
+
+- If you build or change a screen, flow, button, input, loader, search, or API call, it must work on web and on native the same way.
+- Do not ship mobile-first and "fix web later." Do not leave web broken while calling the task done.
+- Backend is shared (`app_gocha/`). The same Laravel API serves web and mobile.
+
+## Implementation
+
+- Source lives in `mobile/gocha-app/`. Web builds with `npm run build:web` (Vite + react-native-web).
+- Prefer shared components and hooks. Use `*.web.tsx` / `*.web.ts` only for DOM-specific mechanics (native `<button>`, `onClick`, keyboard events) when React Native `Pressable` or primitives are unreliable on web. Behavior and UX must match across platforms.
+- Do not gate features with `Platform.OS === 'web'` to skip functionality. Platform checks are for implementation details only, not product differences.
+- Keyboard and pointer: wire Enter/submit, click targets, and focus on web the same as tap/submit on mobile. Verify interactive controls actually fire on web (Pressable alone is not enough for critical actions).
+
+## Verification before push
+
+- Run `npm test` and `npm run build:web` from `mobile/gocha-app/`.
+- Smoke the changed flow on https://gocha.ai/ (hard refresh after deploy), not only native simulators.
+- If you touch auth, search, chat, or forms, click/type through the real web UI before reporting complete.
+
+## Definition of done
+
+- Same user-visible behavior on web and mobile for the changed scope.
+- No silent no-ops on web (e.g. send button that never fires, search that logs the user out).
+- Document platform-specific files only when the shared API differs; otherwise one code path.

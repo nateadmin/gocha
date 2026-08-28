@@ -7,9 +7,13 @@ Product roadmap: `PRODUCT_ROADMAP.md` (Gocha phased plan). Align new work to the
 ## Layout
 
 - Laravel API: `app_gocha/`
-- React Native mobile app: `mobile/gocha-app/`
+- React Native app (iOS, Android, and web): `mobile/gocha-app/`
 - Deploy scripts: `scripts/`
-- Planned production host: `gocha.ai`
+- Production web + API host: `gocha.ai`
+
+## One app, all platforms
+
+Web and mobile are the same product from one codebase (`mobile/gocha-app/`, built for web with Vite + react-native-web). Every feature must behave the same on https://gocha.ai/ and on native. See `.cursor/rules/web-mobile-parity.mdc`.
 
 ## Stack
 
@@ -28,11 +32,13 @@ php artisan key:generate
 php artisan serve
 ```
 
-Mobile (from `mobile/gocha-app/`):
+Mobile and web (from `mobile/gocha-app/`):
 
 ```bash
 npm start
-npm run android   # or npm run ios on macOS
+npm run web          # local web dev server
+npm run build:web    # production web bundle for gocha.ai
+npm run android      # or npm run ios on macOS
 ```
 
 ## Delivery

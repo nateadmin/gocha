@@ -19,7 +19,8 @@ Before planning or editing:
 8. If the task adds or changes a cron, import, pipeline, webhook processor, queue worker, or outbound HTTP to an external API, read `standards/workflows/outbound-http-timeouts.md`, `standards/workflows/single-flight-scheduled-jobs.md`, and `standards/workflows/pipeline-health-and-watchdogs.md` before editing. Read `standards/notifications/alerts.md` when adding or changing operational alerts or watchdogs.
 9. If the owner pasted or attached an image or binary file for the repo, read `standards/development/chat-supplied-files.md` and give the GitHub upload link in the same turn.
 10. If the task commits, pushes, deploys, or restarts a live service, read `standards/development/ship-live-and-test.md` before editing. Do not end the job until post-deploy smoke passes on URLs in this repo's `Smoke checks` section.
-11. If none apply, continue using this repo's `.cursor/rules/` and project docs.
+11. Every UI or client feature must work the same on web and mobile. Read `.cursor/rules/web-mobile-parity.mdc` before planning or editing anything in `mobile/gocha-app/`.
+12. If none apply, continue using this repo's `.cursor/rules/` and project docs.
 
 When you report completed work, end with a Rulebook note. This one line is required even when other rules cap length or forbid conclusions. Missing the note means the check did not run.
 
