@@ -137,7 +137,20 @@ export function BusinessListingFormScreen() {
       if (imported.website) setWebsite(imported.website);
       setGoogleUrl(imported.googleBusinessUrl);
       setGooglePlaceId(imported.googlePlaceId);
-      setMessage('Auto-filled from Google listing.');
+      if (imported.source === 'places_api') {
+        setMessage('Auto-filled name, address, website, and category from Google.');
+      } else {
+        const filled: string[] = [];
+        if (imported.name) filled.push('name');
+        if (imported.address) filled.push('address');
+        if (imported.website) filled.push('website');
+        if (imported.category) filled.push('category');
+        setMessage(
+          filled.length > 0
+            ? `Filled ${filled.join(', ')} from the link. Connect Google Places on the server for full auto-fill.`
+            : 'Could not read details from that link. Try a full maps.google.com place URL.',
+        );
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not read that Google link.');
     } finally {
@@ -220,7 +233,8 @@ export function BusinessListingFormScreen() {
         {listingId ? 'Edit business listing' : 'List your business'}
       </Text>
       <Text style={{ color: theme.colors.mutedForeground, marginBottom: 16, fontFamily: theme.typography.sans }}>
-        Add your business details or paste a Google listing link to auto-fill. Listings go live after review.
+        Paste a Google Maps or Google Business link below to auto-fill details, then review and submit. Listings go live
+        after review.
       </Text>
 
       {readOnly ? (
@@ -230,6 +244,42 @@ export function BusinessListingFormScreen() {
             : 'This listing is pending review and cannot be edited.'}
         </Text>
       ) : null}
+
+      <View
+        style={[
+          styles.googleCard,
+          { backgroundColor: theme.colors.muted, borderColor: theme.colors.border },
+        ]}>
+        <View style={styles.googleTitle}>
+          <Ionicons name="sparkles" size={18} color={theme.colors.primary} />
+          <Text style={{ color: theme.colors.cardForeground, fontWeight: '600' }}>Auto-fill from Google</Text>
+        </View>
+        <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginBottom: 8 }}>
+          Paste your Google Maps or Google Business profile link. Full address, website, and category require Google
+          Places to be enabled on Gocha. Without it, we can only read the business name from the URL.
+        </Text>
+        <TextInput
+          value={googleUrl}
+          onChangeText={setGoogleUrl}
+          editable={!readOnly}
+          placeholder="https://maps.google.com/..."
+          autoCapitalize="none"
+          placeholderTextColor={theme.colors.mutedForeground}
+          style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+        />
+        {!readOnly ? (
+          <Pressable
+            onPress={autoFillFromGoogle}
+            disabled={importing}
+            style={[styles.autoFillBtn, { borderColor: theme.colors.primary }]}>
+            <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>
+              {importing ? 'Reading link…' : 'Auto-fill from Google'}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      <Text style={[styles.sectionHeading, { color: theme.colors.cardForeground }]}>Business details</Text>
 
       <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Business name *</Text>
       <TextInput
@@ -298,39 +348,6 @@ export function BusinessListingFormScreen() {
         )}
       </Pressable>
 
-      <View
-        style={[
-          styles.googleCard,
-          { backgroundColor: theme.colors.muted, borderColor: theme.colors.border },
-        ]}>
-        <View style={styles.googleTitle}>
-          <Ionicons name="sparkles" size={18} color={theme.colors.primary} />
-          <Text style={{ color: theme.colors.cardForeground, fontWeight: '600' }}>Google Business link</Text>
-        </View>
-        <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginBottom: 8 }}>
-          Paste your Google Maps or Google Business profile link and auto-fill details.
-        </Text>
-        <TextInput
-          value={googleUrl}
-          onChangeText={setGoogleUrl}
-          editable={!readOnly}
-          placeholder="https://maps.google.com/..."
-          autoCapitalize="none"
-          placeholderTextColor={theme.colors.mutedForeground}
-          style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
-        />
-        {!readOnly ? (
-          <Pressable
-            onPress={autoFillFromGoogle}
-            disabled={importing}
-            style={[styles.autoFillBtn, { borderColor: theme.colors.primary }]}>
-            <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>
-              {importing ? 'Reading link…' : 'Auto-fill from Google'}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-
       {error ? <Text style={{ color: theme.colors.destructive, marginBottom: 8 }}>{error}</Text> : null}
       {message ? <Text style={{ color: theme.colors.primary, marginBottom: 12 }}>{message}</Text> : null}
 
@@ -348,6 +365,12 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
   title: { fontSize: 28, marginBottom: 8 },
+  sectionHeading: {
+    fontFamily: 'System',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
   label: { fontFamily: 'System', fontSize: 13, marginBottom: 6 },
   input: {
     borderWidth: 1,
@@ -370,7 +393,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
-    marginBottom: 12,
+    marginBottom: 20,
   },
   googleTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   autoFillBtn: {
