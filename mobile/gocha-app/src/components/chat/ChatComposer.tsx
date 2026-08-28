@@ -179,13 +179,6 @@ export function ChatComposer({
             onPress={handleFilePress}>
             <Ionicons name="attach" size={22} color={theme.colors.primary} />
           </Pressable>
-          <Pressable
-            hitSlop={6}
-            style={[styles.inlineAction, webActionStyle]}
-            accessibilityLabel="Camera"
-            onPress={handleCameraPress}>
-            <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
-          </Pressable>
           <View style={styles.inputWrap}>
             <TextInput
               value={value}
@@ -205,6 +198,13 @@ export function ChatComposer({
               ]}
             />
           </View>
+          <Pressable
+            hitSlop={6}
+            style={[styles.inlineAction, webActionStyle]}
+            accessibilityLabel="Camera"
+            onPress={handleCameraPress}>
+            <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
+          </Pressable>
         </View>
 
         {value.trim() ? (
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     minWidth: 0,
     paddingLeft: 4,
-    paddingRight: 10,
+    paddingRight: 4,
   },
   inlineAction: {
     alignItems: 'center',
