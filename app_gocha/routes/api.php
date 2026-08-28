@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
 
     Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
+    Route::post('/auth/device-token', [AuthOtpController::class, 'issueDeviceToken']);
 
     Route::get('/businesses/mine', [BusinessListingController::class, 'mine']);
     Route::post('/businesses/import-google', [BusinessListingController::class, 'importGoogle']);

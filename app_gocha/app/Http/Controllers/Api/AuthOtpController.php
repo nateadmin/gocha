@@ -76,6 +76,21 @@ class AuthOtpController extends Controller
         ]);
     }
 
+    public function issueDeviceToken(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            abort(401, 'Sign in required.');
+        }
+
+        $deviceToken = $this->deviceTokens->issue($user);
+
+        return response()->json([
+            'deviceToken' => $deviceToken->plainTextToken,
+            'account' => $user->toAccountSwitcherPayload(),
+        ]);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $this->deviceTokens->revokeCurrent($request->bearerToken());

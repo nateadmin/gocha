@@ -60,3 +60,11 @@ export function writeActiveAccountId(userId: number | null): void {
   }
   localStorage.setItem(ACTIVE_KEY, String(userId));
 }
+
+export function updateStoredAccountDeviceToken(userId: number, deviceToken: string): StoredAccount[] {
+  const accounts = readStoredAccounts().map((account) =>
+    account.userId === userId ? { ...account, deviceToken } : account,
+  );
+  writeStoredAccounts(accounts);
+  return accounts;
+}

@@ -8,6 +8,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -95,6 +96,16 @@ class Handler extends ExceptionHandler
                 'retryable' => false,
                 'timestamp' => now()->toIso8601String(),
             ], 422);
+        }
+
+        if ($e instanceof TokenMismatchException) {
+            return response()->json([
+                'code' => 'CSRF_MISMATCH',
+                'message' => 'Your session expired. Refresh the page and sign in again.',
+                'correlationId' => CorrelationId::current(),
+                'retryable' => true,
+                'timestamp' => now()->toIso8601String(),
+            ], 419);
         }
 
         $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;

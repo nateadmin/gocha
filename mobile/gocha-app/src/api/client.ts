@@ -197,6 +197,10 @@ export async function logout(): Promise<void> {
   csrfPrimed = false;
 }
 
+export async function issueDeviceToken(): Promise<{ deviceToken: string; account: AccountSwitcherEntry }> {
+  return apiRequest(API_PATHS.deviceToken, { method: 'POST' });
+}
+
 export async function completeOnboarding(input: {
   displayName: string;
   username?: string;

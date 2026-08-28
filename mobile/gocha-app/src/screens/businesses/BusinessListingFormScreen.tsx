@@ -29,12 +29,25 @@ import {
 import { IndustryPicker } from '../../components/business/IndustryPicker';
 import { SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand/CtaButton';
+import { formatApiError } from '../../api/formatApiError';
+import { useAuth } from '../../context/AuthContext';
 import type { DiscoverStackParamList, SettingsStackParamList } from '../../navigation/types';
 import { useGochaTheme } from '../../theme';
 
 type FormRoute =
   | RouteProp<DiscoverStackParamList, 'BusinessListingForm'>
   | RouteProp<SettingsStackParamList, 'BusinessListingForm'>;
+
+function normalizeWebsite(url: string): string | undefined {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
 
 function buildPayload(
   name: string,
@@ -50,7 +63,7 @@ function buildPayload(
     category: category || undefined,
     address: noPhysicalAddress ? undefined : address.trim() || undefined,
     no_physical_address: noPhysicalAddress,
-    website: website.trim() || undefined,
+    website: normalizeWebsite(website),
     google_business_url: googleUrl.trim() || undefined,
     google_place_id: googlePlaceId || undefined,
   };
@@ -61,6 +74,9 @@ export function BusinessListingFormScreen() {
   const route = useRoute<FormRoute>();
   const listingId = route.params?.listingId;
   const { theme } = useGochaTheme();
+  const { user } = useAuth();
+
+  const [savedListingId, setSavedListingId] = useState<number | undefined>(listingId);
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -152,19 +168,34 @@ export function BusinessListingFormScreen() {
         );
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not read that Google link.');
+      setError(formatApiError(err, 'Could not read that Google link.'));
     } finally {
       setImporting(false);
     }
   }
 
-  async function persistCover(id: number) {
-    if (!pendingCover) return;
-    await uploadBusinessCover(id, pendingCover, pendingCoverName);
-    setPendingCover(null);
+  async function persistCover(id: number): Promise<string | null> {
+    if (!pendingCover) {
+      return null;
+    }
+    try {
+      await uploadBusinessCover(id, pendingCover, pendingCoverName);
+      setPendingCover(null);
+      return null;
+    } catch (err) {
+      return formatApiError(err, 'Cover photo upload failed.');
+    }
+  }
+
+  function activeListingId(): number | undefined {
+    return savedListingId ?? existing?.id ?? listingId;
   }
 
   async function saveDraft() {
+    if (!user) {
+      setError('Sign in to save a business listing.');
+      return;
+    }
     if (!name.trim()) {
       setError('Business name is required.');
       return;
@@ -175,22 +206,30 @@ export function BusinessListingFormScreen() {
     try {
       const payload = buildPayload(name, category, address, noPhysicalAddress, website, googleUrl, googlePlaceId);
       let listing: OwnerBusinessListing;
-      if (listingId && existing) {
-        listing = await saveBusinessListingDraft(listingId, payload);
+      const currentId = activeListingId();
+      if (currentId) {
+        listing = await saveBusinessListingDraft(currentId, payload);
       } else {
         listing = await submitBusinessListing({ ...payload, submit: false });
+        setSavedListingId(listing.id);
       }
-      await persistCover(listing.id);
+      const coverError = await persistCover(listing.id);
       setExisting(listing);
-      setMessage('Draft saved.');
+      setMessage(
+        coverError ? `Draft saved. ${coverError}` : 'Draft saved.',
+      );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not save draft.');
+      setError(formatApiError(err, 'Could not save draft.'));
     } finally {
       setLoading(false);
     }
   }
 
   async function submitForReview() {
+    if (!user) {
+      setError('Sign in to submit a business listing.');
+      return;
+    }
     if (!name.trim()) {
       setError('Business name is required.');
       return;
@@ -201,17 +240,23 @@ export function BusinessListingFormScreen() {
     try {
       const payload = buildPayload(name, category, address, noPhysicalAddress, website, googleUrl, googlePlaceId);
       let listing: OwnerBusinessListing;
-      if (listingId && existing) {
-        await updateBusinessListing(listingId, payload);
-        listing = await submitBusinessListingForReview(listingId);
+      const currentId = activeListingId();
+      if (currentId) {
+        await updateBusinessListing(currentId, payload);
+        listing = await submitBusinessListingForReview(currentId);
       } else {
         listing = await submitBusinessListing({ ...payload, submit: true });
+        setSavedListingId(listing.id);
       }
-      await persistCover(listing.id);
-      setMessage('Submitted for review. We will notify you when it is approved.');
+      const coverError = await persistCover(listing.id);
       setExisting(listing);
+      setMessage(
+        coverError
+          ? `Submitted for review. ${coverError}`
+          : 'Submitted for review. We will notify you when it is approved.',
+      );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not submit listing.');
+      setError(formatApiError(err, 'Could not submit listing.'));
     } finally {
       setLoading(false);
     }
@@ -242,6 +287,12 @@ export function BusinessListingFormScreen() {
           {existing?.status === 'approved'
             ? 'This listing is live. Unpublish it from My listings to edit.'
             : 'This listing is pending review and cannot be edited.'}
+        </Text>
+      ) : null}
+
+      {!user ? (
+        <Text style={{ color: theme.colors.destructive, marginBottom: 12, fontFamily: theme.typography.sans }}>
+          Sign in to create or save a business listing.
         </Text>
       ) : null}
 

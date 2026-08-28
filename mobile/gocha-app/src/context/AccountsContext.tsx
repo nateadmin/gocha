@@ -11,6 +11,7 @@ import {
 import {
   readActiveAccountId,
   readStoredAccounts,
+  updateStoredAccountDeviceToken,
   writeActiveAccountId,
   writeStoredAccounts,
   type StoredAccount,
@@ -26,6 +27,7 @@ type AccountsContextValue = {
   registerAccount: (account: StoredAccount) => void;
   switchAccount: (userId: number) => void;
   removeAccount: (userId: number) => void;
+  patchAccountDeviceToken: (userId: number, deviceToken: string) => void;
 };
 
 const AccountsContext = createContext<AccountsContextValue | null>(null);
@@ -104,6 +106,16 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     [activeAccountId, accounts],
   );
 
+  const patchAccountDeviceToken = useCallback((userId: number, deviceToken: string) => {
+    setAccounts((prev) => {
+      const next = updateStoredAccountDeviceToken(userId, deviceToken);
+      return next;
+    });
+    if (activeAccountId === userId) {
+      setActiveDeviceToken(deviceToken);
+    }
+  }, [activeAccountId]);
+
   const beginAddAccount = useCallback(() => setIsAddingAccount(true), []);
   const cancelAddAccount = useCallback(() => setIsAddingAccount(false), []);
 
@@ -117,6 +129,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       registerAccount,
       switchAccount,
       removeAccount,
+      patchAccountDeviceToken,
     }),
     [
       accounts,
@@ -127,6 +140,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       registerAccount,
       switchAccount,
       removeAccount,
+      patchAccountDeviceToken,
     ],
   );
 

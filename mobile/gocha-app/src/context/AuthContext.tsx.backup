@@ -14,7 +14,6 @@ import {
   completeOnboarding,
   fetchCurrentUser,
   getActiveDeviceToken,
-  issueDeviceToken,
   logout as apiLogout,
   requestOtp,
   updateProfile as apiUpdateProfile,
@@ -58,7 +57,12 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { activeAccountId, removeAccount, patchAccountDeviceToken, registerAccount } = useAccounts();
+  const {
+    activeAccountId,
+    isAddingAccount,
+    registerAccount,
+    removeAccount,
+  } = useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,15 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(nextUser);
         setError(null);
 
-        if (nextUser && !getActiveDeviceToken()) {
-          try {
-            const tokenPayload = await issueDeviceToken();
-            patchAccountDeviceToken(nextUser.id, tokenPayload.deviceToken);
-          } catch {
-            // Session cookie auth may still work for stateful API requests.
-          }
-        }
-
         if (!nextUser && hadToken && activeAccountId !== null) {
           removeAccount(activeAccountId);
         }
@@ -97,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [activeAccountId, patchAccountDeviceToken, removeAccount],
+    [activeAccountId, removeAccount],
   );
 
   useEffect(() => {

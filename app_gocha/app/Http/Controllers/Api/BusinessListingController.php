@@ -181,6 +181,8 @@ class BusinessListingController extends Controller
 
     private function validateListingInput(Request $request, bool $partial = false): array
     {
+        $this->normalizeListingInput($request);
+
         $industries = config('business.industries', []);
 
         $rules = [
@@ -202,6 +204,31 @@ class BusinessListingController extends Controller
     {
         if ($listing->owner_user_id !== $request->user()->id) {
             abort(403, 'You can only manage your own business listings.');
+        }
+    }
+
+    private function normalizeListingInput(Request $request): void
+    {
+        foreach (['website', 'google_business_url'] as $field) {
+            if (! $request->has($field)) {
+                continue;
+            }
+
+            $value = trim((string) $request->input($field));
+            if ($value === '') {
+                $request->merge([$field => null]);
+
+                continue;
+            }
+
+            if ($field === 'website' && ! preg_match('/^https?:\/\//i', $value)) {
+                $request->merge([$field => 'https://'.$value]);
+            }
+        }
+
+        if ($request->has('category')) {
+            $category = trim((string) $request->input('category'));
+            $request->merge(['category' => $category === '' ? null : $category]);
         }
     }
 }
