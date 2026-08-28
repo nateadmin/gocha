@@ -74,3 +74,4 @@ web/dist/
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+mobile/gocha-app/.vite/
