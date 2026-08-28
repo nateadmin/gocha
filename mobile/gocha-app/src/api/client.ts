@@ -617,6 +617,7 @@ export type ConversationMessageRecord = {
   type: string;
   text: string | null;
   sentAt: string | null;
+  senderUserId?: number;
   isOutgoing: boolean;
   status?: 'sent' | 'delivered' | 'read';
 };

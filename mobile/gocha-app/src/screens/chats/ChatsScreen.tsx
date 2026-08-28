@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -132,6 +132,16 @@ export function ChatsScreen() {
       ...withLiveProfile,
     ];
   }, [accounts, user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void chat.refreshConversations();
+      const interval = setInterval(() => {
+        void chat.refreshConversations();
+      }, 8000);
+      return () => clearInterval(interval);
+    }, [chat.refreshConversations]),
+  );
 
   const listData = useMemo(() => {
     if (chat.activeFilter === 'archived') return chat.archivedChats;

@@ -122,9 +122,10 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
     (message.type === 'image' || message.type === 'video') && Boolean(message.mediaUrl);
 
   return (
+    <View style={[styles.row, outgoing ? styles.rowOutgoing : styles.rowIncoming]}>
     <Pressable
       onLongPress={onLongPress}
-      style={[styles.wrap, outgoing ? styles.outgoing : styles.incoming]}>
+      style={styles.wrap}>
       {replyPreview ? (
         <View
           style={[
@@ -185,19 +186,24 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
         ) : null}
       </View>
     </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
+  row: {
+    width: '100%',
+    flexDirection: 'row',
     marginBottom: 12,
+  },
+  rowIncoming: {
+    justifyContent: 'flex-start',
+  },
+  rowOutgoing: {
+    justifyContent: 'flex-end',
+  },
+  wrap: {
     maxWidth: '82%',
-  },
-  incoming: {
-    alignSelf: 'flex-start',
-  },
-  outgoing: {
-    alignSelf: 'flex-end',
   },
   reply: {
     borderLeftWidth: 3,

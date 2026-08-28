@@ -62,6 +62,14 @@ export function ChatDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void chatApi.refreshMessagesForChat(chatId);
+    }, 4000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]);
+
   useLayoutEffect(() => {
     if (!tabNavigation) {
       return;

@@ -30,6 +30,10 @@ import {
   createOrderAssistantMessages,
 } from './seedData';
 import {
+  listPreviewForMessage,
+  previewFromMessages,
+} from './messageMapping';
+import {
   loadConversationMessages,
   loadConversations,
   markChatReadOnServer,
@@ -115,6 +119,7 @@ type ChatContextValue = {
   refreshConversations: () => Promise<void>;
   startDirectMessage: (userId: number) => Promise<string>;
   ensureMessagesLoaded: (chatId: string) => Promise<void>;
+  refreshMessagesForChat: (chatId: string) => Promise<void>;
   conversationsLoading: boolean;
   createBroadcast: (name: string) => string;
   sendTextMessage: (chatId: string, text: string, replyToId?: string) => void;
@@ -181,38 +186,6 @@ function activityDateLabel(timestamp = Date.now()): string {
   return date.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
 }
 
-function previewForMessage(message: ChatMessage): string {
-  switch (message.type) {
-    case 'voice':
-      return `Voice message (${message.durationSec ?? 0}s)`;
-    case 'video':
-      return 'Video';
-    case 'image':
-      return 'Photo';
-    case 'file':
-      return message.fileName ?? 'File';
-    case 'sticker':
-      return STICKER_EMOJI[message.stickerKey ?? ''] ?? 'Sticker';
-    case 'emoji':
-      return message.text ?? '';
-    default:
-      return message.text ?? '';
-  }
-}
-
-function listPreviewForMessage(message: ChatMessage): string {
-  const body = previewForMessage(message);
-  return message.isOutgoing ? `You: ${body}` : body;
-}
-
-function previewFromMessages(messages: ChatMessage[]): string {
-  const last = messages[messages.length - 1];
-  if (!last) {
-    return 'No messages yet';
-  }
-  return listPreviewForMessage(last);
-}
-
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const orderAssistantChat = useMemo(() => createOrderAssistantChat(), []);
@@ -268,16 +241,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     void refreshConversations();
   }, [user?.id, refreshConversations]);
 
-  const ensureMessagesLoaded = useCallback(async (chatId: string) => {
-    if (isOrderAssistantChat(chatId)) return;
-    if (loadedMessageChatsRef.current.has(chatId)) return;
-    if (!/^\d+$/.test(chatId)) return;
-
-    const records = await loadConversationMessages(chatId);
-    loadedMessageChatsRef.current.add(chatId);
-    setMessages((prev) => ({ ...prev, [chatId]: records }));
-  }, []);
-
   const startDirectMessage = useCallback(
     async (userId: number) => {
       const chat = await openDirectConversation(userId);
@@ -300,6 +263,61 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       prev.map((chat) => (chat.id === chatId ? { ...chat, ...patch } : chat)),
     );
   }, []);
+
+  const syncChatFromMessages = useCallback(
+    (chatId: string, records: ChatMessage[], options?: { markRead?: boolean }) => {
+      const last = records[records.length - 1];
+      if (!last) {
+        return;
+      }
+
+      updateChat(chatId, {
+        preview: listPreviewForMessage(last),
+        dateLabel: activityDateLabel(),
+        lastActivityAt: Date.now(),
+        ...(options?.markRead && !last.isOutgoing ? { unreadCount: 0, markedUnread: false } : {}),
+        ...(last.isOutgoing ? { unreadCount: 0 } : {}),
+      });
+    },
+    [updateChat],
+  );
+
+  const ensureMessagesLoaded = useCallback(
+    async (chatId: string) => {
+      if (isOrderAssistantChat(chatId)) return;
+      if (loadedMessageChatsRef.current.has(chatId)) return;
+      if (!/^\d+$/.test(chatId)) return;
+
+      const records = await loadConversationMessages(chatId, user?.id);
+      loadedMessageChatsRef.current.add(chatId);
+      setMessages((prev) => ({ ...prev, [chatId]: records }));
+      syncChatFromMessages(chatId, records);
+    },
+    [syncChatFromMessages, user?.id],
+  );
+
+  const refreshMessagesForChat = useCallback(
+    async (chatId: string) => {
+      if (isOrderAssistantChat(chatId)) return;
+      if (!/^\d+$/.test(chatId)) return;
+
+      const records = await loadConversationMessages(chatId, user?.id);
+      loadedMessageChatsRef.current.add(chatId);
+      setMessages((prev) => {
+        const previous = prev[chatId] ?? [];
+        if (
+          previous.length === records.length &&
+          previous.every((message, index) => message.id === records[index]?.id)
+        ) {
+          return prev;
+        }
+        return { ...prev, [chatId]: records };
+      });
+      syncChatFromMessages(chatId, records, { markRead: true });
+      void markChatReadOnServer(chatId).catch(() => undefined);
+    },
+    [syncChatFromMessages, user?.id],
+  );
 
   const getChat = useCallback(
     (chatId: string) => chats.find((chat) => chat.id === chatId),
@@ -764,7 +782,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         replyToId,
       });
 
-      void postTextMessage(chatId, trimmed)
+      void postTextMessage(chatId, trimmed, user?.id)
         .then((saved) => {
           setMessages((prev) => ({
             ...prev,
@@ -792,7 +810,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           });
         });
     },
-    [appendMessage, updateChat],
+    [appendMessage, updateChat, user?.id],
   );
 
   const sendEmojiMessage = useCallback(
@@ -973,6 +991,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       refreshConversations,
       startDirectMessage,
       ensureMessagesLoaded,
+      refreshMessagesForChat,
       conversationsLoading,
       createBroadcast,
       sendTextMessage,
@@ -1055,6 +1074,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       refreshConversations,
       startDirectMessage,
       ensureMessagesLoaded,
+      refreshMessagesForChat,
       conversationsLoading,
       createBroadcast,
       sendTextMessage,

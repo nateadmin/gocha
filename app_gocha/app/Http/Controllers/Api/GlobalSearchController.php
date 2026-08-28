@@ -108,6 +108,7 @@ class GlobalSearchController extends Controller
                     'conversationName' => $conversationName,
                     'text' => $message->body,
                     'sentAt' => $message->created_at?->toIso8601String(),
+                    'senderUserId' => (int) $message->sender_user_id,
                     'isOutgoing' => $message->sender_user_id === $user->id,
                 ];
             })

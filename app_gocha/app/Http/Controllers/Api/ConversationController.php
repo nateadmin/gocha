@@ -225,12 +225,15 @@ class ConversationController extends Controller
     /** @return array<string, mixed> */
     private function toMessagePayload(Message $message, User $viewer): array
     {
+        $senderUserId = (int) $message->sender_user_id;
+
         return [
             'id' => (string) $message->id,
             'type' => $message->type,
             'text' => $message->body,
             'sentAt' => $message->created_at?->toIso8601String(),
-            'isOutgoing' => $message->sender_user_id === $viewer->id,
+            'senderUserId' => $senderUserId,
+            'isOutgoing' => $senderUserId === (int) $viewer->id,
             'status' => 'sent',
         ];
     }

@@ -36,7 +36,8 @@ class ConversationTest extends TestCase
         $this->actingAs($bob)->getJson("/api/conversations/{$conversationId}/messages")
             ->assertOk()
             ->assertJsonCount(1, 'messages')
-            ->assertJsonPath('messages.0.isOutgoing', false);
+            ->assertJsonPath('messages.0.isOutgoing', false)
+            ->assertJsonPath('messages.0.senderUserId', $alice->id);
     }
 
     public function test_start_conversation_is_idempotent_for_same_pair(): void

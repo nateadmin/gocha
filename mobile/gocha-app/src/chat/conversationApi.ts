@@ -7,20 +7,14 @@ import {
   type ConversationMessageRecord,
   type ConversationRecord,
 } from '../api/client';
-import type { ChatMessage, ChatRecord } from './types';
+import { mapMessageRecord } from './messageMapping';
+import type { ChatRecord } from './types';
 
 function formatDateLabel(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
-}
-
-function formatTimeLabel(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 export function mapConversationRecord(
@@ -31,19 +25,20 @@ export function mapConversationRecord(
     ? new Date(record.lastActivityAt).getTime()
     : Date.now();
 
-  const useExistingActivity =
-    existing !== undefined && existing.lastActivityAt >= apiLastActivityAt;
+  const existingActivity = existing?.lastActivityAt ?? 0;
+  const lastActivityAt = Math.max(apiLastActivityAt, existingActivity);
+  const useApiMeta = apiLastActivityAt >= existingActivity;
 
   return {
     id: String(record.id),
     name: record.name,
     avatarLabel: record.avatarLabel,
     avatarColor: record.avatarColor,
-    preview: useExistingActivity ? existing.preview : record.preview,
-    dateLabel: useExistingActivity
-      ? existing.dateLabel
-      : formatDateLabel(record.lastActivityAt),
-    lastActivityAt: useExistingActivity ? existing.lastActivityAt : apiLastActivityAt,
+    preview: useApiMeta ? record.preview : (existing?.preview ?? record.preview),
+    dateLabel: useApiMeta
+      ? formatDateLabel(record.lastActivityAt)
+      : (existing?.dateLabel ?? formatDateLabel(record.lastActivityAt)),
+    lastActivityAt,
     unreadCount: record.unreadCount,
     pinned: existing?.pinned ?? false,
     archived: existing?.archived ?? false,
@@ -63,17 +58,6 @@ export function mapConversationRecord(
   };
 }
 
-export function mapMessageRecord(record: ConversationMessageRecord): ChatMessage {
-  return {
-    id: record.id,
-    type: record.type === 'emoji' ? 'emoji' : 'text',
-    text: record.text ?? undefined,
-    sentAt: formatTimeLabel(record.sentAt),
-    isOutgoing: record.isOutgoing,
-    status: record.status ?? 'sent',
-  };
-}
-
 export async function loadConversations(existing: ChatRecord[]): Promise<ChatRecord[]> {
   const records = await fetchConversations();
   const byId = new Map(existing.map((chat) => [chat.id, chat]));
@@ -83,9 +67,12 @@ export async function loadConversations(existing: ChatRecord[]): Promise<ChatRec
   );
 }
 
-export async function loadConversationMessages(chatId: string): Promise<ChatMessage[]> {
+export async function loadConversationMessages(
+  chatId: string,
+  viewerUserId?: number | null,
+) {
   const records = await fetchConversationMessages(Number(chatId));
-  return records.map(mapMessageRecord);
+  return records.map((record) => mapMessageRecord(record, viewerUserId));
 }
 
 export async function openDirectConversation(userId: number): Promise<ChatRecord> {
@@ -93,9 +80,13 @@ export async function openDirectConversation(userId: number): Promise<ChatRecord
   return mapConversationRecord(record);
 }
 
-export async function postTextMessage(chatId: string, text: string): Promise<ChatMessage> {
+export async function postTextMessage(
+  chatId: string,
+  text: string,
+  viewerUserId?: number | null,
+) {
   const record = await sendConversationMessage(Number(chatId), text);
-  return mapMessageRecord(record);
+  return mapMessageRecord(record, viewerUserId);
 }
 
 export async function markChatReadOnServer(chatId: string): Promise<void> {
