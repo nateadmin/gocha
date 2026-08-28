@@ -21,7 +21,7 @@ type Panel = 'none' | 'sticker' | 'voice';
 type Props = {
   value: string;
   onChangeText: (text: string) => void;
-  onSend?: () => void;
+  onSend?: (text: string) => void;
   onSendEmoji?: (emoji: string) => void;
   onSendSticker?: (key: string) => void;
   onSendVoice?: (voice: RecordedVoice) => void;
@@ -63,6 +63,31 @@ export function ChatComposer({
 
   const webActionStyle =
     Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null;
+
+  function submitMessage() {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    onSend?.(trimmed);
+  }
+
+  const webSendButtonStyle =
+    Platform.OS === 'web'
+      ? ({
+          border: 0,
+          background: 'transparent',
+          padding: 0,
+          margin: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 40,
+          height: 40,
+          flexShrink: 0,
+          cursor: 'pointer',
+        } as const)
+      : null;
 
   async function handleCameraPress() {
     setPanel('none');
@@ -188,6 +213,23 @@ export function ChatComposer({
               placeholder="Message"
               placeholderTextColor={theme.colors.mutedForeground}
               selectionColor={theme.colors.primary}
+              returnKeyType="send"
+              blurOnSubmit={false}
+              onSubmitEditing={submitMessage}
+              {...(Platform.OS === 'web'
+                ? {
+                    onKeyDown: (event: {
+                      key?: string;
+                      shiftKey?: boolean;
+                      preventDefault?: () => void;
+                    }) => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault?.();
+                        submitMessage();
+                      }
+                    },
+                  }
+                : {})}
               style={[
                 styles.input,
                 webInputReset,
@@ -208,9 +250,19 @@ export function ChatComposer({
         </View>
 
         {value.trim() ? (
-          <Pressable hitSlop={8} style={[styles.outsideAction, webActionStyle]} onPress={onSend}>
-            <Ionicons name="send" size={22} color={theme.colors.primary} />
-          </Pressable>
+          Platform.OS === 'web' ? (
+            <button
+              type="button"
+              aria-label="Send message"
+              style={webSendButtonStyle ?? undefined}
+              onClick={submitMessage}>
+              <Ionicons name="send" size={22} color={theme.colors.primary} />
+            </button>
+          ) : (
+            <Pressable hitSlop={8} style={[styles.outsideAction, webActionStyle]} onPress={submitMessage}>
+              <Ionicons name="send" size={22} color={theme.colors.primary} />
+            </Pressable>
+          )
         ) : (
           <Pressable
             hitSlop={8}
@@ -230,6 +282,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: '100%',
     alignSelf: 'stretch',
+    flexShrink: 0,
+    zIndex: 2,
   },
   bar: {
     flexDirection: 'row',
