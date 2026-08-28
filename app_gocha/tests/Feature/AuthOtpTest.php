@@ -264,4 +264,17 @@ class AuthOtpTest extends TestCase
             ->assertJsonCount(1, 'results')
             ->assertJsonPath('results.0.displayName', 'Visible Neo');
     }
+
+    public function test_device_only_logout_revokes_bearer_token(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('device:test')->plainTextToken;
+        $tokenId = (int) explode('|', $token, 2)[0];
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson('/api/auth/logout', ['device_only' => true])
+            ->assertOk();
+
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $tokenId]);
+    }
 }

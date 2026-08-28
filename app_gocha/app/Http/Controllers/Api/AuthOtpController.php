@@ -95,11 +95,15 @@ class AuthOtpController extends Controller
     {
         $this->deviceTokens->revokeCurrent($request->bearerToken());
 
-        Auth::guard('web')->logout();
+        $deviceOnly = $request->boolean('device_only');
 
-        if ($request->hasSession()) {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+        if (! $deviceOnly) {
+            Auth::guard('web')->logout();
+
+            if ($request->hasSession()) {
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
         }
 
         return response()->json([

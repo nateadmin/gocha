@@ -192,8 +192,11 @@ export async function verifyOtp(
   });
 }
 
-export async function logout(): Promise<void> {
-  await apiRequest(API_PATHS.logout, { method: 'POST' });
+export async function logout(options?: { deviceOnly?: boolean }): Promise<void> {
+  await apiRequest(API_PATHS.logout, {
+    method: 'POST',
+    body: JSON.stringify({ device_only: options?.deviceOnly ?? false }),
+  });
   csrfPrimed = false;
 }
 

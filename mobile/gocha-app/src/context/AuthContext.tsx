@@ -52,13 +52,13 @@ type AuthContextValue = {
     discoverable: boolean;
   }) => Promise<void>;
   uploadProfileAvatar: (file: Blob, filename?: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<'auth' | 'switched'>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { activeAccountId, removeAccount, patchAccountDeviceToken, registerAccount } = useAccounts();
+  const { accounts, removeAccount, patchAccountDeviceToken, registerAccount } = useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -168,17 +168,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(nextUser);
   }, []);
 
-  const signOut = useCallback(async () => {
+  const signOut = useCallback(async (): Promise<'auth' | 'switched'> => {
+    if (!user) {
+      return 'auth';
+    }
+
+    const signingOutUserId = user.id;
+    const remaining = accounts.filter((entry) => entry.userId !== signingOutUserId);
+    const hasOtherAccounts = remaining.length > 0;
+
     try {
-      await apiLogout();
+      await apiLogout({ deviceOnly: hasOtherAccounts });
     } catch {
-      // Removing local account even if remote logout fails.
+      // Continue removing the local account even if token revocation fails.
     }
-    if (user) {
-      removeAccount(user.id);
+
+    removeAccount(signingOutUserId);
+
+    if (hasOtherAccounts) {
+      await refresh({ background: false });
+      return 'switched';
     }
+
     setUser(null);
-  }, [removeAccount, user]);
+    return 'auth';
+  }, [accounts, removeAccount, refresh, user]);
 
   const value = useMemo(
     () => ({

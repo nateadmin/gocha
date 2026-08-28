@@ -4,14 +4,23 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { ProfileAvatar, SectionLabel, SettingsToggleRow } from '../../components/app';
 import { useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { SettingsStackParamList } from '../../navigation/types';
+import type { RootTabParamList, SettingsStackParamList } from '../../navigation/types';
+import { useAccounts } from '../../context/AccountsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useGochaTheme } from '../../theme';
 
+type SettingsNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<SettingsStackParamList, 'SettingsHome'>,
+  BottomTabNavigationProp<RootTabParamList>
+>;
+
 export function SettingsScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
+  const navigation = useNavigation<SettingsNavigationProp>();
   const { theme, mode, setMode } = useGochaTheme();
+  const { accounts } = useAccounts();
   const { user, signOut } = useAuth();
   const [readReceipts, setReadReceipts] = useState(true);
   const [lastSeen, setLastSeen] = useState(true);
@@ -19,6 +28,13 @@ export function SettingsScreen() {
   const [messagePreview, setMessagePreview] = useState(true);
   const [notificationSound, setNotificationSound] = useState(true);
   const [aiSummaries, setAiSummaries] = useState(true);
+
+  async function handleSignOut() {
+    const result = await signOut();
+    if (result === 'switched') {
+      navigation.navigate('ChatsTab', { screen: 'ChatsList' });
+    }
+  }
 
   return (
     <ScrollView
@@ -148,17 +164,6 @@ export function SettingsScreen() {
             </Pressable>
           </>
         ) : null}
-        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-        <Pressable onPress={() => signOut()} style={styles.signOutRow}>
-          <Text
-            style={{
-              color: theme.colors.destructive,
-              fontFamily: theme.typography.sans,
-              fontSize: theme.typography.body,
-            }}>
-            Sign out
-          </Text>
-        </Pressable>
       </View>
 
       <SectionLabel>CHATS</SectionLabel>
@@ -315,6 +320,27 @@ export function SettingsScreen() {
           onValueChange={(enabled) => setMode(enabled ? 'light' : 'dark')}
         />
       </View>
+
+      <Pressable
+        onPress={handleSignOut}
+        style={[
+          styles.signOutCard,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <Text
+          style={{
+            color: theme.colors.destructive,
+            fontFamily: theme.typography.sans,
+            fontSize: theme.typography.body,
+            textAlign: 'center',
+          }}>
+          {accounts.length > 1 ? 'Sign out of this account' : 'Sign out'}
+        </Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -344,7 +370,9 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
   },
-  signOutRow: {
+  signOutCard: {
+    borderWidth: 1,
+    marginTop: 8,
     paddingVertical: 14,
   },
   linkRow: {
