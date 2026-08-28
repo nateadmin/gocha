@@ -4,6 +4,7 @@ export { MessageBubble } from './MessageBubble';
 export { ChatComposer } from './ChatComposer';
 export { ActionSheet } from './ActionSheet';
 export { ChatFilterBar } from './ChatFilterBar';
+export { GlobalSearchResults } from './GlobalSearchResults';
 export { SwipeableRow } from './SwipeableRow';
 export { EmojiPickerPanel } from './EmojiPickerPanel';
 export { StickerPickerPanel } from './StickerPickerPanel';

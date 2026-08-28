@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -10,23 +10,32 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AccountLogoButton,
   AccountSwitcherMenu,
-  Avatar,
-  HeaderOverflowMenu,
   ConfirmDialog,
+  HeaderOverflowMenu,
   SearchField,
   type DropdownMenuItem,
 } from '../../components/app';
 import {
   ActionSheet,
   ChatFilterBar,
+  GlobalSearchResults,
   SwipeableChatListItem,
   type ActionSheetItem,
 } from '../../components/chat';
 import { useChat } from '../../chat/ChatContext';
+import {
+  searchLocalContacts,
+  searchLocalConversations,
+} from '../../chat/globalSearchLocal';
 import type { ChatRecord } from '../../chat/types';
 import { useAccounts } from '../../context/AccountsContext';
 import { useAuth } from '../../context/AuthContext';
-import { searchUsers, type PublicUserProfile } from '../../api/client';
+import {
+  globalSearch,
+  type GlobalSearchContactResult,
+  type GlobalSearchMessageResult,
+  type PublicUserProfile,
+} from '../../api/client';
 import { useGochaTheme } from '../../theme';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 
@@ -47,39 +56,47 @@ export function ChatsScreen() {
   const searchRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [contextChat, setContextChat] = useState<ChatRecord | null>(null);
-  const [composeOpen, setComposeOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [listPickerChat, setListPickerChat] = useState<ChatRecord | null>(null);
   const [clearTarget, setClearTarget] = useState<ChatRecord | null>(null);
-  const [userResults, setUserResults] = useState<PublicUserProfile[]>([]);
-  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [remoteContacts, setRemoteContacts] = useState<GlobalSearchContactResult[]>([]);
+  const [messageResults, setMessageResults] = useState<GlobalSearchMessageResult[]>([]);
+  const [peopleResults, setPeopleResults] = useState<PublicUserProfile[]>([]);
+  const [remoteSearchLoading, setRemoteSearchLoading] = useState(false);
   const [startingChatUserId, setStartingChatUserId] = useState<number | null>(null);
 
   const accountMenuTop = insets.top + 12 + 44;
+  const trimmedQuery = query.trim();
+  const isSearching = trimmedQuery.length > 0;
 
   useEffect(() => {
-    if (!composeOpen) {
-      setUserResults([]);
-      return;
-    }
-
-    const needle = query.trim();
-    if (needle.length < 2) {
-      setUserResults([]);
+    if (trimmedQuery.length < 2) {
+      setRemoteContacts([]);
+      setMessageResults([]);
+      setPeopleResults([]);
+      setRemoteSearchLoading(false);
       return;
     }
 
     const handle = setTimeout(() => {
-      setUserSearchLoading(true);
-      searchUsers(needle)
-        .then(setUserResults)
-        .catch(() => setUserResults([]))
-        .finally(() => setUserSearchLoading(false));
+      setRemoteSearchLoading(true);
+      globalSearch(trimmedQuery)
+        .then((payload) => {
+          setRemoteContacts(payload.contacts);
+          setMessageResults(payload.messages);
+          setPeopleResults(payload.people);
+        })
+        .catch(() => {
+          setRemoteContacts([]);
+          setMessageResults([]);
+          setPeopleResults([]);
+        })
+        .finally(() => setRemoteSearchLoading(false));
     }, 250);
 
     return () => clearTimeout(handle);
-  }, [composeOpen, query]);
+  }, [trimmedQuery]);
 
   const switcherAccounts = useMemo(() => {
     if (!user) {
@@ -108,19 +125,25 @@ export function ChatsScreen() {
     return chat.filteredChats;
   }, [chat.activeFilter, chat.archivedChats, chat.filteredChats]);
 
-  const filtered = listData.filter((item) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      item.name.toLowerCase().includes(q) || item.preview.toLowerCase().includes(q)
-    );
-  });
+  const searchableChats = useMemo(
+    () => [...chat.filteredChats, ...chat.archivedChats],
+    [chat.archivedChats, chat.filteredChats],
+  );
+
+  const conversationResults = useMemo(
+    () => searchLocalConversations(searchableChats, trimmedQuery),
+    [searchableChats, trimmedQuery],
+  );
+
+  const localContactResults = useMemo(() => {
+    const excludeIds = new Set(conversationResults.map((item) => item.id));
+    return searchLocalContacts(searchableChats, trimmedQuery, excludeIds);
+  }, [conversationResults, searchableChats, trimmedQuery]);
 
   async function startChatWithUser(profile: PublicUserProfile) {
     setStartingChatUserId(profile.id);
     try {
       const chatId = await chat.startDirectMessage(profile.id);
-      setComposeOpen(false);
       setQuery('');
       openChat(chatId);
     } finally {
@@ -128,11 +151,13 @@ export function ChatsScreen() {
     }
   }
 
-  const showingUserSearch = composeOpen && query.trim().length >= 2;
-
   function openChat(chatId: string) {
     chat.openChat(chatId);
     navigation.navigate('ChatDetail', { chatId });
+  }
+
+  function openConversationById(conversationId: number) {
+    openChat(String(conversationId));
   }
 
   const headerMenuItems: DropdownMenuItem[] = [
@@ -142,7 +167,6 @@ export function ChatsScreen() {
       icon: 'chatbubble-outline',
       onPress: () => {
         setHeaderMenuOpen(false);
-        setComposeOpen(true);
         searchRef.current?.focus();
       },
     },
@@ -259,90 +283,45 @@ export function ChatsScreen() {
             ref={searchRef}
             value={query}
             onChangeText={setQuery}
-            placeholder={
-              composeOpen
-                ? 'Search name, email, or phone'
-                : 'Search conversations'
-            }
+            placeholder="Search chats, messages, and people"
           />
         </View>
       </View>
 
-      {chat.activeFilter === 'archived' ? (
+      {!isSearching && chat.activeFilter === 'archived' ? (
         <View style={styles.filterBanner}>
           <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.typography.sans }}>
             Archived conversations
           </Text>
         </View>
-      ) : (
+      ) : null}
+
+      {!isSearching && chat.activeFilter !== 'archived' ? (
         <ChatFilterBar
           onManageLists={() => navigation.navigate('ChatListsSettings')}
           onOpenHidden={() => navigation.navigate('HiddenChats')}
         />
-      )}
+      ) : null}
 
-      {showingUserSearch ? (
-        <View style={{ backgroundColor: theme.colors.card, flex: 1 }}>
-          {userSearchLoading ? (
-            <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 24 }} />
-          ) : userResults.length === 0 ? (
-            <Text
-              style={{
-                color: theme.colors.mutedForeground,
-                fontFamily: theme.typography.sans,
-                padding: 16,
-              }}>
-              No discoverable users matched that search. They need discoverability enabled in profile settings.
-            </Text>
-          ) : (
-            <FlatList
-              data={userResults}
-              keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.list}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => startChatWithUser(item)}
-                  disabled={startingChatUserId === item.id}
-                  style={styles.userResultRow}>
-                  <Avatar
-                    label={item.displayName.slice(0, 2).toUpperCase()}
-                    color={theme.colors.primary}
-                    size={44}
-                  />
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text
-                      style={{
-                        color: theme.colors.cardForeground,
-                        fontFamily: theme.typography.sans,
-                        fontSize: 16,
-                        fontWeight: '600',
-                      }}>
-                      {item.displayName}
-                    </Text>
-                    {item.username ? (
-                      <Text
-                        style={{
-                          color: theme.colors.mutedForeground,
-                          fontFamily: theme.typography.sans,
-                          fontSize: 13,
-                        }}>
-                        @{item.username}
-                      </Text>
-                    ) : null}
-                  </View>
-                  {startingChatUserId === item.id ? (
-                    <ActivityIndicator color={theme.colors.primary} />
-                  ) : (
-                    <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
-                  )}
-                </Pressable>
-              )}
-            />
-          )}
-        </View>
+      {isSearching ? (
+        <GlobalSearchResults
+          query={query}
+          conversations={conversationResults}
+          contacts={remoteContacts}
+          localContacts={localContactResults}
+          messages={messageResults}
+          people={peopleResults}
+          loading={remoteSearchLoading}
+          startingChatUserId={startingChatUserId}
+          onOpenChat={openChat}
+          onOpenContact={openConversationById}
+          onOpenMessage={openConversationById}
+          onStartChatWithPerson={startChatWithUser}
+          onLongPressChat={setContextChat}
+        />
       ) : (
         <FlatList
-          data={filtered}
+          data={listData}
           keyExtractor={(item) => item.id}
           style={{ backgroundColor: theme.colors.card, flex: 1 }}
           contentContainerStyle={styles.list}
@@ -449,13 +428,6 @@ const styles = StyleSheet.create({
   },
   list: { paddingBottom: 8 },
   archiveBanner: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  userResultRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },

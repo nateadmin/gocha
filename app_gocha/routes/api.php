@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthOtpController;
 use App\Http\Controllers\Api\BusinessListingController;
 use App\Http\Controllers\Api\CommunityGroupController;
 use App\Http\Controllers\Api\ConversationController;
+use App\Http\Controllers\Api\GlobalSearchController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\VerificationController;
@@ -57,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/username', [ProfileController::class, 'updateUsername']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::get('/users/search', [ProfileController::class, 'search']);
+    Route::get('/search', [GlobalSearchController::class, 'search']);
 
     Route::get('/conversations', [ConversationController::class, 'index']);
     Route::post('/conversations', [ConversationController::class, 'store']);

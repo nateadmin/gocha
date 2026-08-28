@@ -21,6 +21,7 @@ export const API_PATHS = {
   profileMode: '/api/profile/mode',
   avatar: '/api/profile/avatar',
   userSearch: '/api/users/search',
+  globalSearch: '/api/search',
   businesses: '/api/businesses',
   businessesMine: '/api/businesses/mine',
   businessesImportGoogle: '/api/businesses/import-google',

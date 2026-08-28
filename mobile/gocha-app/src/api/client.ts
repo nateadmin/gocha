@@ -560,11 +560,40 @@ export type PublicUserProfile = {
   chatUserId: number;
 };
 
+export type GlobalSearchContactResult = {
+  conversationId: number;
+  userId: number;
+  displayName: string;
+  username: string | null;
+  avatarUrl: string | null;
+};
+
+export type GlobalSearchMessageResult = {
+  id: string;
+  conversationId: number;
+  conversationName: string;
+  text: string;
+  sentAt: string | null;
+  isOutgoing: boolean;
+};
+
+export type GlobalSearchResponse = {
+  contacts: GlobalSearchContactResult[];
+  messages: GlobalSearchMessageResult[];
+  people: PublicUserProfile[];
+};
+
 export async function searchUsers(query: string): Promise<PublicUserProfile[]> {
   const payload = await apiRequest<{ results: PublicUserProfile[] }>(
     `${API_PATHS.userSearch}?q=${encodeURIComponent(query)}`,
   );
   return payload.results;
+}
+
+export async function globalSearch(query: string): Promise<GlobalSearchResponse> {
+  return apiRequest<GlobalSearchResponse>(
+    `${API_PATHS.globalSearch}?q=${encodeURIComponent(query)}`,
+  );
 }
 
 export type ConversationRecord = {

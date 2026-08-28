@@ -224,7 +224,8 @@ class ProfileController extends Controller
                 $query->where('display_name', 'like', '%'.$needle.'%')
                     ->orWhere('name', 'like', '%'.$needle.'%')
                     ->orWhere('username', 'like', '%'.$needle.'%')
-                    ->orWhere('email', 'like', '%'.$needle.'%');
+                    ->orWhere('email', 'like', '%'.$needle.'%')
+                    ->orWhere('phone', 'like', '%'.$needle.'%');
             })
             ->orderBy('display_name')
             ->limit(20)
