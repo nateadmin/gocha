@@ -38,9 +38,10 @@ export function CtaButton({
       }>
       <button
         type="button"
-        disabled={isDisabled}
+        disabled={disabled}
         onClick={isDisabled ? undefined : onPress}
-        aria-busy={loading}>
+        aria-busy={loading}
+        aria-disabled={isDisabled}>
         <span className="text">
           {loading ? <UniversalLoader size={compact ? 0.22 : 0.28} /> : label}
         </span>
@@ -85,7 +86,13 @@ const StyledWrapper = styled.div<{
     width: ${(p) => (p.$fullWidth ? '100%' : 'auto')};
   }
 
-  button:disabled {
+  button[aria-busy='true'] {
+    cursor: wait;
+    pointer-events: none;
+  }
+
+  button:disabled,
+  button[aria-disabled='true']:not([aria-busy='true']) {
     cursor: not-allowed;
     opacity: 0.55;
   }
