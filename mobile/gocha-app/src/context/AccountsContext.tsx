@@ -17,7 +17,7 @@ import {
   writeStoredAccounts,
   type StoredAccount,
 } from '../accounts/accountStore';
-import { setActiveDeviceToken } from '../api/client';
+import { ApiError, setActiveDeviceToken, switchSession } from '../api/client';
 
 type AccountsContextValue = {
   accounts: StoredAccount[];
@@ -26,7 +26,8 @@ type AccountsContextValue = {
   beginAddAccount: () => void;
   cancelAddAccount: () => void;
   registerAccount: (account: StoredAccount) => void;
-  switchAccount: (userId: number) => void;
+  switchAccount: (userId: number) => Promise<boolean>;
+  adoptActiveAccount: (userId: number) => void;
   removeAccount: (userId: number) => void;
   patchAccountDeviceToken: (userId: number, deviceToken: string) => void;
   syncAccountProfile: (
@@ -78,16 +79,6 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     setActiveDeviceToken(account.deviceToken);
   }, []);
 
-  const switchAccount = useCallback(
-    (userId: number) => {
-      setActiveAccountId(userId);
-      writeActiveAccountId(userId);
-      const match = accounts.find((entry) => entry.userId === userId);
-      setActiveDeviceToken(match?.deviceToken ?? null);
-    },
-    [accounts],
-  );
-
   const removeAccount = useCallback(
     (userId: number) => {
       const remaining = accounts.filter((entry) => entry.userId !== userId);
@@ -111,11 +102,53 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     [activeAccountId, accounts],
   );
 
-  const patchAccountDeviceToken = useCallback((userId: number, deviceToken: string) => {
-    setAccounts((prev) => {
-      const next = updateStoredAccountDeviceToken(userId, deviceToken);
-      return next;
+  /**
+   * Switches the server session to the target account before changing any
+   * client state. On stateful (web) requests the session cookie decides the
+   * authenticated user, so swapping only the bearer token is not enough.
+   */
+  const switchAccount = useCallback(
+    async (userId: number): Promise<boolean> => {
+      const match = accounts.find((entry) => entry.userId === userId);
+      if (!match) {
+        return false;
+      }
+
+      try {
+        const payload = await switchSession(match.deviceToken);
+        setAccounts(() => updateStoredAccountDeviceToken(userId, payload.deviceToken));
+        setActiveAccountId(userId);
+        writeActiveAccountId(userId);
+        setActiveDeviceToken(payload.deviceToken);
+        return true;
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 422)) {
+          // The stored device token is dead; this account must sign in again.
+          removeAccount(userId);
+        }
+        return false;
+      }
+    },
+    [accounts, removeAccount],
+  );
+
+  /**
+   * Aligns the client's active account with the already-authenticated session
+   * user (no server call). Used at bootstrap when the session identity and
+   * the locally stored active account disagree.
+   */
+  const adoptActiveAccount = useCallback((userId: number) => {
+    setActiveAccountId((current) => {
+      if (current === userId) {
+        return current;
+      }
+      writeActiveAccountId(userId);
+      return userId;
     });
+  }, []);
+
+  const patchAccountDeviceToken = useCallback((userId: number, deviceToken: string) => {
+    setAccounts(() => updateStoredAccountDeviceToken(userId, deviceToken));
     if (activeAccountId === userId) {
       setActiveDeviceToken(deviceToken);
     }
@@ -153,6 +186,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       cancelAddAccount,
       registerAccount,
       switchAccount,
+      adoptActiveAccount,
       removeAccount,
       patchAccountDeviceToken,
       syncAccountProfile,
@@ -165,6 +199,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       cancelAddAccount,
       registerAccount,
       switchAccount,
+      adoptActiveAccount,
       removeAccount,
       patchAccountDeviceToken,
       syncAccountProfile,

@@ -52,6 +52,9 @@ Route::prefix('auth/otp')
         ->middleware('throttle:otp-verify');
 });
 
+Route::post('/auth/switch', [AuthOtpController::class, 'switchSession'])
+    ->middleware('throttle:30,1');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
     Route::post('/profile/onboarding', [ProfileController::class, 'completeOnboarding']);

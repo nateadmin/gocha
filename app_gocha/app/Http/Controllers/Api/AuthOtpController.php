@@ -76,6 +76,43 @@ class AuthOtpController extends Controller
         ]);
     }
 
+    /**
+     * Exchanges a stored device token for a web session login. This is how
+     * account switching changes the server-side identity: on stateful (web)
+     * requests the session cookie takes precedence over bearer tokens, so the
+     * session itself must be re-logged-in as the target account.
+     */
+    public function switchSession(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'deviceToken' => ['required', 'string', 'max:512'],
+        ]);
+
+        $user = $this->deviceTokens->resolveUser($validated['deviceToken']);
+        if (! $user) {
+            return response()->json([
+                'code' => 'INVALID_DEVICE_TOKEN',
+                'message' => 'This account needs to sign in again.',
+            ], 401);
+        }
+
+        Auth::guard('web')->login($user, remember: true);
+
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
+
+        // Rotate the device token so the presented credential is single-use.
+        $this->deviceTokens->revokeCurrent($validated['deviceToken']);
+        $deviceToken = $this->deviceTokens->issue($user);
+
+        return response()->json([
+            'user' => $user->load('activeBusinessListing')->toAuthPayload(),
+            'deviceToken' => $deviceToken->plainTextToken,
+            'account' => $user->toAccountSwitcherPayload(),
+        ]);
+    }
+
     public function issueDeviceToken(Request $request): JsonResponse
     {
         $user = $request->user();

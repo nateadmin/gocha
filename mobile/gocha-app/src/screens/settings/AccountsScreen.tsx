@@ -54,8 +54,11 @@ export function AccountsScreen() {
             <Pressable
               key={account.userId}
               onPress={async () => {
-                switchAccount(account.userId);
-                await refresh();
+                if (account.userId === activeAccountId) return;
+                const switched = await switchAccount(account.userId);
+                if (switched) {
+                  await refresh();
+                }
               }}
               style={[styles.row, { borderColor: theme.colors.border }]}>
               <View style={{ flex: 1 }}>

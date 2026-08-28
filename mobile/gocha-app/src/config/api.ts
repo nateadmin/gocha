@@ -13,6 +13,7 @@ export const API_PATHS = {
   otpRequest: '/api/auth/otp/request',
   otpVerify: '/api/auth/otp/verify',
   logout: '/api/auth/logout',
+  authSwitch: '/api/auth/switch',
   deviceToken: '/api/auth/device-token',
   me: '/api/me',
   onboarding: '/api/profile/onboarding',

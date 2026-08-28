@@ -209,6 +209,20 @@ export async function verifyOtp(
   });
 }
 
+/**
+ * Exchanges a stored device token for a web session login so the server-side
+ * identity actually changes when switching accounts. Returns a rotated device
+ * token that must replace the presented one.
+ */
+export async function switchSession(deviceToken: string): Promise<OtpVerifyResult> {
+  const payload = await apiRequest<OtpVerifyResult>(API_PATHS.authSwitch, {
+    method: 'POST',
+    body: JSON.stringify({ deviceToken }),
+  });
+  resetCsrfPrimed();
+  return payload;
+}
+
 export async function logout(options?: { deviceOnly?: boolean }): Promise<void> {
   await apiRequest(API_PATHS.logout, {
     method: 'POST',

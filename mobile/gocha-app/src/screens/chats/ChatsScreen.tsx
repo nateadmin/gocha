@@ -386,8 +386,10 @@ export function ChatsScreen() {
         onSelectAccount={async (userId) => {
           const currentId = activeAccountId ?? user?.id ?? null;
           if (userId === currentId) return;
-          switchAccount(userId);
-          await refresh();
+          const switched = await switchAccount(userId);
+          if (switched) {
+            await refresh();
+          }
         }}
         onAddAccount={() => beginAddAccount()}
         onManageAccounts={() => {

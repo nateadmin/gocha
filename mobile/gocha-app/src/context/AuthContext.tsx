@@ -68,19 +68,29 @@ function isAuthFailure(error: unknown): boolean {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { accounts, activeAccountId, removeAccount, patchAccountDeviceToken, registerAccount, syncAccountProfile } =
-    useAccounts();
+  const {
+    accounts,
+    activeAccountId,
+    adoptActiveAccount,
+    removeAccount,
+    patchAccountDeviceToken,
+    registerAccount,
+    switchAccount,
+    syncAccountProfile,
+  } = useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasBootstrapped = useRef(false);
   const userRef = useRef<AuthUser | null>(null);
   const activeAccountIdRef = useRef(activeAccountId);
+  const adoptActiveAccountRef = useRef(adoptActiveAccount);
   const removeAccountRef = useRef(removeAccount);
   const syncAccountProfileRef = useRef(syncAccountProfile);
 
   userRef.current = user;
   activeAccountIdRef.current = activeAccountId;
+  adoptActiveAccountRef.current = adoptActiveAccount;
   removeAccountRef.current = removeAccount;
   syncAccountProfileRef.current = syncAccountProfile;
 
@@ -106,6 +116,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(nextUser);
         setError(null);
         syncUserToStoredAccount(nextUser);
+
+        // The session decides who is authenticated on web. If the locally
+        // stored active account claims a different user, adopt the session
+        // identity so the UI never claims to be one user while requests run
+        // as another.
+        if (activeAccountIdRef.current !== null && activeAccountIdRef.current !== nextUser.id) {
+          adoptActiveAccountRef.current(nextUser.id);
+        }
 
         if (!getActiveDeviceToken()) {
           try {
@@ -238,13 +256,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeAccount(signingOutUserId);
 
     if (hasOtherAccounts) {
+      // The session still belongs to the signed-out user; switch it to the
+      // next account before refreshing, or the wrong identity lingers.
+      const switched = await switchAccount(remaining[0].userId);
+      if (!switched) {
+        setUser(null);
+        return 'auth';
+      }
       await refresh({ background: false });
       return 'switched';
     }
 
     setUser(null);
     return 'auth';
-  }, [accounts, removeAccount, refresh, user]);
+  }, [accounts, removeAccount, refresh, switchAccount, user]);
 
   const value = useMemo(
     () => ({
