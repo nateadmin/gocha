@@ -57,6 +57,16 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function isAuthFailure(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 401 ||
+      error.status === 419 ||
+      error.body.code === 'UNAUTHENTICATED' ||
+      error.body.code === 'CSRF_MISMATCH')
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { accounts, activeAccountId, removeAccount, patchAccountDeviceToken, registerAccount, syncAccountProfile } =
     useAccounts();
@@ -64,36 +74,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasBootstrapped = useRef(false);
+  const userRef = useRef<AuthUser | null>(null);
+  const activeAccountIdRef = useRef(activeAccountId);
+  const removeAccountRef = useRef(removeAccount);
+  const syncAccountProfileRef = useRef(syncAccountProfile);
 
-  const syncUserToStoredAccount = useCallback(
-    (nextUser: AuthUser) => {
-      syncAccountProfile(nextUser.id, {
-        displayName: nextUser.displayName,
-        avatarUrl: nextUser.avatarUrl,
-        label: nextUser.email ?? nextUser.phone ?? 'This device',
-      });
-    },
-    [syncAccountProfile],
-  );
+  userRef.current = user;
+  activeAccountIdRef.current = activeAccountId;
+  removeAccountRef.current = removeAccount;
+  syncAccountProfileRef.current = syncAccountProfile;
 
-  const refresh = useCallback(
-    async (options?: { background?: boolean }) => {
-      const background = options?.background ?? false;
-      if (!background) {
-        setLoading(true);
-      }
+  const syncUserToStoredAccount = useCallback((nextUser: AuthUser) => {
+    syncAccountProfileRef.current(nextUser.id, {
+      displayName: nextUser.displayName,
+      avatarUrl: nextUser.avatarUrl,
+      label: nextUser.email ?? nextUser.phone ?? 'This device',
+    });
+  }, []);
 
-      try {
-        const hadToken = getActiveDeviceToken();
-        const nextUser = await fetchCurrentUser();
+  const refresh = useCallback(async (options?: { background?: boolean }) => {
+    const background = options?.background ?? false;
+    if (!background) {
+      setLoading(true);
+    }
+
+    try {
+      const hadToken = getActiveDeviceToken();
+      const nextUser = await fetchCurrentUser();
+
+      if (nextUser) {
         setUser(nextUser);
         setError(null);
+        syncUserToStoredAccount(nextUser);
 
-        if (nextUser) {
-          syncUserToStoredAccount(nextUser);
-        }
-
-        if (nextUser && !getActiveDeviceToken()) {
+        if (!getActiveDeviceToken()) {
           try {
             const tokenPayload = await issueDeviceToken();
             patchAccountDeviceToken(nextUser.id, tokenPayload.deviceToken);
@@ -101,45 +115,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Session cookie auth may still work for stateful API requests.
           }
         }
-
-        if (!nextUser && hadToken && activeAccountId !== null) {
-          removeAccount(activeAccountId);
-        }
-      } catch (err) {
-        if (
-          err instanceof ApiError &&
-          (err.status === 401 ||
-            err.status === 419 ||
-            err.body.code === 'UNAUTHENTICATED' ||
-            err.body.code === 'CSRF_MISMATCH')
-        ) {
-          setUser(null);
-          if (activeAccountId !== null) {
-            removeAccount(activeAccountId);
-          }
-          setError(null);
-        } else {
-          setUser(null);
-          setError(err instanceof ApiError ? err.message : 'Could not load your session.');
-        }
-      } finally {
-        if (!background) {
-          setLoading(false);
-        }
+        return;
       }
-    },
-    [activeAccountId, patchAccountDeviceToken, removeAccount, syncUserToStoredAccount],
-  );
+
+      // Confirmed unauthenticated session.
+      setUser(null);
+      if (hadToken && activeAccountIdRef.current !== null) {
+        removeAccountRef.current(activeAccountIdRef.current);
+      }
+      setError(null);
+    } catch (err) {
+      if (isAuthFailure(err)) {
+        setUser(null);
+        if (activeAccountIdRef.current !== null) {
+          removeAccountRef.current(activeAccountIdRef.current);
+        }
+        setError(null);
+      } else {
+        // Transient failures (429, 5xx, network) must not sign the user out.
+        if (userRef.current) {
+          setUser(userRef.current);
+        }
+        setError(err instanceof ApiError ? err.message : 'Could not refresh your session.');
+      }
+    } finally {
+      if (!background) {
+        setLoading(false);
+      }
+    }
+  }, [patchAccountDeviceToken, syncUserToStoredAccount]);
+
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
 
   useEffect(() => {
     if (!hasBootstrapped.current) {
       hasBootstrapped.current = true;
-      refresh({ background: false });
+      void refreshRef.current({ background: false });
       return;
     }
 
-    refresh({ background: true });
-  }, [activeAccountId, refresh]);
+    void refreshRef.current({ background: true });
+  }, [activeAccountId]);
 
   const clearError = useCallback(() => setError(null), []);
 

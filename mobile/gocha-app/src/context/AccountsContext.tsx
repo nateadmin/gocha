@@ -124,7 +124,15 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
   const syncAccountProfile = useCallback(
     (userId: number, profile: Pick<StoredAccount, 'displayName' | 'avatarUrl' | 'label'>) => {
       setAccounts((prev) => {
-        if (!prev.some((entry) => entry.userId === userId)) {
+        const existing = prev.find((entry) => entry.userId === userId);
+        if (!existing) {
+          return prev;
+        }
+        if (
+          existing.displayName === profile.displayName &&
+          existing.avatarUrl === profile.avatarUrl &&
+          existing.label === profile.label
+        ) {
           return prev;
         }
         return updateStoredAccountProfile(userId, profile);

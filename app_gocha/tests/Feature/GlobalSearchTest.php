@@ -102,4 +102,17 @@ class GlobalSearchTest extends TestCase
             ->assertJsonCount(1, 'people')
             ->assertJsonPath('people.0.username', 'gigglygoo');
     }
+
+    public function test_repeated_global_search_does_not_invalidate_the_session(): void
+    {
+        $user = User::factory()->create(['name' => 'Search Stable']);
+
+        foreach (['ab', 'abc', 'abcd', 'abcde'] as $query) {
+            $this->actingAs($user)->getJson('/api/search?q='.$query)->assertOk();
+        }
+
+        $this->actingAs($user)->getJson('/api/me')
+            ->assertOk()
+            ->assertJsonPath('user.id', $user->id);
+    }
 }

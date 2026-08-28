@@ -65,7 +65,22 @@ export function updateStoredAccountProfile(
   userId: number,
   profile: Pick<StoredAccount, 'displayName' | 'avatarUrl' | 'label'>,
 ): StoredAccount[] {
-  const accounts = readStoredAccounts().map((account) =>
+  const current = readStoredAccounts();
+  const index = current.findIndex((account) => account.userId === userId);
+  if (index === -1) {
+    return current;
+  }
+
+  const existing = current[index];
+  if (
+    existing.displayName === profile.displayName &&
+    existing.avatarUrl === profile.avatarUrl &&
+    existing.label === profile.label
+  ) {
+    return current;
+  }
+
+  const accounts = current.map((account) =>
     account.userId === userId ? { ...account, ...profile } : account,
   );
   writeStoredAccounts(accounts);

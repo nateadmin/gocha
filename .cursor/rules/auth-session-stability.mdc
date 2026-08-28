@@ -1,0 +1,32 @@
+---
+description: Prevent search and background refresh from signing users out
+alwaysApply: true
+---
+
+# Auth session stability
+
+Read before changing auth, search, account storage, or any debounced API call from text inputs.
+
+## Session clearing
+
+- Only clear the signed-in user after a confirmed auth failure (`401`, `419`, `UNAUTHENTICATED`, `CSRF_MISMATCH`) from an intentional session check (`/api/me`) or explicit sign-out.
+- Never clear the session on transient API errors (`429`, `5xx`, network). Surface an error and keep the current user.
+- Secondary endpoints (search, conversations, messages) must never trigger sign-out. Catch errors locally and show empty or retry UI.
+
+## Background refresh
+
+- Session refresh runs on bootstrap and when the active account changes only. Do not tie refresh to account profile sync or other state that updates frequently.
+- Profile sync to localStorage must no-op when display name, avatar, and label are unchanged. Avoid recreating the accounts array on every `/api/me` success.
+
+## Tests required
+
+- Add or extend tests when touching auth refresh, search, or account storage:
+  - Frontend: profile sync no-op, refresh preserves user on transient errors.
+  - Backend: authenticated user can hit `/api/search` repeatedly without losing `/api/me`.
+- Run the full PHP and Jest suites before push.
+
+## Smoke after auth or search changes
+
+- Sign in on https://gocha.ai/
+- Type in global search on Chats for several characters; confirm you stay signed in.
+- Open a conversation, search in chat; confirm you stay signed in.
