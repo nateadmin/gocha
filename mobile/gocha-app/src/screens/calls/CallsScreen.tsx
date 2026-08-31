@@ -1,8 +1,6 @@
-import { FlatList, Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Avatar } from '../../components/app';
-import { calls } from '../../data/mock';
 import { useGochaTheme } from '../../theme';
 
 export function CallsScreen() {
@@ -20,51 +18,28 @@ export function CallsScreen() {
           Calls
         </Text>
       </View>
-      <FlatList
-        data={calls}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        style={{ backgroundColor: theme.colors.card, flex: 1 }}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Avatar label={item.avatarLabel} size={48} />
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  color: theme.colors.cardForeground,
-                  fontFamily: theme.typography.sans,
-                  fontSize: 16,
-                  fontWeight: '600',
-                }}>
-                {item.name}
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.mutedForeground,
-                  fontFamily: theme.typography.sans,
-                  fontSize: 13,
-                }}>
-                {item.timeLabel}
-              </Text>
-            </View>
-            <Ionicons
-              name={
-                item.type === 'missed'
-                  ? 'call-outline'
-                  : item.type === 'incoming'
-                    ? 'arrow-down'
-                    : 'arrow-up'
-              }
-              size={18}
-              color={
-                item.type === 'missed'
-                  ? theme.colors.destructive
-                  : theme.colors.primary
-              }
-            />
-          </View>
-        )}
-      />
+      <View style={styles.body}>
+        <Ionicons name="call-outline" size={40} color={theme.colors.mutedForeground} />
+        <Text
+          style={{
+            color: theme.colors.cardForeground,
+            fontFamily: theme.typography.sans,
+            fontSize: 18,
+            fontWeight: '600',
+          }}>
+          Coming soon
+        </Text>
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.typography.sans,
+            fontSize: 14,
+            textAlign: 'center',
+            lineHeight: 20,
+          }}>
+          Voice and video need a call provider.
+        </Text>
+      </View>
     </View>
   );
 }
@@ -75,14 +50,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-  list: {
-    paddingVertical: 8,
-  },
-  row: {
-    flexDirection: 'row',
+  body: {
+    flex: 1,
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 10,
   },
 });

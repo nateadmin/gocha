@@ -50,7 +50,7 @@ Long-term handset ecosystem. Not in scope now. Messaging, commerce, Collective, 
 | Chats | Build 1 messaging | Personal, group, and business threads |
 | Catch up | Build 1 AI | Conversation summaries |
 | Discover | Build 1 Around Me + Build 2 Businesses | Two sections in one tab |
-| Calls | Messaging companion | Voice/video shell |
+| Calls | Messaging companion | Coming soon until a call provider is wired |
 | Settings | Cross-cutting | Privacy, notifications, AI, Collective stub |
 
 ## Backend (Laravel `app_gocha/`)
