@@ -282,6 +282,10 @@ export function BusinessListingFormScreen() {
       setLogoImportPath(null);
       setCoverImportPath(null);
       setMessage(photoError ? `Draft saved. ${photoError}` : 'Draft saved.');
+      const routeNames = navigation.getState()?.routeNames ?? [];
+      if (routeNames.includes('MyBusinessListings')) {
+        navigation.navigate('MyBusinessListings' as never, { tab: 'drafts' } as never);
+      }
     } catch (err) {
       setError(formatApiError(err, 'Could not save draft.'));
     } finally {

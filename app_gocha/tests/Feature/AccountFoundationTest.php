@@ -109,6 +109,17 @@ class AccountFoundationTest extends TestCase
             ->assertJsonPath('import.name', 'Neon Pizza');
     }
 
+    public function test_google_import_unwraps_consent_continue_url(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/businesses/import-google', [
+            'url' => 'https://consent.google.com/ml?continue='.rawurlencode('https://www.google.com/maps/place/Ohkie/@40.7,-74.0,17z').'&gl=DE',
+        ])
+            ->assertOk()
+            ->assertJsonPath('import.name', 'Ohkie');
+    }
+
     public function test_google_import_enriches_from_places_api_when_key_is_set(): void
     {
         config(['gocha.google_places_api_key' => 'test-places-key']);

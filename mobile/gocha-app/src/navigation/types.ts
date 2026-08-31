@@ -42,7 +42,7 @@ export type SettingsStackParamList = {
   Accounts: undefined;
   ProfileMode: undefined;
   SubmitBusiness: undefined;
-  MyBusinessListings: undefined;
+  MyBusinessListings: { tab?: 'live' | 'drafts' | 'pending' } | undefined;
   BusinessListingForm: { listingId?: number } | undefined;
   AdminReview: undefined;
   UsernameSettings: undefined;

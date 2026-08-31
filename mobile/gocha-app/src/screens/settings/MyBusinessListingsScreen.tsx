@@ -10,7 +10,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
@@ -22,11 +23,13 @@ import {
   unpublishBusinessListing,
   type OwnerBusinessListing,
 } from '../../api/client';
+import { formatApiError } from '../../api/formatApiError';
+import { listingsForTab, pickListingsTab, type ListingsTabId } from '../../business/listingsTabs';
 import { industryLabel } from '../../data/businessIndustries';
 import type { SettingsStackParamList } from '../../navigation/types';
 import { useGochaTheme } from '../../theme';
 
-type TabId = 'live' | 'drafts' | 'pending';
+type TabId = ListingsTabId;
 
 function statusLabel(status: string): string {
   switch (status) {
@@ -45,25 +48,11 @@ function statusLabel(status: string): string {
   }
 }
 
-function filterForTab(listings: OwnerBusinessListing[], tab: TabId): OwnerBusinessListing[] {
-  switch (tab) {
-    case 'live':
-      return listings.filter((item) => item.status === 'approved');
-    case 'pending':
-      return listings.filter((item) => item.status === 'pending_review');
-    case 'drafts':
-      return listings.filter((item) =>
-        ['draft', 'unpublished', 'rejected'].includes(item.status),
-      );
-    default:
-      return listings;
-  }
-}
-
 export function MyBusinessListingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
+  const route = useRoute<RouteProp<SettingsStackParamList, 'MyBusinessListings'>>();
   const { theme } = useGochaTheme();
-  const [tab, setTab] = useState<TabId>('live');
+  const [tab, setTab] = useState<TabId | null>(route.params?.tab ?? null);
   const [listings, setListings] = useState<OwnerBusinessListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<number | null>(null);
@@ -74,18 +63,28 @@ export function MyBusinessListingsScreen() {
     setError(null);
     try {
       setListings(await fetchMyBusinessListings());
-    } catch {
-      setError('Could not load your listings.');
+    } catch (err) {
+      setError(formatApiError(err, 'Could not load your listings.'));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
-  const visible = useMemo(() => filterForTab(listings, tab), [listings, tab]);
+  useEffect(() => {
+    if (tab !== null || loading) {
+      return;
+    }
+    setTab(pickListingsTab(listings));
+  }, [listings, loading, tab]);
+
+  const activeTab = tab ?? 'drafts';
+  const visible = useMemo(() => listingsForTab(listings, activeTab), [listings, activeTab]);
 
   async function runAction(id: number, action: () => Promise<void>) {
     setActionId(id);
@@ -126,7 +125,7 @@ export function MyBusinessListingsScreen() {
 
       <View style={styles.tabRow}>
         {tabs.map((item) => {
-          const active = tab === item.id;
+          const active = activeTab === item.id;
           return (
             <Pressable
               key={item.id}

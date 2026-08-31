@@ -89,25 +89,42 @@ class GoogleBusinessImportService
       $url = 'https://'.$url;
     }
 
-    if (! preg_match('/maps\.app\.goo\.gl|goo\.gl\/maps/i', $url)) {
+    $url = $this->unwrapConsentUrl($url);
+
+    if (preg_match('/maps\.app\.goo\.gl|goo\.gl\/maps/i', $url)) {
+      try {
+        $response = Http::timeout(8)
+          ->connectTimeout(5)
+          ->withOptions(['allow_redirects' => true, 'force_ip_resolve' => 'v4'])
+          ->get($url);
+
+        $final = $response->effectiveUri()?->__toString();
+        if ($final) {
+          $url = $final;
+        }
+      } catch (\Throwable) {
+        // Fall back to the original URL.
+      }
+    }
+
+    return $this->unwrapConsentUrl($url);
+  }
+
+  private function unwrapConsentUrl(string $url): string
+  {
+    $host = parse_url($url, PHP_URL_HOST);
+    if (! is_string($host) || ! str_contains($host, 'consent.google.')) {
       return $url;
     }
 
-    try {
-      $response = Http::timeout(8)
-        ->connectTimeout(5)
-        ->withOptions(['allow_redirects' => true, 'force_ip_resolve' => 'v4'])
-        ->get($url);
-
-      $final = $response->effectiveUri()?->__toString();
-      if ($final) {
-        return $final;
-      }
-    } catch (\Throwable) {
-      // Fall back to the original URL.
+    $query = [];
+    parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+    $continue = $query['continue'] ?? null;
+    if (! is_string($continue) || $continue === '') {
+      return $url;
     }
 
-    return $url;
+    return $this->unwrapConsentUrl($continue);
   }
 
   /**
