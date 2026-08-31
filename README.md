@@ -35,9 +35,9 @@ SSH: key-only via Infisical secret `CONTABO_PRIVATE_SSH_KEY` (user `root` today;
 
 Project: `Rydit / Gocha` (id `e8bb8347-d16d-4614-930a-94912a2b354e`). Environments: Development, Staging, Production.
 
-Production secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_KEY`, `RESEND_API_KEY`, `OPEN_AI_API_KEY`, `SERVER_HOST`, `SERVER_APP_PATH`, `SERVER_SSH_USER`.
+Production secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_KEY`, `RESEND_API_KEY`, `OPEN_AI_API_KEY`, `GOOGLE_PLACES_API_KEY`, `SERVER_HOST`, `SERVER_APP_PATH`, `SERVER_SSH_USER`.
 
-Laravel reads the OpenAI key as `OPENAI_API_KEY` (also accepts `OPEN_AI_API_KEY`). Deploy injects the Infisical value into the server `.env` without printing it.
+Laravel reads the OpenAI key as `OPENAI_API_KEY` (also accepts `OPEN_AI_API_KEY`) and Places as `GOOGLE_PLACES_API_KEY`. Deploy injects those Infisical values into the server `.env` without printing them. Places calls go out over IPv4 so an API-key IP restriction of `212.47.68.106` matches. The host also has IPv6 `2a02:c207:2291:8811::1` if a Google key is left on dual-stack.
 
 ## Catch Up pipeline
 
@@ -91,6 +91,7 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/c/{slug}` → 200 JSON `{ card: ... }` for a real share slug, or 404 JSON `NOT_FOUND` when the slug is unknown
 - GET `https://gocha.ai/c/{slug}` → 200 mobile web shell (HTML) for a share page; Chat on that page requires a signed-in account
 - GET `https://gocha.ai/api/catch-up` as an authenticated session → 200 JSON `{ briefing, generatedAt, attention, conversations }` (401 without a session is expected)
+- POST `https://gocha.ai/api/businesses/import-google` without a session → 401 `UNAUTHENTICATED`
 
 ### Log check
 

@@ -2,6 +2,7 @@
 
 namespace App\Services\Business;
 
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -53,7 +54,7 @@ class GoogleBusinessImportService
       return [];
     }
 
-    $response = Http::timeout(12)->get('https://maps.googleapis.com/maps/api/place/details/json', [
+    $response = $this->placesHttp()->get('https://maps.googleapis.com/maps/api/place/details/json', [
       'place_id' => $googlePlaceId,
       'fields' => 'reviews,rating,user_ratings_total',
       'key' => $apiKey,
@@ -89,7 +90,8 @@ class GoogleBusinessImportService
 
     try {
       $response = Http::timeout(8)
-        ->withOptions(['allow_redirects' => true])
+        ->connectTimeout(5)
+        ->withOptions(['allow_redirects' => true, 'force_ip_resolve' => 'v4'])
         ->get($url);
 
       $final = $response->effectiveUri()?->__toString();
@@ -175,7 +177,7 @@ class GoogleBusinessImportService
     $placeId = $heuristic['googlePlaceId'];
 
     if (! $placeId && $heuristic['name']) {
-      $search = Http::timeout(12)->get('https://maps.googleapis.com/maps/api/place/findplacefromtext/json', [
+      $search = $this->placesHttp()->get('https://maps.googleapis.com/maps/api/place/findplacefromtext/json', [
         'input' => $heuristic['name'],
         'inputtype' => 'textquery',
         'fields' => 'place_id,name,formatted_address,website,types',
@@ -200,7 +202,7 @@ class GoogleBusinessImportService
       return null;
     }
 
-    $details = Http::timeout(12)->get('https://maps.googleapis.com/maps/api/place/details/json', [
+    $details = $this->placesHttp()->get('https://maps.googleapis.com/maps/api/place/details/json', [
       'place_id' => $placeId,
       'fields' => 'name,formatted_address,website,types,editorial_summary',
       'key' => $apiKey,
@@ -225,6 +227,13 @@ class GoogleBusinessImportService
       'noPhysicalAddress' => empty($result['formatted_address']),
       'source' => 'places_api',
     ];
+  }
+
+  private function placesHttp(): PendingRequest
+  {
+    return Http::timeout(12)
+      ->connectTimeout(5)
+      ->withOptions(['force_ip_resolve' => 'v4']);
   }
 
   private function decodePathSegment(string $segment): string

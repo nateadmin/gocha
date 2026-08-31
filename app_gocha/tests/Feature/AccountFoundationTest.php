@@ -9,6 +9,7 @@ use App\Support\BusinessListingStatus;
 use App\Support\ProfileMode;
 use App\Support\VerificationStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class AccountFoundationTest extends TestCase
@@ -101,6 +102,46 @@ class AccountFoundationTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('import.name', 'Neon Pizza');
+    }
+
+    public function test_google_import_enriches_from_places_api_when_key_is_set(): void
+    {
+        config(['gocha.google_places_api_key' => 'test-places-key']);
+
+        Http::fake([
+            'https://maps.googleapis.com/maps/api/place/findplacefromtext/json*' => Http::response([
+                'status' => 'OK',
+                'candidates' => [[
+                    'place_id' => 'ChIJtestplace',
+                    'name' => 'Neon Pizza Shop',
+                    'formatted_address' => '142 Mulberry St, New York, NY',
+                    'website' => 'https://neon.pizza',
+                    'types' => ['restaurant'],
+                ]],
+            ], 200),
+            'https://maps.googleapis.com/maps/api/place/details/json*' => Http::response([
+                'status' => 'OK',
+                'result' => [
+                    'name' => 'Neon Pizza Shop',
+                    'formatted_address' => '142 Mulberry St, New York, NY',
+                    'website' => 'https://neon.pizza',
+                    'types' => ['restaurant'],
+                    'editorial_summary' => ['overview' => 'Wood-fired pizza.'],
+                ],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/businesses/import-google', [
+            'url' => 'https://www.google.com/maps/place/Neon+Pizza/@40.7,-74.0,17z',
+        ])
+            ->assertOk()
+            ->assertJsonPath('import.source', 'places_api')
+            ->assertJsonPath('import.name', 'Neon Pizza Shop')
+            ->assertJsonPath('import.address', '142 Mulberry St, New York, NY')
+            ->assertJsonPath('import.website', 'https://neon.pizza')
+            ->assertJsonPath('import.googlePlaceId', 'ChIJtestplace');
     }
 
     public function test_user_can_set_unique_username(): void

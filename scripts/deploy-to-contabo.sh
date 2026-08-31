@@ -19,23 +19,30 @@ RSYNC_SSH="ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=acce
 
 echo "Deploying $COMMIT_SHA to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH"
 
-OPENAI_ENV_FILE=""
+INJECT_ENV_FILE=""
 if [[ -x "$ROOT/scripts/infisical-pull.sh" ]] && command -v infisical >/dev/null 2>&1; then
   # shellcheck disable=SC1091
   source "$ROOT/scripts/infisical-pull.sh"
+  INJECT_ENV_FILE="$(mktemp)"
+  chmod 600 "$INJECT_ENV_FILE"
   OPENAI_VALUE="${OPENAI_API_KEY:-${OPEN_AI_API_KEY:-}}"
   if [[ -n "$OPENAI_VALUE" ]]; then
-    OPENAI_ENV_FILE="$(mktemp)"
-    chmod 600 "$OPENAI_ENV_FILE"
-    printf 'OPENAI_API_KEY=%s\n' "$OPENAI_VALUE" > "$OPENAI_ENV_FILE"
-    scp -q -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
-      "$OPENAI_ENV_FILE" "$REMOTE_USER@$REMOTE_HOST:/tmp/gocha-openai.env"
-    ssh "${SSH_OPTS[@]}" "$REMOTE_USER@$REMOTE_HOST" 'chmod 600 /tmp/gocha-openai.env'
-    echo "Prepared OpenAI key for server .env inject"
+    printf 'OPENAI_API_KEY=%s\n' "$OPENAI_VALUE" >> "$INJECT_ENV_FILE"
   else
     echo "Infisical pull succeeded but OPENAI_API_KEY / OPEN_AI_API_KEY was empty" >&2
   fi
+  if [[ -n "${GOOGLE_PLACES_API_KEY:-}" ]]; then
+    printf 'GOOGLE_PLACES_API_KEY=%s\n' "$GOOGLE_PLACES_API_KEY" >> "$INJECT_ENV_FILE"
+  else
+    echo "Infisical pull succeeded but GOOGLE_PLACES_API_KEY was empty" >&2
+  fi
   unset OPENAI_VALUE
+  if [[ -s "$INJECT_ENV_FILE" ]]; then
+    scp -q -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
+      "$INJECT_ENV_FILE" "$REMOTE_USER@$REMOTE_HOST:/tmp/gocha-inject.env"
+    ssh "${SSH_OPTS[@]}" "$REMOTE_USER@$REMOTE_HOST" 'chmod 600 /tmp/gocha-inject.env'
+    echo "Prepared Infisical secrets for server .env inject"
+  fi
 fi
 
 rsync -az --delete -e "$RSYNC_SSH" \
@@ -60,29 +67,36 @@ if ! grep -q '^APP_KEY=base64:' .env; then
   php artisan key:generate --force
 fi
 grep -q '^APP_BUILD_SHA=' .env && sed -i "s/^APP_BUILD_SHA=.*/APP_BUILD_SHA=$COMMIT_SHA/" .env || echo "APP_BUILD_SHA=$COMMIT_SHA" >> .env
-if [[ -f /tmp/gocha-openai.env ]]; then
+if [[ -f /tmp/gocha-inject.env ]]; then
   GOCHA_REMOTE_PATH="$REMOTE_PATH" python3 - <<'PY'
 from pathlib import Path
 import os
 remote = os.environ["GOCHA_REMOTE_PATH"]
 env_path = Path(remote) / ".env"
-incoming = Path("/tmp/gocha-openai.env")
-_key, value = incoming.read_text().split("=", 1)
-value = value.strip()
+incoming = Path("/tmp/gocha-inject.env")
+updates = {}
+for raw in incoming.read_text().splitlines():
+    if not raw.strip() or "=" not in raw:
+        continue
+    key, value = raw.split("=", 1)
+    if key in {"OPENAI_API_KEY", "GOOGLE_PLACES_API_KEY"}:
+        updates[key] = value.strip()
 lines = env_path.read_text().splitlines()
-found = False
+found = set()
 out = []
 for line in lines:
-    if line.startswith("OPENAI_API_KEY="):
-        out.append(f"OPENAI_API_KEY={value}")
-        found = True
+    key = line.split("=", 1)[0] if "=" in line else ""
+    if key in updates:
+        out.append(f"{key}={updates[key]}")
+        found.add(key)
     else:
         out.append(line)
-if not found:
-    out.append(f"OPENAI_API_KEY={value}")
+for key, value in updates.items():
+    if key not in found:
+        out.append(f"{key}={value}")
 env_path.write_text("\n".join(out) + "\n")
 incoming.unlink()
-print("openai_env_injected=yes")
+print("injected_env_keys=" + ",".join(sorted(updates)))
 PY
 fi
 php artisan migrate --force
@@ -100,8 +114,8 @@ chown -R www-data:www-data storage bootstrap/cache
 chmod -R ug+rwx storage bootstrap/cache
 REMOTE
 
-if [[ -n "$OPENAI_ENV_FILE" ]]; then
-  rm -f "$OPENAI_ENV_FILE"
+if [[ -n "$INJECT_ENV_FILE" ]]; then
+  rm -f "$INJECT_ENV_FILE"
 fi
 
 echo "Deploy complete: $COMMIT_SHA"
