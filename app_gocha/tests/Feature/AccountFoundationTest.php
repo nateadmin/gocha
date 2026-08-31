@@ -115,7 +115,6 @@ class AccountFoundationTest extends TestCase
                     'place_id' => 'ChIJtestplace',
                     'name' => 'Neon Pizza Shop',
                     'formatted_address' => '142 Mulberry St, New York, NY',
-                    'website' => 'https://neon.pizza',
                     'types' => ['restaurant'],
                 ]],
             ], 200),

@@ -180,7 +180,7 @@ class GoogleBusinessImportService
       $search = $this->placesHttp()->get('https://maps.googleapis.com/maps/api/place/findplacefromtext/json', [
         'input' => $heuristic['name'],
         'inputtype' => 'textquery',
-        'fields' => 'place_id,name,formatted_address,website,types',
+        'fields' => 'place_id,name,formatted_address,types',
         'key' => $apiKey,
       ]);
 
