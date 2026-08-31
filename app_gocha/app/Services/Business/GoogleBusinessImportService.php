@@ -4,6 +4,7 @@ namespace App\Services\Business;
 
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class GoogleBusinessImportService
@@ -18,6 +19,10 @@ class GoogleBusinessImportService
    *   googleBusinessUrl: string,
    *   googlePlaceId: string|null,
    *   noPhysicalAddress: bool,
+   *   logoPhotoUrl: string|null,
+   *   logoPhotoPath: string|null,
+   *   coverPhotoUrl: string|null,
+   *   coverPhotoPath: string|null,
    *   source: string
    * }
    */
@@ -114,7 +119,11 @@ class GoogleBusinessImportService
    *   description: string|null,
    *   googleBusinessUrl: string,
    *   googlePlaceId: string|null,
-   *   noPhysicalAddress: bool
+   *   noPhysicalAddress: bool,
+   *   logoPhotoUrl: string|null,
+   *   logoPhotoPath: string|null,
+   *   coverPhotoUrl: string|null,
+   *   coverPhotoPath: string|null
    * }
    */
   private function parseFromUrl(string $url): array
@@ -148,6 +157,10 @@ class GoogleBusinessImportService
       $placeId = $match[1];
     }
 
+    if (! $placeId && preg_match('/(ChIJ[a-zA-Z0-9_-]+)/', $url, $match)) {
+      $placeId = $match[1];
+    }
+
     return [
       'name' => $name,
       'address' => $address,
@@ -157,6 +170,10 @@ class GoogleBusinessImportService
       'googleBusinessUrl' => $url,
       'googlePlaceId' => $placeId,
       'noPhysicalAddress' => false,
+      'logoPhotoUrl' => null,
+      'logoPhotoPath' => null,
+      'coverPhotoUrl' => null,
+      'coverPhotoPath' => null,
     ];
   }
 
@@ -169,7 +186,11 @@ class GoogleBusinessImportService
    *   description: string|null,
    *   googleBusinessUrl: string,
    *   googlePlaceId: string|null,
-   *   noPhysicalAddress: bool
+   *   noPhysicalAddress: bool,
+   *   logoPhotoUrl: string|null,
+   *   logoPhotoPath: string|null,
+   *   coverPhotoUrl: string|null,
+   *   coverPhotoPath: string|null
    * } $heuristic
    */
   private function enrichWithPlacesApi(array $heuristic, string $apiKey): ?array
@@ -177,23 +198,21 @@ class GoogleBusinessImportService
     $placeId = $heuristic['googlePlaceId'];
 
     if (! $placeId && $heuristic['name']) {
+      $input = trim(($heuristic['name'] ?? '').' '.($heuristic['address'] ?? ''));
       $search = $this->placesHttp()->get('https://maps.googleapis.com/maps/api/place/findplacefromtext/json', [
-        'input' => $heuristic['name'],
+        'input' => $input,
         'inputtype' => 'textquery',
         'fields' => 'place_id,name,formatted_address,types',
         'key' => $apiKey,
       ]);
 
-      if ($search->ok()) {
+      if ($search->ok() && ($search->json('status') ?? '') === 'OK') {
         $candidate = $search->json('candidates.0');
         if ($candidate) {
           $placeId = $candidate['place_id'] ?? null;
           $heuristic['name'] = $candidate['name'] ?? $heuristic['name'];
           $heuristic['address'] = $candidate['formatted_address'] ?? $heuristic['address'];
-          $heuristic['website'] = $candidate['website'] ?? $heuristic['website'];
-          if (! empty($candidate['types'][0])) {
-            $heuristic['category'] = $this->mapGoogleType($candidate['types'][0]);
-          }
+          $heuristic['category'] = $this->mapGoogleTypes($candidate['types'] ?? []) ?? $heuristic['category'];
         }
       }
     }
@@ -204,29 +223,107 @@ class GoogleBusinessImportService
 
     $details = $this->placesHttp()->get('https://maps.googleapis.com/maps/api/place/details/json', [
       'place_id' => $placeId,
-      'fields' => 'name,formatted_address,website,types,editorial_summary',
+      'fields' => 'name,formatted_address,website,types,editorial_summary,photos,url',
       'key' => $apiKey,
     ]);
 
-    if (! $details->ok()) {
-      return null;
+    $result = [];
+    if ($details->ok() && ($details->json('status') ?? '') === 'OK') {
+      $result = $details->json('result') ?? [];
     }
 
-    $result = $details->json('result') ?? [];
+    $photos = $result['photos'] ?? [];
+    $logo = $this->storeImportedPhoto($photos[0]['photo_reference'] ?? null, $apiKey, 'logo');
+    $cover = $this->storeImportedPhoto($photos[1]['photo_reference'] ?? $photos[0]['photo_reference'] ?? null, $apiKey, 'cover');
 
     return [
       'name' => $result['name'] ?? $heuristic['name'],
       'address' => $result['formatted_address'] ?? $heuristic['address'],
       'website' => $result['website'] ?? $heuristic['website'],
-      'category' => ! empty($result['types'][0])
-        ? $this->mapGoogleType($result['types'][0])
-        : $heuristic['category'],
+      'category' => $this->mapGoogleTypes($result['types'] ?? []) ?? $heuristic['category'],
       'description' => $result['editorial_summary']['overview'] ?? $heuristic['description'],
-      'googleBusinessUrl' => $heuristic['googleBusinessUrl'],
+      'googleBusinessUrl' => $result['url'] ?? $heuristic['googleBusinessUrl'],
       'googlePlaceId' => $placeId,
-      'noPhysicalAddress' => empty($result['formatted_address']),
+      'noPhysicalAddress' => empty($result['formatted_address'] ?? $heuristic['address']),
+      'logoPhotoUrl' => $logo['url'] ?? $heuristic['logoPhotoUrl'] ?? null,
+      'logoPhotoPath' => $logo['path'] ?? $heuristic['logoPhotoPath'] ?? null,
+      'coverPhotoUrl' => $cover['url'] ?? $heuristic['coverPhotoUrl'] ?? null,
+      'coverPhotoPath' => $cover['path'] ?? $heuristic['coverPhotoPath'] ?? null,
       'source' => 'places_api',
     ];
+  }
+
+  /**
+   * @return array{path: string, url: string}|null
+   */
+  private function storeImportedPhoto(?string $photoReference, string $apiKey, string $suffix): ?array
+  {
+    if (! $photoReference) {
+      return null;
+    }
+
+    try {
+      $response = $this->placesHttp()
+        ->withOptions(['allow_redirects' => true, 'force_ip_resolve' => 'v4'])
+        ->get('https://maps.googleapis.com/maps/api/place/photo', [
+          'maxwidth' => $suffix === 'logo' ? 400 : 1200,
+          'photo_reference' => $photoReference,
+          'key' => $apiKey,
+        ]);
+    } catch (\Throwable) {
+      return null;
+    }
+
+    if (! $response->successful()) {
+      return null;
+    }
+
+    $contentType = strtolower((string) $response->header('Content-Type'));
+    if ($contentType === '' || str_contains($contentType, 'json') || str_contains($contentType, 'html')) {
+      return null;
+    }
+
+    $extension = str_contains($contentType, 'png') ? 'png' : (str_contains($contentType, 'webp') ? 'webp' : 'jpg');
+    $path = 'business-imports/'.Str::uuid().'-'.$suffix.'.'.$extension;
+    Storage::disk('public')->put($path, $response->body());
+
+    return [
+      'path' => $path,
+      'url' => Storage::disk('public')->url($path),
+    ];
+  }
+
+  /**
+   * @param  array<int, string>  $types
+   */
+  private function mapGoogleTypes(array $types): ?string
+  {
+    $skip = [
+      'point_of_interest',
+      'establishment',
+      'premise',
+      'geocode',
+      'political',
+      'plus_code',
+      'route',
+      'street_address',
+      'neighborhood',
+      'locality',
+      'sublocality',
+      'colloquial_area',
+      'country',
+      'postal_code',
+    ];
+
+    foreach ($types as $type) {
+      if (in_array($type, $skip, true)) {
+        continue;
+      }
+
+      return $this->mapGoogleType($type);
+    }
+
+    return null;
   }
 
   private function placesHttp(): PendingRequest

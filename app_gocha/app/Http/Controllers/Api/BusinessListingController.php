@@ -155,6 +155,25 @@ class BusinessListingController extends Controller
         return response()->json(['listing' => $listing->toOwnerPayload()]);
     }
 
+    public function uploadLogo(Request $request, BusinessListing $businessListing): JsonResponse
+    {
+        $this->authorizeOwner($request, $businessListing);
+
+        $validated = $request->validate([
+            'logo' => ['required', 'file', 'image', 'max:4096'],
+        ]);
+
+        $file = $validated['logo'];
+        $extension = strtolower($file->extension() ?: 'jpg');
+        $listing = $this->businesses->storeLogoPhoto(
+            $businessListing,
+            $file->getContent(),
+            $extension,
+        );
+
+        return response()->json(['listing' => $listing->toOwnerPayload()]);
+    }
+
     public function importGoogle(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -194,6 +213,8 @@ class BusinessListingController extends Controller
             'website' => ['nullable', 'string', 'max:255', 'url'],
             'google_business_url' => ['nullable', 'string', 'max:512', 'url'],
             'google_place_id' => ['nullable', 'string', 'max:128'],
+            'logo_import_path' => ['nullable', 'string', 'max:512'],
+            'cover_import_path' => ['nullable', 'string', 'max:512'],
             'submit' => ['nullable', 'boolean'],
         ];
 
@@ -229,6 +250,19 @@ class BusinessListingController extends Controller
         if ($request->has('category')) {
             $category = trim((string) $request->input('category'));
             $request->merge(['category' => $category === '' ? null : $category]);
+        }
+
+        foreach (['logo_import_path', 'cover_import_path'] as $field) {
+            if (! $request->has($field)) {
+                continue;
+            }
+
+            $value = ltrim((string) $request->input($field), '/');
+            if ($value === '' || ! str_starts_with($value, 'business-imports/')) {
+                $request->merge([$field => null]);
+            } else {
+                $request->merge([$field => $value]);
+            }
         }
     }
 }

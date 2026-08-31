@@ -49,6 +49,8 @@ Route::get('/groups/discover', [CommunityGroupController::class, 'discover']);
 Route::get('/groups/search', [CommunityGroupController::class, 'search']);
 Route::get('/businesses', [BusinessListingController::class, 'index']);
 Route::get('/businesses/industries', [BusinessListingController::class, 'industries']);
+Route::get('/businesses/mine', [BusinessListingController::class, 'mine'])
+    ->middleware('auth:sanctum');
 Route::get('/businesses/{slug}', [BusinessListingController::class, 'show']);
 Route::get('/c/{slug}', [ProfileCardController::class, 'showPublic'])
     ->where('slug', '[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*');
@@ -99,7 +101,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
     Route::post('/auth/device-token', [AuthOtpController::class, 'issueDeviceToken']);
 
-    Route::get('/businesses/mine', [BusinessListingController::class, 'mine']);
     Route::post('/businesses/import-google', [BusinessListingController::class, 'importGoogle']);
     Route::post('/businesses', [BusinessListingController::class, 'store']);
     Route::put('/businesses/mine/{businessListing}', [BusinessListingController::class, 'update']);
@@ -107,6 +108,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/businesses/mine/{businessListing}/submit', [BusinessListingController::class, 'submit']);
     Route::post('/businesses/mine/{businessListing}/unpublish', [BusinessListingController::class, 'unpublish']);
     Route::post('/businesses/mine/{businessListing}/cover', [BusinessListingController::class, 'uploadCover']);
+    Route::post('/businesses/mine/{businessListing}/logo', [BusinessListingController::class, 'uploadLogo']);
     Route::post('/businesses/mine/{businessListing}/sync-reviews', [BusinessListingController::class, 'syncReviews']);
     Route::delete('/businesses/mine/{businessListing}', [BusinessListingController::class, 'destroy']);
 

@@ -19,7 +19,7 @@ class BusinessListingService
     {
         $slug = $this->uniqueSlug($data['name']);
 
-        return BusinessListing::query()->create([
+        $listing = BusinessListing::query()->create([
             'owner_user_id' => $user->id,
             'submitted_by_user_id' => $user->id,
             'slug' => $slug,
@@ -35,6 +35,10 @@ class BusinessListingService
             'submitted_at' => $submit ? now() : null,
             'chat_enabled' => true,
         ]);
+
+        $this->adoptImportedPhotos($listing, $data);
+
+        return $listing->fresh();
     }
 
     public function update(BusinessListing $listing, array $data): BusinessListing
@@ -57,6 +61,8 @@ class BusinessListingService
             'google_business_url' => $data['google_business_url'] ?? $listing->google_business_url,
             'google_place_id' => $data['google_place_id'] ?? $listing->google_place_id,
         ])->save();
+
+        $this->adoptImportedPhotos($listing, $data);
 
         return $listing->fresh();
     }
@@ -116,8 +122,10 @@ class BusinessListingService
 
     public function delete(BusinessListing $listing): void
     {
-        if ($listing->cover_photo_path) {
-            Storage::disk('public')->delete($listing->cover_photo_path);
+        foreach (['cover_photo_path', 'logo_photo_path'] as $column) {
+            if ($listing->{$column}) {
+                Storage::disk('public')->delete($listing->{$column});
+            }
         }
 
         $listing->delete();
@@ -139,6 +147,26 @@ class BusinessListingService
         Storage::disk('public')->put($path, $contents);
 
         $listing->forceFill(['cover_photo_path' => $path])->save();
+
+        return $listing->fresh();
+    }
+
+    public function storeLogoPhoto(BusinessListing $listing, string $contents, string $extension): BusinessListing
+    {
+        if (! $this->canEdit($listing)) {
+            throw ValidationException::withMessages([
+                'logo' => ['Logo cannot be changed while the listing is under review.'],
+            ]);
+        }
+
+        if ($listing->logo_photo_path) {
+            Storage::disk('public')->delete($listing->logo_photo_path);
+        }
+
+        $path = 'business-logos/'.$listing->id.'-'.Str::random(8).'.'.$extension;
+        Storage::disk('public')->put($path, $contents);
+
+        $listing->forceFill(['logo_photo_path' => $path])->save();
 
         return $listing->fresh();
     }
@@ -254,6 +282,45 @@ class BusinessListingService
             'phone' => $e164,
             'phone_verified_at' => null,
         ])->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function adoptImportedPhotos(BusinessListing $listing, array $data): void
+    {
+        $this->adoptImportedPhoto($listing, $data['logo_import_path'] ?? null, 'logo_photo_path', 'business-logos');
+        $this->adoptImportedPhoto($listing, $data['cover_import_path'] ?? null, 'cover_photo_path', 'business-covers');
+    }
+
+    private function adoptImportedPhoto(
+        BusinessListing $listing,
+        ?string $sourcePath,
+        string $column,
+        string $directory,
+    ): void {
+        if (! is_string($sourcePath) || $sourcePath === '') {
+            return;
+        }
+
+        $sourcePath = ltrim($sourcePath, '/');
+        if (! str_starts_with($sourcePath, 'business-imports/')) {
+            return;
+        }
+
+        if (! Storage::disk('public')->exists($sourcePath)) {
+            return;
+        }
+
+        $extension = pathinfo($sourcePath, PATHINFO_EXTENSION) ?: 'jpg';
+        $dest = $directory.'/'.$listing->id.'-'.Str::random(8).'.'.$extension;
+
+        if ($listing->{$column}) {
+            Storage::disk('public')->delete($listing->{$column});
+        }
+
+        Storage::disk('public')->copy($sourcePath, $dest);
+        $listing->forceFill([$column => $dest])->save();
     }
 
     private function canEdit(BusinessListing $listing): bool

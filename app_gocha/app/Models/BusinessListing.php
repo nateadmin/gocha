@@ -22,6 +22,7 @@ class BusinessListing extends Model
         'no_physical_address',
         'website',
         'cover_photo_path',
+        'logo_photo_path',
         'google_business_url',
         'google_place_id',
         'google_reviews',
@@ -83,11 +84,21 @@ class BusinessListing extends Model
 
     public function coverPhotoUrl(): ?string
     {
-        if (! $this->cover_photo_path) {
+        return $this->publicPhotoUrl($this->cover_photo_path);
+    }
+
+    public function logoPhotoUrl(): ?string
+    {
+        return $this->publicPhotoUrl($this->logo_photo_path);
+    }
+
+    private function publicPhotoUrl(?string $path): ?string
+    {
+        if (! $path) {
             return null;
         }
 
-        return Storage::disk('public')->url($this->cover_photo_path);
+        return Storage::disk('public')->url($path);
     }
 
     public function toSummaryPayload(): array
@@ -103,6 +114,7 @@ class BusinessListing extends Model
             'chatEnabled' => $this->chat_enabled,
             'chatUserId' => $this->chatUserId(),
             'coverPhotoUrl' => $this->coverPhotoUrl(),
+            'logoPhotoUrl' => $this->logoPhotoUrl(),
         ];
     }
 
@@ -118,6 +130,7 @@ class BusinessListing extends Model
             'noPhysicalAddress' => $this->no_physical_address,
             'website' => $this->website,
             'coverPhotoUrl' => $this->coverPhotoUrl(),
+            'logoPhotoUrl' => $this->logoPhotoUrl(),
             'googleReviews' => $this->google_reviews ?? [],
             'googleReviewsSyncedAt' => $this->google_reviews_synced_at?->toIso8601String(),
             'verificationStatus' => $this->verification_status,

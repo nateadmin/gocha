@@ -362,6 +362,7 @@ export type PublicBusinessListing = {
   noPhysicalAddress: boolean;
   website: string | null;
   coverPhotoUrl: string | null;
+  logoPhotoUrl: string | null;
   googleReviews: GoogleReview[];
   googleReviewsSyncedAt: string | null;
   verificationStatus: string;
@@ -394,6 +395,10 @@ export type GoogleBusinessImport = {
   googleBusinessUrl: string;
   googlePlaceId: string | null;
   noPhysicalAddress: boolean;
+  logoPhotoUrl: string | null;
+  logoPhotoPath: string | null;
+  coverPhotoUrl: string | null;
+  coverPhotoPath: string | null;
   source: string;
 };
 
@@ -406,6 +411,8 @@ export type BusinessListingInput = {
   website?: string;
   google_business_url?: string;
   google_place_id?: string;
+  logo_import_path?: string;
+  cover_import_path?: string;
   submit?: boolean;
 };
 
@@ -487,6 +494,16 @@ export async function uploadBusinessCover(id: number, file: Blob, filename = 'co
   form.append('cover', file, filename);
   const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
     `${API_PATHS.businessesMine}/${id}/cover`,
+    { method: 'POST', body: form },
+  );
+  return payload.listing;
+}
+
+export async function uploadBusinessLogo(id: number, file: Blob, filename = 'logo.jpg'): Promise<OwnerBusinessListing> {
+  const form = new FormData();
+  form.append('logo', file, filename);
+  const payload = await apiRequest<{ listing: OwnerBusinessListing }>(
+    `${API_PATHS.businessesMine}/${id}/logo`,
     { method: 'POST', body: form },
   );
   return payload.listing;

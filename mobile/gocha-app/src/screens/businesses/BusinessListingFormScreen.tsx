@@ -23,6 +23,7 @@ import {
   submitBusinessListingForReview,
   updateBusinessListing,
   uploadBusinessCover,
+  uploadBusinessLogo,
   type BusinessIndustry,
   type OwnerBusinessListing,
 } from '../../api/client';
@@ -52,20 +53,26 @@ function normalizeWebsite(url: string): string | undefined {
 function buildPayload(
   name: string,
   category: string,
+  description: string,
   address: string,
   noPhysicalAddress: boolean,
   website: string,
   googleUrl: string,
   googlePlaceId: string | null,
+  logoImportPath: string | null,
+  coverImportPath: string | null,
 ) {
   return {
     name: name.trim(),
     category: category || undefined,
+    description: description.trim() || undefined,
     address: noPhysicalAddress ? undefined : address.trim() || undefined,
     no_physical_address: noPhysicalAddress,
     website: normalizeWebsite(website),
     google_business_url: googleUrl.trim() || undefined,
     google_place_id: googlePlaceId || undefined,
+    logo_import_path: logoImportPath || undefined,
+    cover_import_path: coverImportPath || undefined,
   };
 }
 
@@ -80,6 +87,7 @@ export function BusinessListingFormScreen() {
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
   const [noPhysicalAddress, setNoPhysicalAddress] = useState(false);
   const [website, setWebsite] = useState('');
@@ -88,6 +96,11 @@ export function BusinessListingFormScreen() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [pendingCover, setPendingCover] = useState<Blob | null>(null);
   const [pendingCoverName, setPendingCoverName] = useState('cover.jpg');
+  const [coverImportPath, setCoverImportPath] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [pendingLogo, setPendingLogo] = useState<Blob | null>(null);
+  const [pendingLogoName, setPendingLogoName] = useState('logo.jpg');
+  const [logoImportPath, setLogoImportPath] = useState<string | null>(null);
   const [industries, setIndustries] = useState<BusinessIndustry[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -106,12 +119,14 @@ export function BusinessListingFormScreen() {
     setExisting(match);
     setName(match.name);
     setCategory(match.category ?? '');
+    setDescription(match.description ?? '');
     setAddress(match.address ?? '');
     setNoPhysicalAddress(match.noPhysicalAddress);
     setWebsite(match.website ?? '');
     setGoogleUrl(match.googleBusinessUrl ?? '');
     setGooglePlaceId(match.googlePlaceId);
     setCoverPreview(match.coverPhotoUrl);
+    setLogoPreview(match.logoPhotoUrl);
   }, [listingId]);
 
   useEffect(() => {
@@ -123,16 +138,28 @@ export function BusinessListingFormScreen() {
     }
   }, [listingId, loadListing]);
 
-  function pickCover() {
+  function pickImage(kind: 'cover' | 'logo') {
+    if (typeof document === 'undefined') {
+      return;
+    }
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
-      setPendingCover(file);
-      setPendingCoverName(file.name);
-      setCoverPreview(URL.createObjectURL(file));
+      const preview = URL.createObjectURL(file);
+      if (kind === 'cover') {
+        setPendingCover(file);
+        setPendingCoverName(file.name);
+        setCoverPreview(preview);
+        setCoverImportPath(null);
+        return;
+      }
+      setPendingLogo(file);
+      setPendingLogoName(file.name);
+      setLogoPreview(preview);
+      setLogoImportPath(null);
     };
     input.click();
   }
@@ -148,19 +175,37 @@ export function BusinessListingFormScreen() {
       const imported = await importGoogleBusiness(googleUrl.trim());
       if (imported.name) setName(imported.name);
       if (imported.category) setCategory(imported.category);
+      if (imported.description) setDescription(imported.description);
       if (imported.address) setAddress(imported.address);
       setNoPhysicalAddress(imported.noPhysicalAddress);
       if (imported.website) setWebsite(imported.website);
       setGoogleUrl(imported.googleBusinessUrl);
       setGooglePlaceId(imported.googlePlaceId);
+      if (imported.logoPhotoUrl) {
+        setLogoPreview(imported.logoPhotoUrl);
+        setLogoImportPath(imported.logoPhotoPath);
+        setPendingLogo(null);
+      }
+      if (imported.coverPhotoUrl) {
+        setCoverPreview(imported.coverPhotoUrl);
+        setCoverImportPath(imported.coverPhotoPath);
+        setPendingCover(null);
+      }
+      const filled: string[] = [];
+      if (imported.name) filled.push('name');
+      if (imported.category) filled.push('industry');
+      if (imported.description) filled.push('description');
+      if (imported.address) filled.push('address');
+      if (imported.website) filled.push('website');
+      if (imported.logoPhotoUrl) filled.push('logo');
+      if (imported.coverPhotoUrl) filled.push('cover photo');
       if (imported.source === 'places_api') {
-        setMessage('Auto-filled name, address, website, and category from Google.');
+        setMessage(
+          filled.length > 0
+            ? `Auto-filled ${filled.join(', ')} from Google.`
+            : 'Google found the place but had no extra fields to fill.',
+        );
       } else {
-        const filled: string[] = [];
-        if (imported.name) filled.push('name');
-        if (imported.address) filled.push('address');
-        if (imported.website) filled.push('website');
-        if (imported.category) filled.push('category');
         setMessage(
           filled.length > 0
             ? `Filled ${filled.join(', ')} from the link. Connect Google Places on the server for full auto-fill.`
@@ -174,17 +219,25 @@ export function BusinessListingFormScreen() {
     }
   }
 
-  async function persistCover(id: number): Promise<string | null> {
-    if (!pendingCover) {
-      return null;
+  async function persistPhotos(id: number): Promise<string | null> {
+    const errors: string[] = [];
+    if (pendingCover) {
+      try {
+        await uploadBusinessCover(id, pendingCover, pendingCoverName);
+        setPendingCover(null);
+      } catch (err) {
+        errors.push(formatApiError(err, 'Cover photo upload failed.'));
+      }
     }
-    try {
-      await uploadBusinessCover(id, pendingCover, pendingCoverName);
-      setPendingCover(null);
-      return null;
-    } catch (err) {
-      return formatApiError(err, 'Cover photo upload failed.');
+    if (pendingLogo) {
+      try {
+        await uploadBusinessLogo(id, pendingLogo, pendingLogoName);
+        setPendingLogo(null);
+      } catch (err) {
+        errors.push(formatApiError(err, 'Logo upload failed.'));
+      }
     }
+    return errors.length > 0 ? errors.join(' ') : null;
   }
 
   function activeListingId(): number | undefined {
@@ -204,7 +257,18 @@ export function BusinessListingFormScreen() {
     setError(null);
     setMessage(null);
     try {
-      const payload = buildPayload(name, category, address, noPhysicalAddress, website, googleUrl, googlePlaceId);
+      const payload = buildPayload(
+        name,
+        category,
+        description,
+        address,
+        noPhysicalAddress,
+        website,
+        googleUrl,
+        googlePlaceId,
+        pendingLogo ? null : logoImportPath,
+        pendingCover ? null : coverImportPath,
+      );
       let listing: OwnerBusinessListing;
       const currentId = activeListingId();
       if (currentId) {
@@ -213,11 +277,11 @@ export function BusinessListingFormScreen() {
         listing = await submitBusinessListing({ ...payload, submit: false });
         setSavedListingId(listing.id);
       }
-      const coverError = await persistCover(listing.id);
+      const photoError = await persistPhotos(listing.id);
       setExisting(listing);
-      setMessage(
-        coverError ? `Draft saved. ${coverError}` : 'Draft saved.',
-      );
+      setLogoImportPath(null);
+      setCoverImportPath(null);
+      setMessage(photoError ? `Draft saved. ${photoError}` : 'Draft saved.');
     } catch (err) {
       setError(formatApiError(err, 'Could not save draft.'));
     } finally {
@@ -238,7 +302,18 @@ export function BusinessListingFormScreen() {
     setError(null);
     setMessage(null);
     try {
-      const payload = buildPayload(name, category, address, noPhysicalAddress, website, googleUrl, googlePlaceId);
+      const payload = buildPayload(
+        name,
+        category,
+        description,
+        address,
+        noPhysicalAddress,
+        website,
+        googleUrl,
+        googlePlaceId,
+        pendingLogo ? null : logoImportPath,
+        pendingCover ? null : coverImportPath,
+      );
       let listing: OwnerBusinessListing;
       const currentId = activeListingId();
       if (currentId) {
@@ -248,11 +323,13 @@ export function BusinessListingFormScreen() {
         listing = await submitBusinessListing({ ...payload, submit: true });
         setSavedListingId(listing.id);
       }
-      const coverError = await persistCover(listing.id);
+      const photoError = await persistPhotos(listing.id);
       setExisting(listing);
+      setLogoImportPath(null);
+      setCoverImportPath(null);
       setMessage(
-        coverError
-          ? `Submitted for review. ${coverError}`
+        photoError
+          ? `Submitted for review. ${photoError}`
           : 'Submitted for review. We will notify you when it is approved.',
       );
     } catch (err) {
@@ -306,8 +383,8 @@ export function BusinessListingFormScreen() {
           <Text style={{ color: theme.colors.cardForeground, fontWeight: '600' }}>Auto-fill from Google</Text>
         </View>
         <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginBottom: 8 }}>
-          Paste your Google Maps or Google Business profile link. Full address, website, and category require Google
-          Places to be enabled on Gocha. Without it, we can only read the business name from the URL.
+          Paste your Google Maps or Google Business profile link. We fill name, industry, address, website,
+          description, logo, and cover photo when Google has them.
         </Text>
         <TextInput
           value={googleUrl}
@@ -340,6 +417,17 @@ export function BusinessListingFormScreen() {
         placeholder="Business name"
         placeholderTextColor={theme.colors.mutedForeground}
         style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+      />
+
+      <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Description (optional)</Text>
+      <TextInput
+        value={description}
+        onChangeText={setDescription}
+        editable={!readOnly}
+        placeholder="What does this business do?"
+        multiline
+        placeholderTextColor={theme.colors.mutedForeground}
+        style={[styles.input, styles.bio, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
       />
 
       <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Industry</Text>
@@ -382,9 +470,26 @@ export function BusinessListingFormScreen() {
         style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
       />
 
+      <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Business logo (optional)</Text>
+      <Pressable
+        onPress={readOnly ? undefined : () => pickImage('logo')}
+        style={[
+          styles.logoBox,
+          { borderColor: theme.colors.border, backgroundColor: theme.colors.muted },
+        ]}>
+        {logoPreview ? (
+          <Image source={{ uri: logoPreview }} style={styles.logoImage} />
+        ) : (
+          <View style={styles.coverPlaceholder}>
+            <Ionicons name="storefront-outline" size={28} color={theme.colors.mutedForeground} />
+            <Text style={{ color: theme.colors.mutedForeground }}>Add logo</Text>
+          </View>
+        )}
+      </Pressable>
+
       <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Cover photo (optional)</Text>
       <Pressable
-        onPress={readOnly ? undefined : pickCover}
+        onPress={readOnly ? undefined : () => pickImage('cover')}
         style={[
           styles.coverBox,
           { borderColor: theme.colors.border, backgroundColor: theme.colors.muted },
@@ -431,6 +536,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: 'System',
   },
+  bio: { minHeight: 88, textAlignVertical: 'top' },
+  logoBox: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    width: 120,
+    height: 120,
+  },
+  logoImage: { width: 120, height: 120 },
   coverBox: {
     borderWidth: 1,
     borderRadius: 12,

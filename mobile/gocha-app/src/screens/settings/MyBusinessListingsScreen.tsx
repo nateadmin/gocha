@@ -192,6 +192,9 @@ export function MyBusinessListingsScreen() {
               ) : null}
               <View style={styles.cardBody}>
                 <View style={styles.cardHeader}>
+                  {listing.logoPhotoUrl ? (
+                    <Image source={{ uri: listing.logoPhotoUrl }} style={styles.logo} />
+                  ) : null}
                   <Text
                     style={{
                       color: theme.colors.cardForeground,
@@ -298,6 +301,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cover: { width: '100%', height: 120 },
+  logo: { width: 36, height: 36, borderRadius: 8 },
   cardBody: { padding: 12, gap: 4 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 10 },

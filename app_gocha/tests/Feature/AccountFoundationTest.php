@@ -145,7 +145,107 @@ class AccountFoundationTest extends TestCase
             ->assertJsonPath('import.name', 'Neon Pizza Shop')
             ->assertJsonPath('import.address', '142 Mulberry St, New York, NY')
             ->assertJsonPath('import.website', 'https://neon.pizza')
-            ->assertJsonPath('import.googlePlaceId', 'ChIJtestplace');
+            ->assertJsonPath('import.googlePlaceId', 'ChIJtestplace')
+            ->assertJsonPath('import.category', 'restaurant')
+            ->assertJsonPath('import.description', 'Wood-fired pizza.');
+    }
+
+    public function test_google_import_keeps_find_place_fields_when_details_fail(): void
+    {
+        config(['gocha.google_places_api_key' => 'test-places-key']);
+
+        Http::fake([
+            'https://maps.googleapis.com/maps/api/place/findplacefromtext/json*' => Http::response([
+                'status' => 'OK',
+                'candidates' => [[
+                    'place_id' => 'ChIJfallback',
+                    'name' => 'Neon Pizza Shop',
+                    'formatted_address' => '142 Mulberry St, New York, NY',
+                    'types' => ['point_of_interest', 'establishment', 'restaurant'],
+                ]],
+            ], 200),
+            'https://maps.googleapis.com/maps/api/place/details/json*' => Http::response([
+                'status' => 'REQUEST_DENIED',
+                'error_message' => 'denied',
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/businesses/import-google', [
+            'url' => 'https://www.google.com/maps/place/Neon+Pizza/@40.7,-74.0,17z',
+        ])
+            ->assertOk()
+            ->assertJsonPath('import.source', 'places_api')
+            ->assertJsonPath('import.name', 'Neon Pizza Shop')
+            ->assertJsonPath('import.address', '142 Mulberry St, New York, NY')
+            ->assertJsonPath('import.category', 'restaurant');
+    }
+
+    public function test_google_import_downloads_photos_as_logo_and_cover(): void
+    {
+        config(['gocha.google_places_api_key' => 'test-places-key']);
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        Http::fake([
+            'https://maps.googleapis.com/maps/api/place/findplacefromtext/json*' => Http::response([
+                'status' => 'OK',
+                'candidates' => [[
+                    'place_id' => 'ChIJphotos',
+                    'name' => 'Neon Pizza Shop',
+                    'formatted_address' => '142 Mulberry St, New York, NY',
+                    'types' => ['restaurant'],
+                ]],
+            ], 200),
+            'https://maps.googleapis.com/maps/api/place/details/json*' => Http::response([
+                'status' => 'OK',
+                'result' => [
+                    'name' => 'Neon Pizza Shop',
+                    'formatted_address' => '142 Mulberry St, New York, NY',
+                    'website' => 'https://neon.pizza',
+                    'types' => ['restaurant'],
+                    'photos' => [
+                        ['photo_reference' => 'logo-ref'],
+                        ['photo_reference' => 'cover-ref'],
+                    ],
+                ],
+            ], 200),
+            'https://maps.googleapis.com/maps/api/place/photo*' => Http::response('fake-image', 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+
+        $payload = $this->actingAs($user)->postJson('/api/businesses/import-google', [
+            'url' => 'https://www.google.com/maps/place/Neon+Pizza/@40.7,-74.0,17z',
+        ])
+            ->assertOk()
+            ->assertJsonPath('import.source', 'places_api')
+            ->assertJsonPath('import.website', 'https://neon.pizza')
+            ->json('import');
+
+        $this->assertNotEmpty($payload['logoPhotoPath']);
+        $this->assertNotEmpty($payload['coverPhotoPath']);
+        $this->assertNotEmpty($payload['logoPhotoUrl']);
+        $this->assertStringStartsWith('business-imports/', $payload['logoPhotoPath']);
+    }
+
+    public function test_owner_can_list_their_business_listings(): void
+    {
+        $user = User::factory()->create();
+        BusinessListing::query()->create([
+            'owner_user_id' => $user->id,
+            'submitted_by_user_id' => $user->id,
+            'slug' => 'mine-cafe',
+            'name' => 'Mine Cafe',
+            'status' => BusinessListingStatus::DRAFT,
+        ]);
+
+        $this->actingAs($user)->getJson('/api/businesses/mine')
+            ->assertOk()
+            ->assertJsonPath('listings.0.name', 'Mine Cafe')
+            ->assertJsonPath('listings.0.status', BusinessListingStatus::DRAFT);
     }
 
     public function test_user_can_set_unique_username(): void
