@@ -15,6 +15,7 @@ import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
 import { useAuth } from '../../context/AuthContext';
+import { detectSignupLocale } from '../../i18n/languages';
 import { useGochaTheme } from '../../theme';
 
 type Props = {
@@ -58,7 +59,13 @@ export function OtpScreen({ email, channel = 'email', mode, onBack }: Props) {
       if (channel === 'phone') {
         firebaseIdToken = await confirmPhoneSms(digits);
       }
-      await verifyWithOtp(email, digits, mode, { channel, firebaseIdToken });
+      const locale = mode === 'signup' ? detectSignupLocale() : null;
+      await verifyWithOtp(email, digits, mode, {
+        channel,
+        firebaseIdToken,
+        language: locale?.language,
+        country: locale?.country,
+      });
     } catch (err) {
       setSubmitError(
         err instanceof ApiError ? err.message : 'Could not verify the code.',

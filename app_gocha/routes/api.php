@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\ProfileCardController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\VersionController;
+use App\Support\AppLanguage;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,8 @@ Route::get('/meta', function (FirebasePhoneAuthService $firebasePhone) {
             'phoneSignInEnabled' => $phoneEnabled,
             'multiAccount' => true,
         ],
+        'languages' => AppLanguage::options(),
+        'defaultLanguage' => AppLanguage::DEFAULT,
     ]);
 });
 
@@ -73,6 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/update', [ProfileController::class, 'updateProfile']);
     Route::post('/profile/contact', [ProfileController::class, 'updateContact']);
     Route::post('/profile/mode', [ProfileController::class, 'updateProfileMode']);
+    Route::post('/profile/language', [ProfileController::class, 'updateLanguage']);
     Route::post('/profile/username', [ProfileController::class, 'updateUsername']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::get('/users/search', [ProfileController::class, 'search']);

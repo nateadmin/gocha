@@ -17,6 +17,7 @@ import {
   issueDeviceToken,
   logout as apiLogout,
   requestOtp,
+  updateLanguage as apiUpdateLanguage,
   updateProfile as apiUpdateProfile,
   uploadAvatar,
   verifyOtp,
@@ -35,7 +36,12 @@ type AuthContextValue = {
     identifier: string,
     code: string,
     mode: OtpAuthMode,
-    options?: { channel?: 'email' | 'phone'; firebaseIdToken?: string },
+    options?: {
+      channel?: 'email' | 'phone';
+      firebaseIdToken?: string;
+      language?: string;
+      country?: string | null;
+    },
   ) => Promise<void>;
   requestAuthCode: (
     identifier: string,
@@ -58,6 +64,7 @@ type AuthContextValue = {
     discoverable: boolean;
   }) => Promise<void>;
   uploadProfileAvatar: (file: Blob, filename?: string) => Promise<void>;
+  updateLanguage: (language: string) => Promise<void>;
   signOut: () => Promise<'auth' | 'switched'>;
 };
 
@@ -201,7 +208,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       identifier: string,
       code: string,
       mode: OtpAuthMode,
-      options?: { channel?: 'email' | 'phone'; firebaseIdToken?: string },
+      options?: {
+        channel?: 'email' | 'phone';
+        firebaseIdToken?: string;
+        language?: string;
+        country?: string | null;
+      },
     ) => {
       const payload = await verifyOtp(identifier, code, mode, options);
       if (mode === 'link') {
@@ -259,6 +271,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [syncUserToStoredAccount],
   );
 
+  const updateLanguage = useCallback(async (language: string) => {
+    const nextUser = await apiUpdateLanguage(language);
+    setUser(nextUser);
+    syncUserToStoredAccount(nextUser);
+  }, [syncUserToStoredAccount]);
+
   const uploadProfileAvatar = useCallback(async (file: Blob, filename?: string) => {
     const nextUser = await uploadAvatar(file, filename);
     setUser(nextUser);
@@ -310,6 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       finishOnboarding,
       updateProfile,
       uploadProfileAvatar,
+      updateLanguage,
       signOut,
     }),
     [
@@ -323,6 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       finishOnboarding,
       updateProfile,
       uploadProfileAvatar,
+      updateLanguage,
       signOut,
     ],
   );

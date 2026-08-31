@@ -13,6 +13,7 @@ import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
 import { PublicProfileCardScreen } from './src/screens/chats/PublicProfileCardScreen';
 import { SplashScreen, useSplashGate } from './src/screens/splash/SplashScreen';
 import { AuthProvider, useAuthGate } from './src/context/AuthContext';
+import { LanguageProvider } from './src/i18n/LanguageContext';
 import { ChatProvider } from './src/chat/ChatContext';
 import { ThemeProvider, useGochaTheme } from './src/theme';
 import { useBrandFonts } from './src/theme/fonts';
@@ -103,9 +104,11 @@ function App() {
         <ThemeProvider>
           <AccountsProvider>
             <AuthProvider>
-              <ChatProvider>
-                <AppShell />
-              </ChatProvider>
+              <LanguageProvider>
+                <ChatProvider>
+                  <AppShell />
+                </ChatProvider>
+              </LanguageProvider>
             </AuthProvider>
           </AccountsProvider>
         </ThemeProvider>

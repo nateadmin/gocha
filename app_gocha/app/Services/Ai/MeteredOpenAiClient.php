@@ -20,7 +20,7 @@ class MeteredOpenAiClient
      * @param  array<int, array{role: string, content: string}>  $messages
      * @return array<string, mixed>
      */
-    public function chatJson(array $messages, string $correlationId, string $step): array
+    public function chatJson(array $messages, string $correlationId, string $step, ?int $maxTokens = null): array
     {
         if (Cache::get('openai:circuit')) {
             throw new OpenAiCircuitOpenException('OpenAI circuit breaker is open.');
@@ -61,7 +61,7 @@ class MeteredOpenAiClient
             'messages' => $messages,
             'response_format' => ['type' => 'json_object'],
             'temperature' => 0.2,
-            'max_tokens' => (int) config('gocha.openai.max_tokens', 400),
+            'max_tokens' => $maxTokens ?? (int) config('gocha.openai.max_tokens', 400),
         ], $correlationId, $step);
 
         Cache::increment($hourKey);

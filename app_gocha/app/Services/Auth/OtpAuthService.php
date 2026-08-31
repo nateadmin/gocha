@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Mail\ResendMailer;
 use App\Services\Profile\CharacterAvatarService;
 use App\Support\AccountChannel;
+use App\Support\AppLanguage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -81,6 +82,9 @@ class OtpAuthService
         return $this->cooldownPayload($channel, $identifier, $mode);
     }
 
+    /**
+     * @param  array{language?: string|null, country?: string|null, ipCountry?: string|null}|null  $localeHints
+     */
     public function verifyCode(
         string $channel,
         string $identifier,
@@ -88,6 +92,7 @@ class OtpAuthService
         string $mode = 'signin',
         ?User $actor = null,
         ?string $firebaseIdToken = null,
+        ?array $localeHints = null,
     ): User {
         $channel = Str::lower(trim($channel));
         $identifier = $this->identifiers->normalize($channel, $identifier);
@@ -149,7 +154,7 @@ class OtpAuthService
                 );
             }
 
-            $user = $this->createUserForChannel($channel, $identifier);
+            $user = $this->createUserForChannel($channel, $identifier, $localeHints);
         } else {
             $user = $this->findUserByChannel($channel, $identifier, verifiedOnly: true);
             if (! $user) {
@@ -292,11 +297,21 @@ class OtpAuthService
         return $query->first();
     }
 
-    private function createUserForChannel(string $channel, string $identifier): User
+    /**
+     * @param  array{language?: string|null, country?: string|null, ipCountry?: string|null}|null  $localeHints
+     */
+    private function createUserForChannel(string $channel, string $identifier, ?array $localeHints = null): User
     {
+        $phone = $channel === AccountChannel::PHONE ? $identifier : null;
         $attributes = [
             'password' => Str::password(32),
             'primary_login_channel' => $channel,
+            'language' => AppLanguage::resolve(
+                $localeHints['language'] ?? null,
+                $localeHints['country'] ?? null,
+                $phone,
+                $localeHints['ipCountry'] ?? null,
+            ),
         ];
 
         if ($channel === AccountChannel::EMAIL) {

@@ -337,7 +337,7 @@ export function ChatDetailScreen() {
         data={visibleMessages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messages}
-        style={{ flex: 1, backgroundColor: theme.colors.card }}
+        style={{ flex: 1, backgroundColor: theme.colors.card, direction: 'ltr' } as object}
         onContentSizeChange={() => {
           if (!searchOpen) {
             listRef.current?.scrollToEnd({ animated: false });

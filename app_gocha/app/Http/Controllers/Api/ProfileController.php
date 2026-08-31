@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Business\BusinessListingService;
 use App\Services\Profile\CharacterAvatarService;
 use App\Services\Profile\DiscoverableUserSearch;
+use App\Support\AppLanguage;
 use App\Support\ProfileMode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,10 @@ class ProfileController extends Controller
             'phone' => ['nullable', 'string', 'max:32'],
             'email' => ['nullable', 'email:rfc', 'max:255'],
             'discoverable' => ['sometimes', 'boolean'],
+            'language' => ['sometimes', 'nullable', 'string', 'max:16'],
         ]);
+
+        $language = AppLanguage::normalize($validated['language'] ?? null);
 
         $user->forceFill([
             'name' => $validated['displayName'],
@@ -59,6 +63,7 @@ class ProfileController extends Controller
             'status' => $validated['status'] ?? null,
             'bio' => $validated['bio'] ?? null,
             'discoverable' => $validated['discoverable'] ?? false,
+            'language' => $language ?? $user->language,
             'onboarding_completed_at' => now(),
         ])->save();
 
@@ -79,7 +84,10 @@ class ProfileController extends Controller
             'bio' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:32'],
             'discoverable' => ['sometimes', 'boolean'],
+            'language' => ['sometimes', 'nullable', 'string', 'max:16'],
         ]);
+
+        $language = AppLanguage::normalize($validated['language'] ?? null);
 
         $user->forceFill([
             'name' => $validated['displayName'],
@@ -88,6 +96,7 @@ class ProfileController extends Controller
             'discoverable' => array_key_exists('discoverable', $validated)
                 ? $validated['discoverable']
                 : $user->discoverable,
+            'language' => $language ?? $user->language,
         ])->save();
 
         $user = $this->ensureAvatar($user)->fresh()->load('activeBusinessListing');
@@ -153,6 +162,28 @@ class ProfileController extends Controller
             'business_chat_website' => $validated['businessChatWebsite'] ?? null,
             'active_business_listing_id' => $validated['activeBusinessListingId'] ?? null,
         ])->save();
+
+        return response()->json([
+            'user' => $user->fresh()->load('activeBusinessListing')->toAuthPayload(),
+        ]);
+    }
+
+    public function updateLanguage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'language' => ['required', 'string', 'max:16'],
+        ]);
+
+        $language = AppLanguage::normalize($validated['language']);
+        if ($language === null) {
+            return response()->json([
+                'code' => 'INVALID_LANGUAGE',
+                'message' => 'That language is not supported.',
+            ], 422);
+        }
+
+        $user = $request->user();
+        $user->forceFill(['language' => $language])->save();
 
         return response()->json([
             'user' => $user->fresh()->load('activeBusinessListing')->toAuthPayload(),

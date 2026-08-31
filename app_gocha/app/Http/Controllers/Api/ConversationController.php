@@ -7,6 +7,8 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Locale\MessageTranslationService;
+use App\Services\Locale\TranslationBudget;
 use App\Support\ConversationType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +17,8 @@ use Illuminate\Validation\Rule;
 
 class ConversationController extends Controller
 {
+    public function __construct(private readonly MessageTranslationService $translations) {}
+
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -90,11 +94,12 @@ class ConversationController extends Controller
         $this->authorizeParticipant($user, $conversation);
         $this->markIncomingMessagesDelivered($user, $conversation);
 
+        $budget = new TranslationBudget;
         $messages = $conversation->messages()
             ->orderBy('created_at')
             ->limit(200)
             ->get()
-            ->map(fn (Message $message) => $this->toMessagePayload($message, $user))
+            ->map(fn (Message $message) => $this->toMessagePayload($message, $user, $budget))
             ->values();
 
         return response()->json(['messages' => $messages]);
@@ -215,6 +220,17 @@ class ConversationController extends Controller
 
         $displayName = $other?->chatDisplayName() ?? 'Conversation';
         $preview = $conversation->last_message_body ?? 'No messages yet';
+        if ($preview !== 'No messages yet' && $conversation->last_message_sender_user_id !== $viewer->id) {
+            $lastIncoming = $conversation->relationLoaded('messages')
+                ? $conversation->messages->where('sender_user_id', '!=', $viewer->id)->sortByDesc('id')->first()
+                : $conversation->messages()
+                    ->where('sender_user_id', '!=', $viewer->id)
+                    ->orderByDesc('id')
+                    ->first();
+            if ($lastIncoming) {
+                $preview = $this->translations->decorateCached($lastIncoming, $viewer)['text'];
+            }
+        }
         if (
             $preview !== 'No messages yet' &&
             $conversation->last_message_sender_user_id === $viewer->id
@@ -239,14 +255,18 @@ class ConversationController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function toMessagePayload(Message $message, User $viewer): array
+    private function toMessagePayload(Message $message, User $viewer, ?TranslationBudget $budget = null): array
     {
         $senderUserId = (int) $message->sender_user_id;
+        $translated = $this->translations->decorate($message, $viewer, $budget);
 
         return [
             'id' => (string) $message->id,
             'type' => $message->type,
-            'text' => $message->body,
+            'text' => $translated['text'],
+            'originalText' => $translated['originalText'],
+            'isTranslated' => $translated['isTranslated'],
+            'sourceLanguage' => $translated['sourceLanguage'],
             'sentAt' => $message->created_at?->toIso8601String(),
             'senderUserId' => $senderUserId,
             'isOutgoing' => $senderUserId === (int) $viewer->id,

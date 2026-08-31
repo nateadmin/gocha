@@ -13,6 +13,9 @@ export type ChatMessage = {
   id: string;
   type: MessageType;
   text?: string;
+  originalText?: string;
+  isTranslated?: boolean;
+  sourceLanguage?: string;
   stickerKey?: string;
   fileName?: string;
   mediaUrl?: string;

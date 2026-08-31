@@ -24,6 +24,7 @@ export type AuthUser = {
   chatDisplayName: string;
   status: string | null;
   bio: string | null;
+  language: string;
   avatarUrl: string | null;
   discoverable: boolean;
   needsOnboarding: boolean;
@@ -240,7 +241,12 @@ export async function verifyOtp(
   identifier: string,
   code: string,
   mode: OtpAuthMode,
-  options?: { channel?: AccountChannel; firebaseIdToken?: string },
+  options?: {
+    channel?: AccountChannel;
+    firebaseIdToken?: string;
+    language?: string;
+    country?: string | null;
+  },
 ): Promise<OtpVerifyResult> {
   const channel = options?.channel ?? 'email';
   return apiRequest(API_PATHS.otpVerify, {
@@ -251,6 +257,8 @@ export async function verifyOtp(
       code,
       mode,
       firebaseIdToken: options?.firebaseIdToken,
+      language: options?.language,
+      country: options?.country,
     }),
   });
 }
@@ -317,6 +325,14 @@ export async function updateProfileContact(input: {
   const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.contact, {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+  return payload.user;
+}
+
+export async function updateLanguage(language: string): Promise<AuthUser> {
+  const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.profileLanguage, {
+    method: 'POST',
+    body: JSON.stringify({ language }),
   });
   return payload.user;
 }
@@ -693,6 +709,9 @@ export type ConversationMessageRecord = {
   id: string;
   type: string;
   text: string | null;
+  originalText?: string | null;
+  isTranslated?: boolean;
+  sourceLanguage?: string | null;
   sentAt: string | null;
   senderUserId?: number;
   isOutgoing: boolean;

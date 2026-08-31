@@ -28,6 +28,7 @@ const mockUser = {
   chatDisplayName: 'Nate',
   status: null,
   bio: null,
+  language: 'en',
   avatarUrl: null,
   discoverable: true,
   needsOnboarding: false,

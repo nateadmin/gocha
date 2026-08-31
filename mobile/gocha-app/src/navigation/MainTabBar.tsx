@@ -3,22 +3,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
+import { useLanguage } from '../i18n/LanguageContext';
+import type { StringKey } from '../i18n/strings';
 import { useGochaTheme } from '../theme';
 
 const TAB_META: Record<
   string,
-  { label: string; icon: keyof typeof Ionicons.glyphMap; rootScreen?: string }
+  { labelKey: StringKey; icon: keyof typeof Ionicons.glyphMap; rootScreen?: string }
 > = {
-  ChatsTab: { label: 'Chats', icon: 'chatbubble-outline', rootScreen: 'ChatsList' },
-  CatchUpTab: { label: 'Catch up', icon: 'sparkles-outline' },
-  DiscoverTab: { label: 'Discover', icon: 'compass-outline', rootScreen: 'DiscoverHub' },
-  CallsTab: { label: 'Calls', icon: 'call-outline' },
-  SettingsTab: { label: 'Settings', icon: 'settings-outline', rootScreen: 'SettingsHome' },
+  ChatsTab: { labelKey: 'tabs.chats', icon: 'chatbubble-outline', rootScreen: 'ChatsList' },
+  CatchUpTab: { labelKey: 'tabs.catchUp', icon: 'sparkles-outline' },
+  DiscoverTab: { labelKey: 'tabs.discover', icon: 'compass-outline', rootScreen: 'DiscoverHub' },
+  CallsTab: { labelKey: 'tabs.calls', icon: 'call-outline' },
+  SettingsTab: { labelKey: 'tabs.settings', icon: 'settings-outline', rootScreen: 'SettingsHome' },
 };
 
 export function MainTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useGochaTheme();
+  const { t } = useLanguage();
 
   const focusedRoute = state.routes[state.index];
   const tabBarStyle = descriptors[focusedRoute.key]?.options?.tabBarStyle;
@@ -86,7 +89,7 @@ export function MainTabBar({ state, descriptors, navigation }: BottomTabBarProps
                 fontFamily: theme.typography.sans,
                 fontSize: 11,
               }}>
-              {meta?.label ?? route.name}
+              {meta ? t(meta.labelKey) : route.name}
             </Text>
           </Pressable>
         );

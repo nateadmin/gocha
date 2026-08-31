@@ -37,6 +37,7 @@ export const API_PATHS = {
   groupsMine: '/api/groups/mine',
   groups: '/api/groups',
   profileUsername: '/api/profile/username',
+  profileLanguage: '/api/profile/language',
   conversations: '/api/conversations',
   catchUp: '/api/catch-up',
   profileCards: '/api/profile-cards',

@@ -5,6 +5,7 @@ import { BrandText } from '../../components/brand/BrandText';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandButton } from '../../components/brand/BrandButton';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 type Props = {
   onSignIn: () => void;
@@ -12,21 +13,23 @@ type Props = {
 };
 
 export function AuthWelcomeScreen({ onSignIn, onSignUp }: Props) {
+  const { t } = useLanguage();
+
   return (
     <ScreenContainer edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.content}>
         <BrandLogo size={88} />
         <BrandText variant="display" style={styles.title}>Gocha</BrandText>
         <BrandText muted style={styles.subtitle}>
-          Connect. Catch up. Discover.
+          {t('auth.tagline')}
         </BrandText>
         <BrandText muted style={styles.note}>
-          Sign in with email or phone.
+          {t('auth.signInNote')}
         </BrandText>
 
         <View style={styles.actions}>
-          <CtaButton label="Sign up" onPress={onSignUp} />
-          <BrandButton label="Sign in" variant="outline" onPress={onSignIn} />
+          <CtaButton label={t('auth.signUp')} onPress={onSignUp} />
+          <BrandButton label={t('auth.signIn')} variant="outline" onPress={onSignIn} />
         </View>
       </View>
     </ScreenContainer>

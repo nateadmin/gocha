@@ -9,6 +9,7 @@ use App\Services\Auth\AccountIdentifierService;
 use App\Services\Auth\DeviceTokenService;
 use App\Services\Auth\OtpAuthService;
 use App\Support\AccountChannel;
+use App\Support\AppLanguage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -62,6 +63,8 @@ class AuthOtpController extends Controller
             'code' => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
             'mode' => ['required', 'string', 'in:signin,signup,link'],
             'firebaseIdToken' => ['sometimes', 'nullable', 'string', 'max:4000'],
+            'language' => ['sometimes', 'nullable', 'string', 'max:16'],
+            'country' => ['sometimes', 'nullable', 'string', 'max:8'],
         ]);
 
         try {
@@ -81,6 +84,11 @@ class AuthOtpController extends Controller
                 $validated['mode'],
                 $actor,
                 $validated['firebaseIdToken'] ?? null,
+                [
+                    'language' => $validated['language'] ?? null,
+                    'country' => $validated['country'] ?? null,
+                    'ipCountry' => $this->requestCountry($request),
+                ],
             );
         } catch (OtpVerificationException $e) {
             throw $e;
@@ -223,5 +231,15 @@ class AuthOtpController extends Controller
         $resolved = $this->deviceTokens->resolveUser($request->bearerToken());
 
         return $resolved instanceof User ? $resolved : null;
+    }
+
+    private function requestCountry(Request $request): ?string
+    {
+        return AppLanguage::countryFromRequestHeaders(
+            $request->headers->get('CF-IPCountry'),
+            $request->headers->get('CloudFront-Viewer-Country'),
+            $request->headers->get('X-AppEngine-Country'),
+            $request->headers->get('X-Country-Code'),
+        );
     }
 }

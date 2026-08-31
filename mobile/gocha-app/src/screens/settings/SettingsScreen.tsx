@@ -10,6 +10,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootTabParamList, SettingsStackParamList } from '../../navigation/types';
 import { useAccounts } from '../../context/AccountsContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { languageLabel } from '../../i18n/languages';
 import { useGochaTheme } from '../../theme';
 
 type SettingsNavigationProp = CompositeNavigationProp<
@@ -22,6 +24,7 @@ export function SettingsScreen() {
   const { theme, mode, setMode } = useGochaTheme();
   const { accounts } = useAccounts();
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
   const [readReceipts, setReadReceipts] = useState(true);
   const [lastSeen, setLastSeen] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -47,7 +50,7 @@ export function SettingsScreen() {
           fontSize: 28,
           marginBottom: 12,
         }}>
-        Settings
+        {t('settings.title')}
       </Text>
 
       <Pressable
@@ -91,7 +94,7 @@ export function SettingsScreen() {
           </Text>
           {user?.effectiveVerificationStatus === 'verified' ? (
             <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans, fontSize: 13, marginTop: 4 }}>
-              Verified
+              {t('settings.verified')}
             </Text>
           ) : null}
           {user?.status ? (
@@ -109,7 +112,7 @@ export function SettingsScreen() {
         <Ionicons name="chevron-forward" size={20} color={theme.colors.mutedForeground} />
       </Pressable>
 
-      <SectionLabel>ACCOUNT</SectionLabel>
+      <SectionLabel>{t('settings.account')}</SectionLabel>
       <View
         style={[
           styles.card,
@@ -121,42 +124,49 @@ export function SettingsScreen() {
         ]}>
         <Pressable onPress={() => navigation.navigate('Accounts')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
-            Accounts
+            {t('settings.accounts')}
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable onPress={() => navigation.navigate('ProfileMode')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
-            Chat profile ({user?.profileMode ?? 'personal'})
+            {t('settings.chatProfile')} ({user?.profileMode ?? 'personal'})
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable onPress={() => navigation.navigate('UsernameSettings')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
-            Username {user?.username ? `(@${user.username})` : ''}
+            {t('settings.username')} {user?.username ? `(@${user.username})` : ''}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable onPress={() => navigation.navigate('LanguageSettings')} style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            {t('settings.language')} ({languageLabel(user?.language)})
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable onPress={() => navigation.navigate('ProfileCards')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
-            Profile cards
+            {t('settings.profileCards')}
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable onPress={() => navigation.navigate('MyBusinessListings')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
-            My business listings
+            {t('settings.myListings')}
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable onPress={() => navigation.navigate('BusinessListingForm')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
-            List a new business
+            {t('settings.listBusiness')}
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
@@ -165,7 +175,7 @@ export function SettingsScreen() {
             <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
             <Pressable onPress={() => navigation.navigate('AdminReview')} style={styles.linkRow}>
               <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
-                Admin review queue
+                {t('settings.adminReview')}
               </Text>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
             </Pressable>
@@ -173,7 +183,7 @@ export function SettingsScreen() {
         ) : null}
       </View>
 
-      <SectionLabel>CHATS</SectionLabel>
+      <SectionLabel>{t('settings.chats')}</SectionLabel>
       <View
         style={[
           styles.card,
@@ -214,7 +224,7 @@ export function SettingsScreen() {
         </Pressable>
       </View>
 
-      <SectionLabel>PRIVACY</SectionLabel>
+      <SectionLabel>{t('settings.privacy')}</SectionLabel>
       <View
         style={[
           styles.card,
@@ -239,7 +249,7 @@ export function SettingsScreen() {
         />
       </View>
 
-      <SectionLabel>NOTIFICATIONS</SectionLabel>
+      <SectionLabel>{t('settings.notifications')}</SectionLabel>
       <View
         style={[
           styles.card,
@@ -271,7 +281,7 @@ export function SettingsScreen() {
         />
       </View>
 
-      <SectionLabel>AI SETTINGS</SectionLabel>
+      <SectionLabel>{t('settings.ai')}</SectionLabel>
       <View
         style={[
           styles.card,
@@ -310,7 +320,7 @@ export function SettingsScreen() {
         </Text>
       </View>
 
-      <SectionLabel>APPEARANCE</SectionLabel>
+      <SectionLabel>{t('settings.appearance')}</SectionLabel>
       <View
         style={[
           styles.card,
@@ -322,7 +332,7 @@ export function SettingsScreen() {
         ]}>
         <SettingsToggleRow
           icon={mode === 'light' ? 'sunny-outline' : 'moon-outline'}
-          label="Light mode"
+          label={t('settings.lightMode')}
           value={mode === 'light'}
           onValueChange={(enabled) => setMode(enabled ? 'light' : 'dark')}
         />
@@ -345,7 +355,7 @@ export function SettingsScreen() {
             fontSize: theme.typography.body,
             textAlign: 'center',
           }}>
-          {accounts.length > 1 ? 'Sign out of this account' : 'Sign out'}
+          {accounts.length > 1 ? t('settings.signOutThis') : t('settings.signOut')}
         </Text>
       </Pressable>
     </ScrollView>

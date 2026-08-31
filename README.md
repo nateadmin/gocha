@@ -95,7 +95,8 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/catch-up` as an authenticated session → 200 JSON `{ briefing, generatedAt, attention, conversations }` (401 without a session is expected)
 - POST `https://gocha.ai/api/businesses/import-google` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/businesses/mine` without a session → 401 `UNAUTHENTICATED` (must not 404; that route is not a public slug)
-- GET `https://gocha.ai/api/meta` → 200 JSON, `account.phoneSignInEnabled` true after Firebase secrets are injected
+- GET `https://gocha.ai/api/meta` → 200 JSON, `account.phoneSignInEnabled` true after Firebase secrets are injected, `languages` includes `en` and `he`
+- POST `https://gocha.ai/api/profile/language` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/` login/sign-up → email or phone as primary, the other optional on profile setup
 
 ### Log check

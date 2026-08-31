@@ -38,6 +38,24 @@ describe('messageMapping', () => {
     expect(outgoing.isOutgoing).toBe(true);
   });
 
+  it('maps translation fields for incoming messages', () => {
+    const mapped = mapMessageRecord(
+      {
+        ...baseRecord,
+        text: 'Hello',
+        originalText: 'שלום',
+        isTranslated: true,
+        sourceLanguage: 'he',
+      },
+      9,
+    );
+
+    expect(mapped.text).toBe('Hello');
+    expect(mapped.originalText).toBe('שלום');
+    expect(mapped.isTranslated).toBe(true);
+    expect(mapped.sourceLanguage).toBe('he');
+  });
+
   it('builds list previews with You prefix for outgoing messages', () => {
     const incoming = mapMessageRecord(baseRecord, 9);
     const outgoing = mapMessageRecord(baseRecord, 7);

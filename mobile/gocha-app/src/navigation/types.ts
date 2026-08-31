@@ -46,6 +46,7 @@ export type SettingsStackParamList = {
   BusinessListingForm: { listingId?: number } | undefined;
   AdminReview: undefined;
   UsernameSettings: undefined;
+  LanguageSettings: undefined;
   BlockedChats: undefined;
   ChatListsSettings: undefined;
   ChatLabelsSettings: undefined;

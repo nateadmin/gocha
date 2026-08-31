@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Image, Pressable, View, Text, StyleSheet, Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import type { ChatMessage } from '../../chat/types';
 import { receiptTicks } from '../../chat/receiptTicks';
 import { useChat } from '../../chat/ChatContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { VoiceMessagePlayer } from './VoiceMessagePlayer';
 import { useGochaTheme } from '../../theme';
 
@@ -15,9 +17,17 @@ type Props = {
 
 export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
   const { theme } = useGochaTheme();
+  const { t } = useLanguage();
   const { stickerEmoji } = useChat();
+  const [showOriginal, setShowOriginal] = useState(false);
   const outgoing = message.isOutgoing;
   const ticks = outgoing ? receiptTicks(message.status) : null;
+  const canToggleOriginal =
+    !outgoing &&
+    Boolean(message.isTranslated) &&
+    Boolean(message.originalText) &&
+    message.originalText !== message.text;
+  const displayText = canToggleOriginal && showOriginal ? message.originalText : message.text;
 
   const bubbleContent = (() => {
     switch (message.type) {
@@ -114,7 +124,7 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
               fontSize: 16,
               lineHeight: 22,
             }}>
-            {message.text}
+            {displayText}
           </Text>
         );
     }
@@ -167,6 +177,21 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
         ]}>
         {bubbleContent}
       </View>
+      {canToggleOriginal ? (
+        <Pressable
+          onPress={() => setShowOriginal((value) => !value)}
+          accessibilityRole="button"
+          style={styles.originalToggle}>
+          <Text
+            style={{
+              color: theme.colors.primary,
+              fontFamily: theme.typography.sans,
+              fontSize: 12,
+            }}>
+            {showOriginal ? t('chat.showTranslation') : t('chat.showOriginal')}
+          </Text>
+        </Pressable>
+      ) : null}
       <View style={styles.meta}>
         {message.starred ? (
           <Ionicons name="star" size={12} color={theme.colors.accent} />
@@ -229,6 +254,10 @@ const styles = StyleSheet.create({
   mediaBubble: {
     paddingHorizontal: 0,
     paddingVertical: 0,
+  },
+  originalToggle: {
+    marginTop: 4,
+    paddingHorizontal: 4,
   },
   meta: {
     flexDirection: 'row',

@@ -41,6 +41,9 @@ export function mapMessageRecord(
     id: record.id,
     type: record.type === 'emoji' ? 'emoji' : 'text',
     text: record.text ?? undefined,
+    originalText: record.originalText ?? record.text ?? undefined,
+    isTranslated: Boolean(record.isTranslated),
+    sourceLanguage: record.sourceLanguage ?? undefined,
     sentAt: formatTimeLabel(record.sentAt),
     sentAtMs: parseSentAtMs(record.sentAt),
     isOutgoing: resolveIsOutgoing(record, viewerUserId),
@@ -118,6 +121,8 @@ export function sameMessageList(previous: ChatMessage[], next: ChatMessage[]): b
       message.id === other.id &&
       message.isOutgoing === other.isOutgoing &&
       message.text === other.text &&
+      message.originalText === other.originalText &&
+      message.isTranslated === other.isTranslated &&
       message.status === other.status
     );
   });

@@ -14,6 +14,7 @@ import { pickCameraPhoto, pickDocument } from '../../chat/pickMedia';
 import type { RecordedVoice } from '../../chat/voiceRecording';
 import { EmojiStickerPickerPanel } from './EmojiStickerPickerPanel';
 import { VoiceRecorderBar } from './VoiceRecorderBar';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { useGochaTheme } from '../../theme';
 
 type Panel = 'none' | 'sticker' | 'voice';
@@ -48,6 +49,7 @@ export function ChatComposer({
   onDraftBlur,
 }: Props) {
   const { theme } = useGochaTheme();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState(false);
   const [panel, setPanel] = useState<Panel>('none');
@@ -215,7 +217,7 @@ export function ChatComposer({
                 setFocused(false);
                 onDraftBlur?.();
               }}
-              placeholder="Message"
+              placeholder={t('chat.placeholder')}
               placeholderTextColor={theme.colors.mutedForeground}
               selectionColor={theme.colors.primary}
               returnKeyType="send"
