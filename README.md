@@ -55,9 +55,9 @@ Poll answers: job every 5 minutes; client poll 60 seconds; no realtime push.
 
 ## Status updates
 
-24-hour text, image, and video updates. Visible to the owner and DM contacts only. Statuses are not editable (they expire); the owner can delete. Open a user's status from their profile/avatar on Chats, the chat header, Chat info, Settings > My status, or the Chats status tray. Hold to pause; tap left for previous, tap right or wait for next.
+24-hour text, image, and video updates. Visible to the owner and DM contacts only. Statuses are not editable (they expire); the owner can delete. Open a user's status from their profile/avatar on Chats, the chat header, or Chat info. Add or open your own from the compact status control to the left of the Chats header menu, or Settings > My status. Hold to pause; tap left for previous, tap right or wait for next.
 
-Poll answers: Chats tray refreshes on tab focus and every 60 seconds while focused. No realtime push.
+Poll answers: the header status control refreshes your own status on tab focus and every 60 seconds while focused. No realtime push. Other people's statuses are not listed in a tray; they open from the profile/avatar.
 
 ## Account switcher unread badge
 

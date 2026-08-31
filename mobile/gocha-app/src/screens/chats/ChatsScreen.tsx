@@ -43,7 +43,7 @@ import {
   type PublicUserProfile,
   type StatusAuthorRecord,
 } from '../../api/client';
-import { StatusTray } from '../../components/status/StatusTray';
+import { StatusHeaderButton } from '../../components/status/StatusHeaderButton';
 import { openStatusComposer, openStatusViewer } from '../../navigation/rootNavigation';
 import { useGochaTheme } from '../../theme';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
@@ -78,7 +78,6 @@ export function ChatsScreen() {
   const [remoteSearchLoading, setRemoteSearchLoading] = useState(false);
   const [startingChatUserId, setStartingChatUserId] = useState<number | null>(null);
   const [statusMine, setStatusMine] = useState<StatusAuthorRecord | null>(null);
-  const [statusRecent, setStatusRecent] = useState<StatusAuthorRecord[]>([]);
 
   const accountMenuTop = insets.top + 12 + 44;
   const trimmedQuery = query.trim();
@@ -220,10 +219,9 @@ export function ChatsScreen() {
           const feed = await fetchStatusFeed();
           if (!cancelled) {
             setStatusMine(feed.mine);
-            setStatusRecent(feed.recent);
           }
         } catch {
-          // Keep the last tray. A feed error must not sign the user out.
+          // Keep the last header status. A feed error must not sign the user out.
         } finally {
           inFlight = false;
         }
@@ -385,14 +383,23 @@ export function ChatsScreen() {
               }
             />
           )}
-          <HeaderOverflowMenu
-            open={headerMenuOpen}
-            menuTop={accountMenuTop}
-            items={headerMenuItems}
-            onPress={() => setHeaderMenuOpen((value) => !value)}
-            onClose={() => setHeaderMenuOpen(false)}
-            strokeColor={theme.colors.primary}
-          />
+          <View style={styles.headerActions}>
+            {chat.activeFilter !== 'archived' ? (
+              <StatusHeaderButton
+                mine={statusMine}
+                onOpenMine={() => user?.id && openStatusViewer(user.id)}
+                onAdd={() => openStatusComposer()}
+              />
+            ) : null}
+            <HeaderOverflowMenu
+              open={headerMenuOpen}
+              menuTop={accountMenuTop}
+              items={headerMenuItems}
+              onPress={() => setHeaderMenuOpen((value) => !value)}
+              onClose={() => setHeaderMenuOpen(false)}
+              strokeColor={theme.colors.primary}
+            />
+          </View>
         </View>
 
         <View style={styles.searchBlock}>
@@ -417,16 +424,6 @@ export function ChatsScreen() {
         <ChatFilterBar
           onManageLists={() => navigation.navigate('ChatListsSettings')}
           onOpenHidden={() => navigation.navigate('HiddenChats')}
-        />
-      ) : null}
-
-      {!isSearching && chat.activeFilter !== 'archived' ? (
-        <StatusTray
-          mine={statusMine}
-          recent={statusRecent}
-          onOpenMine={() => user?.id && openStatusViewer(user.id)}
-          onAdd={() => openStatusComposer()}
-          onOpenUser={(userId) => openStatusViewer(userId)}
         />
       ) : null}
 
@@ -549,6 +546,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 40,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   searchBlock: {
     paddingVertical: SEARCH_VERTICAL_PADDING,
