@@ -14,6 +14,7 @@ type Props = {
   onSelectAccount: (userId: number) => void;
   onAddAccount: () => void;
   onManageAccounts: () => void;
+  unreadUserIds?: number[];
 };
 
 export function AccountSwitcherMenu({
@@ -25,6 +26,7 @@ export function AccountSwitcherMenu({
   onSelectAccount,
   onAddAccount,
   onManageAccounts,
+  unreadUserIds = [],
 }: Props) {
   const { theme } = useGochaTheme();
 
@@ -71,6 +73,7 @@ export function AccountSwitcherMenu({
           ) : (
             accounts.map((account, index) => {
               const active = account.userId === activeAccountId;
+              const hasUnread = unreadUserIds.includes(account.userId);
               return (
                 <Pressable
                   key={account.userId}
@@ -112,6 +115,14 @@ export function AccountSwitcherMenu({
                       {account.label}
                     </Text>
                   </View>
+                  {hasUnread ? (
+                    <View
+                      style={[
+                        styles.unreadDot,
+                        { backgroundColor: theme.colors.accent, borderColor: theme.colors.card },
+                      ]}
+                    />
+                  ) : null}
                   {active ? (
                     <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
                   ) : null}
@@ -193,5 +204,11 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
+  },
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
   },
 });

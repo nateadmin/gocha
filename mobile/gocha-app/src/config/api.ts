@@ -39,6 +39,7 @@ export const API_PATHS = {
   profileUsername: '/api/profile/username',
   profileLanguage: '/api/profile/language',
   conversations: '/api/conversations',
+  inboxUnread: '/api/inbox/unread',
   statuses: '/api/statuses',
   catchUp: '/api/catch-up',
   profileCards: '/api/profile-cards',

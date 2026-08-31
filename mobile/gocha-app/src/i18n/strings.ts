@@ -18,6 +18,8 @@ export type StringKey =
   | 'settings.signOut'
   | 'settings.signOutThis'
   | 'settings.accounts'
+  | 'accounts.logo'
+  | 'accounts.logoUnread'
   | 'settings.chatProfile'
   | 'settings.username'
   | 'settings.profileCards'
@@ -78,6 +80,8 @@ const en: Dictionary = {
   'settings.signOut': 'Sign out',
   'settings.signOutThis': 'Sign out of this account',
   'settings.accounts': 'Accounts',
+  'accounts.logo': 'Switch account',
+  'accounts.logoUnread': 'Switch account. Other accounts have new messages.',
   'settings.chatProfile': 'Chat profile',
   'settings.username': 'Username',
   'settings.profileCards': 'Profile cards',
@@ -138,6 +142,8 @@ const he: Dictionary = {
   'settings.signOut': 'התנתקות',
   'settings.signOutThis': 'התנתקות מהחשבון הזה',
   'settings.accounts': 'חשבונות',
+  'accounts.logo': 'החלף חשבון',
+  'accounts.logoUnread': 'החלף חשבון. לחשבונות אחרים יש הודעות חדשות.',
   'settings.chatProfile': 'פרופיל צ׳אט',
   'settings.username': 'שם משתמש',
   'settings.profileCards': 'כרטיסי פרופיל',

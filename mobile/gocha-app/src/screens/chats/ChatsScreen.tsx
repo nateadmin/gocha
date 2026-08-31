@@ -30,8 +30,11 @@ import {
   searchLocalConversations,
 } from '../../chat/globalSearchLocal';
 import type { ChatRecord } from '../../chat/types';
+import { useOtherAccountUnread } from '../../accounts/useOtherAccountUnread';
+import { shouldShowAccountLogoBadge } from '../../accounts/otherAccountUnread';
 import { useAccounts } from '../../context/AccountsContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import {
   fetchStatusFeed,
   globalSearch,
@@ -59,6 +62,9 @@ export function ChatsScreen() {
   const chat = useChat();
   const { accounts, activeAccountId, switchAccount, beginAddAccount } = useAccounts();
   const { user, refresh } = useAuth();
+  const { t } = useLanguage();
+  const otherUnreadIds = useOtherAccountUnread(accounts, activeAccountId);
+  const showAccountBadge = shouldShowAccountLogoBadge(otherUnreadIds);
   const searchRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [contextChat, setContextChat] = useState<ChatRecord | null>(null);
@@ -371,7 +377,13 @@ export function ChatsScreen() {
               <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>All chats</Text>
             </Pressable>
           ) : (
-            <AccountLogoButton onPress={() => setAccountMenuOpen(true)} />
+            <AccountLogoButton
+              onPress={() => setAccountMenuOpen(true)}
+              showBadge={showAccountBadge}
+              accessibilityLabel={
+                showAccountBadge ? t('accounts.logoUnread') : t('accounts.logo')
+              }
+            />
           )}
           <HeaderOverflowMenu
             open={headerMenuOpen}
@@ -478,6 +490,7 @@ export function ChatsScreen() {
       <AccountSwitcherMenu
         visible={accountMenuOpen}
         accounts={switcherAccounts}
+        unreadUserIds={otherUnreadIds}
         activeAccountId={activeAccountId ?? user?.id ?? null}
         menuTop={accountMenuTop}
         onClose={() => setAccountMenuOpen(false)}

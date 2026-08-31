@@ -59,6 +59,14 @@ Poll answers: job every 5 minutes; client poll 60 seconds; no realtime push.
 
 Poll answers: Chats tray refreshes on tab focus and every 60 seconds while focused. No realtime push.
 
+## Account switcher unread badge
+
+When more than one account is saved on the device, the Chats logo shows a notification circle if another (not visible) account has unread messages. The account menu marks those rows. The client polls `GET /api/inbox/unread` with each inactive account's device token and `credentials: omit` so the active session cookie is not sent and a 401 on a stale token cannot sign the current user out.
+
+Poll answers: 30 seconds while the app is visible; refetch on focus. No realtime push.
+
+- `GET /api/inbox/unread` (Sanctum) → `{ unreadMessages, unreadConversations, hasUnread }`
+
 Prune: `gocha:status-prune` hourly. Lock domain: Laravel `withoutOverlapping` mutex `gocha:status-prune` (10 minute expiry). No outbound HTTP. Max run is a short disk delete, well under the hourly interval.
 
 Statuses are not a staff-managed table. There is no edit form. Required on create: text for a text status; an image or video file for media (caption optional).
@@ -120,6 +128,7 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/meta` → 200 JSON, `account.phoneSignInEnabled` true after Firebase secrets are injected, `languages` includes `en` and `he`
 - POST `https://gocha.ai/api/profile/language` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/statuses` without a session → 401 `UNAUTHENTICATED`
+- GET `https://gocha.ai/api/inbox/unread` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/` login/sign-up → email or phone as primary, the other optional on profile setup
 
 ### Log check

@@ -48,6 +48,24 @@ class ConversationController extends Controller
         return response()->json(['conversations' => $conversations]);
     }
 
+    public function inboxUnread(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $unreadMessages = (int) ConversationParticipant::query()
+            ->where('user_id', $user->id)
+            ->sum('unread_count');
+        $unreadConversations = (int) ConversationParticipant::query()
+            ->where('user_id', $user->id)
+            ->where('unread_count', '>', 0)
+            ->count();
+
+        return response()->json([
+            'unreadMessages' => $unreadMessages,
+            'unreadConversations' => $unreadConversations,
+            'hasUnread' => $unreadMessages > 0,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([

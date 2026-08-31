@@ -84,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/search', [GlobalSearchController::class, 'search']);
 
     Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::get('/inbox/unread', [ConversationController::class, 'inboxUnread']);
     Route::post('/conversations', [ConversationController::class, 'store']);
     Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
     Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);

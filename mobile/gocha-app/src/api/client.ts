@@ -685,6 +685,24 @@ export async function searchUsers(query: string): Promise<PublicUserProfile[]> {
   return payload.results;
 }
 
+export type InboxUnread = {
+  unreadMessages: number;
+  unreadConversations: number;
+  hasUnread: boolean;
+};
+
+export async function fetchInboxUnread(deviceToken: string): Promise<InboxUnread> {
+  const response = await fetch(`${API_BASE_URL}${API_PATHS.inboxUnread}`, {
+    method: 'GET',
+    credentials: 'omit',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${deviceToken}`,
+    },
+  });
+  return parseResponse<InboxUnread>(response);
+}
+
 export async function globalSearch(query: string): Promise<GlobalSearchResponse> {
   return apiRequest<GlobalSearchResponse>(
     `${API_PATHS.globalSearch}?q=${encodeURIComponent(query)}`,

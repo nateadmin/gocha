@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Auth\DeviceTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -55,6 +56,61 @@ class ConversationTest extends TestCase
 
         $this->assertSame($first->json('conversation.id'), $second->json('conversation.id'));
         $this->assertDatabaseCount('conversations', 1);
+    }
+
+    public function test_inbox_unread_summarizes_hidden_account_mail(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+
+        $conversationId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'participantUserId' => $bob->id,
+        ])->json('conversation.id');
+
+        $this->actingAs($alice)->getJson('/api/inbox/unread')
+            ->assertOk()
+            ->assertJsonPath('hasUnread', false)
+            ->assertJsonPath('unreadMessages', 0);
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'Ping',
+        ])->assertCreated();
+
+        $this->actingAs($bob)->getJson('/api/inbox/unread')
+            ->assertOk()
+            ->assertJsonPath('hasUnread', true)
+            ->assertJsonPath('unreadMessages', 1)
+            ->assertJsonPath('unreadConversations', 1);
+
+        $this->actingAs($alice)->getJson('/api/inbox/unread')
+            ->assertOk()
+            ->assertJsonPath('hasUnread', false);
+    }
+
+    public function test_inbox_unread_requires_auth(): void
+    {
+        $this->getJson('/api/inbox/unread')->assertUnauthorized();
+    }
+
+    public function test_inbox_unread_accepts_device_bearer_without_session(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+        $conversationId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'participantUserId' => $bob->id,
+        ])->json('conversation.id');
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'Ping',
+        ]);
+
+        $this->app['auth']->forgetGuards();
+        $bobToken = app(DeviceTokenService::class)->issue($bob)->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer '.$bobToken)
+            ->getJson('/api/inbox/unread')
+            ->assertOk()
+            ->assertJsonPath('hasUnread', true)
+            ->assertJsonPath('unreadMessages', 1);
     }
 
     public function test_mark_read_clears_unread_count(): void
