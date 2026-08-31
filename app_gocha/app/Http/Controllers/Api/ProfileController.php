@@ -53,7 +53,9 @@ class ProfileController extends Controller
             'language' => ['sometimes', 'nullable', 'string', 'max:16'],
         ]);
 
-        $language = AppLanguage::normalize($validated['language'] ?? null);
+        $language = AppLanguage::normalize($validated['language'] ?? null)
+            ?? AppLanguage::normalize($user->language)
+            ?? AppLanguage::DEFAULT;
 
         $user->forceFill([
             'name' => $validated['displayName'],
@@ -63,7 +65,7 @@ class ProfileController extends Controller
             'status' => $validated['status'] ?? null,
             'bio' => $validated['bio'] ?? null,
             'discoverable' => $validated['discoverable'] ?? false,
-            'language' => $language ?? $user->language,
+            'language' => $language,
             'onboarding_completed_at' => now(),
         ])->save();
 
@@ -87,17 +89,22 @@ class ProfileController extends Controller
             'language' => ['sometimes', 'nullable', 'string', 'max:16'],
         ]);
 
-        $language = AppLanguage::normalize($validated['language'] ?? null);
-
-        $user->forceFill([
+        $fill = [
             'name' => $validated['displayName'],
             'status' => $validated['status'] ?? null,
             'bio' => $validated['bio'] ?? null,
             'discoverable' => array_key_exists('discoverable', $validated)
                 ? $validated['discoverable']
                 : $user->discoverable,
-            'language' => $language ?? $user->language,
-        ])->save();
+        ];
+        $language = AppLanguage::normalize($validated['language'] ?? null);
+        if ($language) {
+            $fill['language'] = $language;
+        } elseif (! AppLanguage::normalize($user->language)) {
+            $fill['language'] = AppLanguage::DEFAULT;
+        }
+
+        $user->forceFill($fill)->save();
 
         $user = $this->ensureAvatar($user)->fresh()->load('activeBusinessListing');
 
