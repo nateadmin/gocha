@@ -105,25 +105,16 @@ function ContactRow({
           }}>
           {displayName}
         </Text>
-        {username ? (
+        {username?.trim() ? (
           <Text
             style={{
               color: theme.colors.mutedForeground,
               fontFamily: theme.typography.sans,
               fontSize: 13,
             }}>
-            @{username}
+            @{username.trim()}
           </Text>
-        ) : (
-          <Text
-            style={{
-              color: theme.colors.mutedForeground,
-              fontFamily: theme.typography.sans,
-              fontSize: 13,
-            }}>
-            In your chats
-          </Text>
-        )}
+        ) : null}
       </View>
       {trailing ?? (
         <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
