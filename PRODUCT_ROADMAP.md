@@ -11,8 +11,8 @@ Source: Gocha Product Roadmap (product PDF in repo uploads). Product name: Gocha
 | Personal and business messaging in one app | Shell + mock | `ChatsTab`, business chats flagged in `mock.ts` |
 | Business profile activation + verification docs | Not built | Needs onboarding flow + document upload (file-handling standard) |
 | Status updates | Shell entry | Status control on Chats header (Build 1.1 UI) |
-| AI Catch Up (summaries, highlights) | Shell + mock | `CatchUpTab`, `briefingText`, attention items |
-| OpenAI/ChatGPT until proprietary AI | Documented | Catch Up footer note; Settings AI toggle |
+| AI Catch Up (summaries, highlights) | Live | `GET /api/catch-up`, `gocha:catch-up-generate` every 5 minutes, Catch Up tab |
+| OpenAI/ChatGPT until proprietary AI | Live | `gpt-4o-mini` via Infisical `OPEN_AI_API_KEY` |
 | Around Me / Nearby discoverable groups | Shell + mock | Discover → Around Me |
 | Join requests; admin approve/decline | Shell | Request to join button (API pending) |
 | Discoverable vs private group privacy | Documented in UI | Discoverable badge + private-group note |
@@ -55,11 +55,11 @@ Long-term handset ecosystem. Not in scope now. Messaging, commerce, Collective, 
 
 ## Backend (Laravel `app_gocha/`)
 
-Current: health + version only. Next API work should follow roadmap order: auth + messaging (Build 1), then commerce connectors (Build 2), then Collective + AI swap (Build 3).
+Current: health, version, auth, messaging, profile cards, and Catch Up briefs. Next API work should follow roadmap order: commerce connectors (Build 2), then Collective + AI swap (Build 3).
 
 ## Out of scope for current shell
 
 - Real payments, order state machines, verification document storage
-- Live OpenAI calls (use server-side slots; secrets in Infisical only)
+- Catch Up provider swap to proprietary AI (Build 3)
 - Collective website (Phase 2)
 - Phone hardware (Phase 3)

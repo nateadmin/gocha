@@ -12,7 +12,12 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('gocha:catch-up-generate')
+            ->everyFiveMinutes()
+            ->withoutOverlapping(4);
+
+        $schedule->command('gocha:catch-up-watchdog')
+            ->everyTenMinutes();
     }
 
     /**

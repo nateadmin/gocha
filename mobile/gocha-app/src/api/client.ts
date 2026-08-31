@@ -679,6 +679,35 @@ export async function markConversationRead(conversationId: number): Promise<void
   });
 }
 
+export type CatchUpAttentionItem = {
+  id: string;
+  conversationId: number;
+  tone: 'critical' | 'warning';
+  text: string;
+};
+
+export type CatchUpConversationBrief = {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  avatarLabel: string;
+  unreadCount: number;
+  priority: 'High' | 'Medium' | 'Low' | string;
+  summary: string;
+  plans: string[];
+};
+
+export type CatchUpPayload = {
+  briefing: string;
+  generatedAt: string | null;
+  attention: CatchUpAttentionItem[];
+  conversations: CatchUpConversationBrief[];
+};
+
+export async function fetchCatchUp(): Promise<CatchUpPayload> {
+  return apiRequest<CatchUpPayload>(API_PATHS.catchUp);
+}
+
 export type ProfileCardType = 'professional' | 'match' | 'custom';
 export type ProfileCardVisibility = 'public' | 'request' | 'private';
 export type ProfileCardAccessStatus = 'pending' | 'approved' | 'declined';

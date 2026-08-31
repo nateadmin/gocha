@@ -24,6 +24,34 @@ return [
 
     'google_places_api_key' => env('GOOGLE_PLACES_API_KEY'),
 
+    'openai' => [
+        // Infisical stores this as OPEN_AI_API_KEY; accept either name.
+        'api_key' => env('OPENAI_API_KEY', env('OPEN_AI_API_KEY')),
+        'model' => env('OPENAI_CATCH_UP_MODEL', 'gpt-4o-mini'),
+        'base_url' => 'https://api.openai.com/v1',
+        'connect_timeout' => 5,
+        'timeout' => 20,
+        'max_tokens' => 400,
+        'hourly_baseline' => 40,
+        'hourly_budget' => 80,
+    ],
+
+    'catch_up' => [
+        'schedule_minutes' => 5,
+        'max_run_seconds' => 240,
+        'lock_domain' => 'catch-up-generate',
+        'lock_seconds' => 240,
+        'max_messages_per_conversation' => 20,
+        'max_calls_per_run' => 40,
+        'heartbeat_stale_minutes' => 20,
+        'watchdog_skip_threshold' => 3,
+        'client_poll_seconds' => 60,
+    ],
+
+    'alerts' => [
+        'to' => env('GOCHA_ALERT_EMAIL', 'nate@wefoundd.com'),
+    ],
+
     'ai' => [
         'forbidden_characters' => ['—', '–'],
         'style_rules' => [

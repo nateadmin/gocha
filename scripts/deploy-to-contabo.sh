@@ -19,6 +19,25 @@ RSYNC_SSH="ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=acce
 
 echo "Deploying $COMMIT_SHA to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH"
 
+OPENAI_ENV_FILE=""
+if [[ -x "$ROOT/scripts/infisical-pull.sh" ]] && command -v infisical >/dev/null 2>&1; then
+  # shellcheck disable=SC1091
+  source "$ROOT/scripts/infisical-pull.sh"
+  OPENAI_VALUE="${OPENAI_API_KEY:-${OPEN_AI_API_KEY:-}}"
+  if [[ -n "$OPENAI_VALUE" ]]; then
+    OPENAI_ENV_FILE="$(mktemp)"
+    chmod 600 "$OPENAI_ENV_FILE"
+    printf 'OPENAI_API_KEY=%s\n' "$OPENAI_VALUE" > "$OPENAI_ENV_FILE"
+    scp -q -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
+      "$OPENAI_ENV_FILE" "$REMOTE_USER@$REMOTE_HOST:/tmp/gocha-openai.env"
+    ssh "${SSH_OPTS[@]}" "$REMOTE_USER@$REMOTE_HOST" 'chmod 600 /tmp/gocha-openai.env'
+    echo "Prepared OpenAI key for server .env inject"
+  else
+    echo "Infisical pull succeeded but OPENAI_API_KEY / OPEN_AI_API_KEY was empty" >&2
+  fi
+  unset OPENAI_VALUE
+fi
+
 rsync -az --delete -e "$RSYNC_SSH" \
   --exclude '.env' \
   --exclude 'node_modules' \
@@ -41,13 +60,49 @@ if ! grep -q '^APP_KEY=base64:' .env; then
   php artisan key:generate --force
 fi
 grep -q '^APP_BUILD_SHA=' .env && sed -i "s/^APP_BUILD_SHA=.*/APP_BUILD_SHA=$COMMIT_SHA/" .env || echo "APP_BUILD_SHA=$COMMIT_SHA" >> .env
+if [[ -f /tmp/gocha-openai.env ]]; then
+  GOCHA_REMOTE_PATH="$REMOTE_PATH" python3 - <<'PY'
+from pathlib import Path
+import os
+remote = os.environ["GOCHA_REMOTE_PATH"]
+env_path = Path(remote) / ".env"
+incoming = Path("/tmp/gocha-openai.env")
+_key, value = incoming.read_text().split("=", 1)
+value = value.strip()
+lines = env_path.read_text().splitlines()
+found = False
+out = []
+for line in lines:
+    if line.startswith("OPENAI_API_KEY="):
+        out.append(f"OPENAI_API_KEY={value}")
+        found = True
+    else:
+        out.append(line)
+if not found:
+    out.append(f"OPENAI_API_KEY={value}")
+env_path.write_text("\n".join(out) + "\n")
+incoming.unlink()
+print("openai_env_injected=yes")
+PY
+fi
 php artisan migrate --force
 php artisan storage:link || true
 php artisan config:cache
 php artisan route:cache
+CRON_LINE="* * * * * cd $REMOTE_PATH && /usr/bin/php artisan schedule:run >> $REMOTE_PATH/storage/logs/scheduler.log 2>&1"
+if ! crontab -l 2>/dev/null | grep -F "artisan schedule:run" >/dev/null; then
+  (crontab -l 2>/dev/null || true; echo "$CRON_LINE") | crontab -
+  echo "scheduler_cron_installed=yes"
+else
+  echo "scheduler_cron_present=yes"
+fi
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R ug+rwx storage bootstrap/cache
 REMOTE
+
+if [[ -n "$OPENAI_ENV_FILE" ]]; then
+  rm -f "$OPENAI_ENV_FILE"
+fi
 
 echo "Deploy complete: $COMMIT_SHA"
 

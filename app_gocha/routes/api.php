@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\AdminBusinessListingController;
 use App\Http\Controllers\Api\Admin\AdminVerificationController;
 use App\Http\Controllers\Api\AuthOtpController;
 use App\Http\Controllers\Api\BusinessListingController;
+use App\Http\Controllers\Api\CatchUpController;
 use App\Http\Controllers\Api\CommunityGroupController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\GlobalSearchController;
@@ -74,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
     Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
+    Route::get('/catch-up', [CatchUpController::class, 'show']);
 
     Route::get('/profile-cards', [ProfileCardController::class, 'index']);
     Route::post('/profile-cards', [ProfileCardController::class, 'store']);

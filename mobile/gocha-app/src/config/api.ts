@@ -37,6 +37,7 @@ export const API_PATHS = {
   groups: '/api/groups',
   profileUsername: '/api/profile/username',
   conversations: '/api/conversations',
+  catchUp: '/api/catch-up',
   profileCards: '/api/profile-cards',
   publicProfileCard: (slug: string) => `/api/c/${encodeURIComponent(slug)}`,
   userProfileCards: (userId: number) => `/api/users/${userId}/profile-cards`,

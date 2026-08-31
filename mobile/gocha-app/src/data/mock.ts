@@ -12,22 +12,6 @@ export type CommunityGroup = {
   interestTags: string[];
 };
 
-export type AttentionItem = {
-  id: string;
-  tone: 'critical' | 'warning';
-  text: string;
-};
-
-export type ConversationBrief = {
-  id: string;
-  name: string;
-  avatarLabel: string;
-  unreadCount: number;
-  priority: 'Low' | 'Medium' | 'High';
-  summary: string;
-  plans: string[];
-};
-
 export type BusinessCategory = {
   id: string;
   label: string;
@@ -81,39 +65,6 @@ export const userProfile: UserProfile = {
   email: 'gocha.admin@gmail.com',
   avatarLabel: 'G',
 };
-
-export const briefingText =
-  "You've been busy while away! You have a coffee meeting with Sofia at 10am tomorrow, and you still need to address her question about the presentation. Also, keep in mind you've committed to bringing food for the weekend trip this Saturday.";
-
-export const attentionItems: AttentionItem[] = [
-  {
-    id: 'a1',
-    tone: 'critical',
-    text: 'Sofia is waiting for a reply regarding the presentation status.',
-  },
-  {
-    id: 'a2',
-    tone: 'warning',
-    text: 'Weekend trip planning: Saturday 7am departure, you are responsible for the food.',
-  },
-  {
-    id: 'a3',
-    tone: 'warning',
-    text: 'Coffee meeting with Sofia tomorrow at 10am.',
-  },
-];
-
-export const conversationBriefs: ConversationBrief[] = [
-  {
-    id: 'noah',
-    name: 'Noah Park',
-    avatarLabel: 'NP',
-    unreadCount: 0,
-    priority: 'Low',
-    summary: 'Noah checked in about a potential game night this Friday.',
-    plans: ['Friday game night'],
-  },
-];
 
 export const businessCategories: BusinessCategory[] = [
   { id: 'all', label: 'All' },

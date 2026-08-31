@@ -35,7 +35,21 @@ SSH: key-only via Infisical secret `CONTABO_PRIVATE_SSH_KEY` (user `root` today;
 
 Project: `Rydit / Gocha` (id `e8bb8347-d16d-4614-930a-94912a2b354e`). Environments: Development, Staging, Production.
 
-Production secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_KEY`, `RESEND_API_KEY`, `SERVER_HOST`, `SERVER_APP_PATH`, `SERVER_SSH_USER`.
+Production secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_KEY`, `RESEND_API_KEY`, `OPEN_AI_API_KEY`, `SERVER_HOST`, `SERVER_APP_PATH`, `SERVER_SSH_USER`.
+
+Laravel reads the OpenAI key as `OPENAI_API_KEY` (also accepts `OPEN_AI_API_KEY`). Deploy injects the Infisical value into the server `.env` without printing it.
+
+## Catch Up pipeline
+
+- Lock domain: `catch-up-generate`. Schedules: `gocha:catch-up-generate` every 5 minutes, `gocha:catch-up-watchdog` every 10 minutes. Both use the same lock for generate. Server crontab runs `php artisan schedule:run` every minute.
+- Model: `gpt-4o-mini`. Code loads messages by conversation id. The model only summarizes assembled transcript text and returns schema-checked JSON.
+- Skip conversations with no messages, and skip a viewer/conversation pair when `source_message_id` still matches the latest message.
+- Outbound HTTP: connect 5s, read 20s. Max run 240s (under the 5 minute interval). Max 40 OpenAI calls per run.
+- Metering: baseline 40 calls/hour, budget 80 calls/hour. Spike alert at 1.5x baseline. Hard budget opens a circuit breaker until the hour ends.
+- Heartbeat: `pipeline_heartbeats` row `catch-up-generate`. Staleness SLA: 20 minutes. Watchdog alerts after 3 consecutive `skipped_lock_held` skips or a stale heartbeat. Alerts go to nate@wefoundd.com via Resend.
+- Client: `GET /api/catch-up` (Sanctum). Catch Up tab polls every 60 seconds, merges by id, no full-list spinner on poll. No realtime push.
+
+Poll answers: job every 5 minutes; client poll 60 seconds; no realtime push.
 
 Infisical API host: `https://app.infisical.com` (not `api.infisical.com`).
 
@@ -76,6 +90,7 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/profile-cards` as an authenticated session → 200 JSON `{ cards: [] }` or a card list (401 without a session is expected)
 - GET `https://gocha.ai/api/c/{slug}` → 200 JSON `{ card: ... }` for a real share slug, or 404 JSON `NOT_FOUND` when the slug is unknown
 - GET `https://gocha.ai/c/{slug}` → 200 mobile web shell (HTML) for a share page; Chat on that page requires a signed-in account
+- GET `https://gocha.ai/api/catch-up` as an authenticated session → 200 JSON `{ briefing, generatedAt, attention, conversations }` (401 without a session is expected)
 
 ### Log check
 
