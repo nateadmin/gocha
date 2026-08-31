@@ -10,6 +10,7 @@ import {
 
 import { ApiError, fetchAppMeta, type AccountChannel, type OtpAuthMode } from '../../api/client';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
+import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
@@ -176,6 +177,8 @@ export function OtpScreen({ email, channel = 'email', mode, onBack }: Props) {
               {channel === 'phone' ? 'Use a different phone' : 'Use a different email'}
             </BrandText>
           </Pressable>
+
+          {channel === 'phone' ? <RecaptchaLegalNote /> : null}
         </View>
       </KeyboardAvoidingView>
     </ScreenContainer>

@@ -42,6 +42,18 @@
       textarea:focus {
         outline: none;
       }
+      .grecaptcha-badge {
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+      #gocha-recaptcha {
+        position: absolute !important;
+        left: -9999px !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+      }
       @font-face {
         font-family: ionicons;
         src: url('https://cdn.jsdelivr.net/npm/@expo/vector-icons@15.1.1/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf')

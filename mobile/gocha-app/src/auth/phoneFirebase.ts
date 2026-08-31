@@ -63,15 +63,32 @@ async function firebaseAuth(config: FirebasePublicConfig) {
   return getAuth(app);
 }
 
+export function hideRecaptchaBadge(): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  if (!document.getElementById('gocha-hide-recaptcha')) {
+    const style = document.createElement('style');
+    style.id = 'gocha-hide-recaptcha';
+    style.textContent =
+      '.grecaptcha-badge{visibility:hidden!important;opacity:0!important;pointer-events:none!important;}#gocha-recaptcha{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important;}';
+    document.head.appendChild(style);
+  }
+}
+
 function recaptchaHost(): HTMLElement {
+  hideRecaptchaBadge();
   let host = document.getElementById('gocha-recaptcha');
   if (!host) {
     host = document.createElement('div');
     host.id = 'gocha-recaptcha';
-    host.style.position = 'fixed';
-    host.style.bottom = '8px';
-    host.style.right = '8px';
-    host.style.zIndex = '20';
+    host.setAttribute('aria-hidden', 'true');
+    host.style.position = 'absolute';
+    host.style.left = '-9999px';
+    host.style.width = '1px';
+    host.style.height = '1px';
+    host.style.overflow = 'hidden';
     document.body.appendChild(host);
   }
   return host;
@@ -81,6 +98,7 @@ export async function sendPhoneSms(
   config: FirebasePublicConfig,
   phone: string,
 ): Promise<void> {
+  hideRecaptchaBadge();
   const { RecaptchaVerifier, signInWithPhoneNumber } = await import('firebase/auth');
   const auth = await firebaseAuth(config);
 

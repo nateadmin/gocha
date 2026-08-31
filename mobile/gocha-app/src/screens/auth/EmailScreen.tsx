@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, View, StyleSheet } from 'rea
 import { ApiError, fetchAppMeta, type AccountChannel, type OtpAuthMode } from '../../api/client';
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import { sendPhoneSms } from '../../auth/phoneFirebase';
+import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
@@ -191,6 +192,8 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
             disabled={blocked}
             onPress={handleContinue}
           />
+
+          {channel === 'phone' ? <RecaptchaLegalNote /> : null}
 
           <Pressable onPress={onSwitchMode}>
             <BrandText muted style={{ textAlign: 'center' }}>

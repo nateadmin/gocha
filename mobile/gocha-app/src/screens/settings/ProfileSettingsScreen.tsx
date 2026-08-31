@@ -18,6 +18,7 @@ import { formatApiError } from '../../api/formatApiError';
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
+import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { useAuth } from '../../context/AuthContext';
@@ -277,6 +278,7 @@ export function ProfileSettingsScreen() {
                 void handleLinkContact();
               }}
             />
+            {user?.emailVerified && !user?.phoneVerified ? <RecaptchaLegalNote /> : null}
           </>
         ) : null}
 

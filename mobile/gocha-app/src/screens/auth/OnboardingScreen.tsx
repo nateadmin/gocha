@@ -14,6 +14,7 @@ import { formatApiError } from '../../api/formatApiError';
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
+import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
@@ -291,6 +292,7 @@ export function OnboardingScreen() {
             loading={loading}
             onPress={handleSubmit}
           />
+          {optionalChannel === 'phone' ? <RecaptchaLegalNote /> : null}
           {optionalContact.trim() || linkStep ? (
             <Pressable onPress={() => { void handleSkipOptional(); }}>
               <BrandText muted style={{ textAlign: 'center' }}>
