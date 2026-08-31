@@ -54,7 +54,7 @@ export default defineConfig({
     open: false,
   },
   optimizeDeps: {
-    include: ['react-native-web', '@expo/vector-icons'],
+    include: ['react-native-web', '@expo/vector-icons', 'firebase/app', 'firebase/auth'],
     esbuildOptions: {
       resolveExtensions: [
         '.web.js',

@@ -20,6 +20,8 @@ const mockUser = {
   id: 1,
   email: 'nate@example.com',
   phone: null,
+  emailVerified: true,
+  phoneVerified: false,
   primaryLoginChannel: 'email',
   displayName: 'Nate',
   username: null,

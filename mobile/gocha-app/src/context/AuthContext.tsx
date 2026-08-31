@@ -31,10 +31,16 @@ type AuthContextValue = {
   error: string | null;
   clearError: () => void;
   refresh: () => Promise<void>;
-  verifyWithOtp: (email: string, code: string, mode: OtpAuthMode) => Promise<void>;
-  requestAuthCode: (
-    email: string,
+  verifyWithOtp: (
+    identifier: string,
+    code: string,
     mode: OtpAuthMode,
+    options?: { channel?: 'email' | 'phone' },
+  ) => Promise<void>;
+  requestAuthCode: (
+    identifier: string,
+    mode: OtpAuthMode,
+    options?: { channel?: 'email' | 'phone'; recaptchaToken?: string },
   ) => Promise<{ resendAvailableInSeconds: number }>;
   finishOnboarding: (input: {
     displayName: string;
@@ -178,14 +184,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearError = useCallback(() => setError(null), []);
 
-  const requestAuthCode = useCallback(async (email: string, mode: OtpAuthMode) => {
-    const payload = await requestOtp(email, mode);
-    return { resendAvailableInSeconds: payload.resendAvailableInSeconds };
-  }, []);
+  const requestAuthCode = useCallback(
+    async (
+      identifier: string,
+      mode: OtpAuthMode,
+      options?: { channel?: 'email' | 'phone'; recaptchaToken?: string },
+    ) => {
+      const payload = await requestOtp(identifier, mode, options);
+      return { resendAvailableInSeconds: payload.resendAvailableInSeconds };
+    },
+    [],
+  );
 
   const verifyWithOtp = useCallback(
-    async (email: string, code: string, mode: OtpAuthMode) => {
-      const payload = await verifyOtp(email, code, mode);
+    async (
+      identifier: string,
+      code: string,
+      mode: OtpAuthMode,
+      options?: { channel?: 'email' | 'phone' },
+    ) => {
+      const payload = await verifyOtp(identifier, code, mode, options);
+      if (mode === 'link') {
+        setUser(payload.user);
+        setError(null);
+        syncUserToStoredAccount(payload.user);
+        return;
+      }
+      if (!payload.account || !payload.deviceToken) {
+        throw new Error('Could not finish sign-in.');
+      }
       registerAccount({
         userId: payload.account.id,
         label: payload.account.label,

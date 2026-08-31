@@ -9,6 +9,7 @@ export const API_BASE_URL =
 export const API_PATHS = {
   health: '/api/health',
   version: '/api/version',
+  meta: '/api/meta',
   csrfCookie: '/sanctum/csrf-cookie',
   otpRequest: '/api/auth/otp/request',
   otpVerify: '/api/auth/otp/verify',

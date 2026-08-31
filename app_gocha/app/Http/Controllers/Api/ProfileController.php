@@ -47,6 +47,7 @@ class ProfileController extends Controller
             'status' => ['nullable', 'string', 'max:160'],
             'bio' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:32'],
+            'email' => ['nullable', 'email:rfc', 'max:255'],
             'discoverable' => ['sometimes', 'boolean'],
         ]);
 
@@ -60,10 +61,6 @@ class ProfileController extends Controller
             'discoverable' => $validated['discoverable'] ?? false,
             'onboarding_completed_at' => now(),
         ])->save();
-
-        if (! empty($validated['phone'])) {
-            $this->businesses->attachContactPhone($user, $validated['phone']);
-        }
 
         $user = $this->ensureAvatar($user)->fresh()->load('activeBusinessListing');
 
@@ -92,10 +89,6 @@ class ProfileController extends Controller
                 ? $validated['discoverable']
                 : $user->discoverable,
         ])->save();
-
-        if (! empty($validated['phone'])) {
-            $this->businesses->attachContactPhone($user, $validated['phone']);
-        }
 
         $user = $this->ensureAvatar($user)->fresh()->load('activeBusinessListing');
 

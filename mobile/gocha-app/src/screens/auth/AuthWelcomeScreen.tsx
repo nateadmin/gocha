@@ -21,7 +21,7 @@ export function AuthWelcomeScreen({ onSignIn, onSignUp }: Props) {
           Connect. Catch up. Discover.
         </BrandText>
         <BrandText muted style={styles.note}>
-          Sign in with email today. Phone sign-in is coming when SMS is enabled.
+          Sign in with email or phone.
         </BrandText>
 
         <View style={styles.actions}>

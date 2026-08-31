@@ -14,6 +14,16 @@ return [
         'otp_request_message' => 'If your email is registered, a code has been sent.',
         'otp_signin_request_message' => 'A sign-in code has been sent to your email.',
         'otp_signup_request_message' => 'A verification code has been sent to your email.',
+        'sms_per_phone_per_day' => 8,
+    ],
+
+    'firebase' => [
+        'web_api_key' => env('FIREBASE_WEB_API_KEY'),
+        'project_id' => env('FIREBASE_PROJECT_ID'),
+        'auth_domain' => env('FIREBASE_AUTH_DOMAIN'),
+        'app_id' => env('FIREBASE_APP_ID'),
+        'connect_timeout' => 5,
+        'timeout' => 12,
     ],
 
     'resend' => [

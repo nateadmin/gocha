@@ -8,7 +8,8 @@ import {
   StyleSheet,
 } from 'react-native';
 
-import { ApiError, type OtpAuthMode } from '../../api/client';
+import { ApiError, fetchAppMeta, type AccountChannel, type OtpAuthMode } from '../../api/client';
+import { getPhoneRecaptchaToken } from '../../auth/phoneRecaptcha';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
@@ -17,11 +18,12 @@ import { useGochaTheme } from '../../theme';
 
 type Props = {
   email: string;
+  channel?: AccountChannel;
   mode: OtpAuthMode;
   onBack: () => void;
 };
 
-export function OtpScreen({ email, mode, onBack }: Props) {
+export function OtpScreen({ email, channel = 'email', mode, onBack }: Props) {
   const { theme } = useGochaTheme();
   const { verifyWithOtp, requestAuthCode } = useAuth();
   const inputRef = useRef<TextInput>(null);
@@ -51,7 +53,7 @@ export function OtpScreen({ email, mode, onBack }: Props) {
     setLoading(true);
     setSubmitError(null);
     try {
-      await verifyWithOtp(email, digits, mode);
+      await verifyWithOtp(email, digits, mode, { channel });
     } catch (err) {
       setSubmitError(
         err instanceof ApiError ? err.message : 'Could not verify the code.',
@@ -81,7 +83,14 @@ export function OtpScreen({ email, mode, onBack }: Props) {
     setSubmitError(null);
     setShowFormatError(false);
     try {
-      const payload = await requestAuthCode(email, mode);
+      let recaptchaToken: string | undefined;
+      if (channel === 'phone') {
+        const meta = await fetchAppMeta();
+        if (meta.auth.firebase) {
+          recaptchaToken = await getPhoneRecaptchaToken(meta.auth.firebase);
+        }
+      }
+      const payload = await requestAuthCode(email, mode, { channel, recaptchaToken });
       setCooldown(payload.resendAvailableInSeconds || 60);
     } catch (err) {
       setSubmitError(
@@ -116,7 +125,7 @@ export function OtpScreen({ email, mode, onBack }: Props) {
         <View style={styles.content}>
           <BrandText variant="title">Enter your code</BrandText>
           <BrandText muted>
-            {mode === 'signup'
+            {mode === 'signup' || mode === 'link'
               ? `Verification code sent to ${email}`
               : `Sign-in code sent to ${email}`}
           </BrandText>
@@ -159,7 +168,9 @@ export function OtpScreen({ email, mode, onBack }: Props) {
           </Pressable>
 
           <Pressable onPress={onBack}>
-            <BrandText muted style={{ textAlign: 'center' }}>Use a different email</BrandText>
+            <BrandText muted style={{ textAlign: 'center' }}>
+              {channel === 'phone' ? 'Use a different phone' : 'Use a different email'}
+            </BrandText>
           </Pressable>
         </View>
       </KeyboardAvoidingView>

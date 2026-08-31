@@ -20,7 +20,7 @@ Web and mobile are the same product from one codebase (`mobile/gocha-app/`, buil
 - Mobile-first React Native super-app (messaging, Catch Up AI, Discover, calls, settings)
 - Laravel JSON API on Contabo (health/version today; messaging/commerce APIs per roadmap)
 - Rydit integration planned as Build 2 connector (distinct project on same VPS)
-- Secrets only in Infisical (project `gocha`)
+- Secrets only in Infisical (project `gocha`), including Firebase Phone Auth (`FIREBASE_WEB_API_KEY`, `FIREBASE_PROJECT_ID`)
 
 ## Local development
 

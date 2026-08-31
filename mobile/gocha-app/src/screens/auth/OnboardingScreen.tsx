@@ -9,8 +9,10 @@ import {
   StyleSheet,
 } from 'react-native';
 
-import { ApiError } from '../../api/client';
+import { fetchAppMeta, type AccountChannel } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
+import { normalizeIdentifier } from '../../auth/accountChannel';
+import { getPhoneRecaptchaToken } from '../../auth/phoneRecaptcha';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
@@ -21,12 +23,14 @@ import { useGochaTheme } from '../../theme';
 
 export function OnboardingScreen() {
   const { theme } = useGochaTheme();
-  const { user, finishOnboarding, uploadProfileAvatar } = useAuth();
+  const { user, finishOnboarding, uploadProfileAvatar, requestAuthCode, verifyWithOtp } = useAuth();
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
   const [status, setStatus] = useState(user?.status ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
+  const [optionalContact, setOptionalContact] = useState('');
+  const [linkStep, setLinkStep] = useState(false);
+  const [linkCode, setLinkCode] = useState('');
   const [discoverable, setDiscoverable] = useState(user?.discoverable ?? false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl ?? null);
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null);
@@ -45,7 +49,6 @@ export function OnboardingScreen() {
     setUsername(user.username ?? '');
     setStatus(user.status ?? '');
     setBio(user.bio ?? '');
-    setPhone(user.phone?.replace(/^\++/, '') ?? '');
     setDiscoverable(user.discoverable);
     if (!pendingAvatar && user.avatarUrl) {
       setAvatarPreview(user.avatarUrl);
@@ -72,7 +75,95 @@ export function OnboardingScreen() {
     input.click();
   }
 
+  const optionalChannel: AccountChannel = user?.primaryLoginChannel === 'phone' ? 'email' : 'phone';
+
+  async function requestOptionalLink(identifier: string): Promise<void> {
+    let recaptchaToken: string | undefined;
+    if (optionalChannel === 'phone') {
+      const meta = await fetchAppMeta();
+      if (!meta.auth.firebase) {
+        throw new Error('Phone verification is not configured yet.');
+      }
+      recaptchaToken = await getPhoneRecaptchaToken(meta.auth.firebase);
+    }
+    await requestAuthCode(identifier, 'link', { channel: optionalChannel, recaptchaToken });
+  }
+
+  async function saveProfileAndAvatar(): Promise<void> {
+    const trimmedName = displayName.trim();
+    await finishOnboarding({
+      displayName: trimmedName,
+      username: username.trim() || undefined,
+      status: status.trim() || undefined,
+      bio: bio.trim() || undefined,
+      discoverable,
+    });
+
+    if (pendingAvatar) {
+      try {
+        await uploadProfileAvatar(pendingAvatar, pendingFilename);
+      } catch {
+        // Profile is already saved; avatar can be retried later.
+      }
+    }
+  }
+
   async function handleSubmit() {
+    const trimmedName = displayName.trim();
+    if (!trimmedName) {
+      setError('Your name is required.');
+      return;
+    }
+
+    const optional = optionalContact.trim();
+    if (optional && !linkStep) {
+      const normalized = normalizeIdentifier(optionalChannel, optional);
+      if (optionalChannel === 'email' && !normalized.includes('@')) {
+        setError('Enter a valid email.');
+        return;
+      }
+      if (optionalChannel === 'phone' && normalized.length < 9) {
+        setError('Enter a valid phone number.');
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        await requestOptionalLink(normalized);
+        setOptionalContact(normalized);
+        setLinkStep(true);
+      } catch (err) {
+        setError(formatApiError(err, 'Could not send a verification code.'));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      if (linkStep) {
+        const digits = linkCode.replace(/\D/g, '');
+        if (digits.length !== 6) {
+          setError('Enter the 6-digit code.');
+          setLoading(false);
+          return;
+        }
+        await verifyWithOtp(normalizeIdentifier(optionalChannel, optionalContact), digits, 'link', {
+          channel: optionalChannel,
+        });
+      }
+      await saveProfileAndAvatar();
+    } catch (err) {
+      setError(formatApiError(err, 'Could not save your profile.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSkipOptional() {
     const trimmedName = displayName.trim();
     if (!trimmedName) {
       setError('Your name is required.');
@@ -82,22 +173,7 @@ export function OnboardingScreen() {
     setLoading(true);
     setError(null);
     try {
-      await finishOnboarding({
-        displayName: trimmedName,
-        username: username.trim() || undefined,
-        status: status.trim() || undefined,
-        bio: bio.trim() || undefined,
-        phone: phone.trim() || undefined,
-        discoverable,
-      });
-
-      if (pendingAvatar) {
-        try {
-          await uploadProfileAvatar(pendingAvatar, pendingFilename);
-        } catch {
-          // Profile is already saved; avatar can be retried later.
-        }
-      }
+      await saveProfileAndAvatar();
     } catch (err) {
       setError(formatApiError(err, 'Could not save your profile.'));
     } finally {
@@ -162,13 +238,24 @@ export function OnboardingScreen() {
             multiline
             style={styles.bio}
           />
-          <BrandInput
-            placeholder="Phone (optional)"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            autoComplete="tel"
-          />
+          {linkStep ? (
+            <BrandInput
+              placeholder="6-digit code"
+              value={linkCode}
+              onChangeText={(text) => setLinkCode(text.replace(/\D/g, '').slice(0, 6))}
+              keyboardType="number-pad"
+              autoComplete="one-time-code"
+            />
+          ) : (
+            <BrandInput
+              placeholder={optionalChannel === 'email' ? 'Email (optional)' : 'Phone (optional)'}
+              value={optionalContact}
+              onChangeText={setOptionalContact}
+              autoCapitalize="none"
+              keyboardType={optionalChannel === 'email' ? 'email-address' : 'phone-pad'}
+              autoComplete={optionalChannel === 'email' ? 'email' : 'tel'}
+            />
+          )}
 
           <View
             style={[
@@ -194,7 +281,18 @@ export function OnboardingScreen() {
             <BrandText style={{ color: theme.colors.destructive }}>{error}</BrandText>
           ) : null}
 
-          <CtaButton label="Continue" loading={loading} onPress={handleSubmit} />
+          <CtaButton
+            label={linkStep ? 'Verify and continue' : 'Continue'}
+            loading={loading}
+            onPress={handleSubmit}
+          />
+          {optionalContact.trim() || linkStep ? (
+            <Pressable onPress={() => { void handleSkipOptional(); }}>
+              <BrandText muted style={{ textAlign: 'center' }}>
+                Skip {optionalChannel === 'email' ? 'email' : 'phone'}
+              </BrandText>
+            </Pressable>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>

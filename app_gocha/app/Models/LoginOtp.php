@@ -10,6 +10,7 @@ class LoginOtp extends Model
         'channel',
         'identifier',
         'code_hash',
+        'provider_session',
         'attempts',
         'expires_at',
         'consumed_at',

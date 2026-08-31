@@ -16,6 +16,8 @@ export type AuthUser = {
   id: number;
   email: string | null;
   phone: string | null;
+  emailVerified: boolean;
+  phoneVerified: boolean;
   primaryLoginChannel: string;
   displayName: string;
   username: string | null;
@@ -177,35 +179,79 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
   }
 }
 
-export type OtpAuthMode = 'signin' | 'signup';
+export type OtpAuthMode = 'signin' | 'signup' | 'link';
+export type AccountChannel = 'email' | 'phone';
+
+export type FirebasePublicConfig = {
+  apiKey: string;
+  authDomain?: string | null;
+  projectId: string;
+  appId?: string | null;
+};
+
+export type AppMeta = {
+  auth: {
+    phoneSignInEnabled: boolean;
+    firebase: FirebasePublicConfig | null;
+  };
+  account: {
+    phoneSignInEnabled: boolean;
+  };
+};
 
 export type OtpVerifyResult = {
   user: AuthUser;
-  deviceToken: string;
-  account: AccountSwitcherEntry;
+  deviceToken?: string;
+  account?: AccountSwitcherEntry;
 };
 
+let appMetaPromise: Promise<AppMeta> | null = null;
+
+export async function fetchAppMeta(): Promise<AppMeta> {
+  if (!appMetaPromise) {
+    appMetaPromise = apiRequest<AppMeta>(API_PATHS.meta).catch((error) => {
+      appMetaPromise = null;
+      throw error;
+    });
+  }
+  return appMetaPromise;
+}
+
 export async function requestOtp(
-  email: string,
+  identifier: string,
   mode: OtpAuthMode,
+  options?: { channel?: AccountChannel; recaptchaToken?: string },
 ): Promise<{
   message: string;
   resendAvailableInSeconds: number;
 }> {
+  const channel = options?.channel ?? 'email';
   return apiRequest(API_PATHS.otpRequest, {
     method: 'POST',
-    body: JSON.stringify({ email, mode }),
+    body: JSON.stringify({
+      channel,
+      identifier,
+      mode,
+      recaptchaToken: options?.recaptchaToken,
+    }),
   });
 }
 
 export async function verifyOtp(
-  email: string,
+  identifier: string,
   code: string,
   mode: OtpAuthMode,
+  options?: { channel?: AccountChannel },
 ): Promise<OtpVerifyResult> {
+  const channel = options?.channel ?? 'email';
   return apiRequest(API_PATHS.otpVerify, {
     method: 'POST',
-    body: JSON.stringify({ email, code, mode }),
+    body: JSON.stringify({
+      channel,
+      identifier,
+      code,
+      mode,
+    }),
   });
 }
 

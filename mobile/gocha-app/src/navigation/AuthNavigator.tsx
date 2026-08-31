@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import type { OtpAuthMode } from '../../api/client';
+import type { AccountChannel, OtpAuthMode } from '../../api/client';
 import { useAccounts } from '../context/AccountsContext';
 import { consumeStartSignIn } from '../profileCards/postAuthIntent';
 import { AuthWelcomeScreen } from '../screens/auth/AuthWelcomeScreen';
@@ -14,6 +14,7 @@ export function AuthNavigator() {
   const [step, setStep] = useState<Step>('welcome');
   const [mode, setMode] = useState<OtpAuthMode>('signin');
   const [email, setEmail] = useState<string | null>(null);
+  const [channel, setChannel] = useState<AccountChannel>('email');
 
   useEffect(() => {
     if (isAddingAccount) {
@@ -39,6 +40,7 @@ export function AuthNavigator() {
     return (
       <OtpScreen
         email={email}
+        channel={channel}
         mode={mode}
         onBack={() => setStep('email')}
       />
@@ -49,8 +51,9 @@ export function AuthNavigator() {
     return (
       <EmailScreen
         mode={mode}
-        onCodeSent={(value) => {
+        onCodeSent={(value, nextChannel) => {
           setEmail(value);
+          setChannel(nextChannel);
           setStep('otp');
         }}
         onSwitchMode={() => {

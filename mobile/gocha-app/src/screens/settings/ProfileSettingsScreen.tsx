@@ -13,7 +13,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { fetchAppMeta, type AccountChannel } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
+import { normalizeIdentifier } from '../../auth/accountChannel';
+import { getPhoneRecaptchaToken } from '../../auth/phoneRecaptcha';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
@@ -24,11 +27,14 @@ import { useGochaTheme } from '../../theme';
 export function ProfileSettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const { theme } = useGochaTheme();
-  const { user, updateProfile, uploadProfileAvatar } = useAuth();
+  const { user, updateProfile, uploadProfileAvatar, requestAuthCode, verifyWithOtp } = useAuth();
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [status, setStatus] = useState(user?.status ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
+  const [optionalContact, setOptionalContact] = useState('');
+  const [linkCode, setLinkCode] = useState('');
+  const [linkSent, setLinkSent] = useState(false);
+  const [linkLoading, setLinkLoading] = useState(false);
   const [discoverable, setDiscoverable] = useState(user?.discoverable ?? false);
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -42,8 +48,12 @@ export function ProfileSettingsScreen() {
     setDisplayName(user.displayName ?? '');
     setStatus(user.status ?? '');
     setBio(user.bio ?? '');
-    setPhone(user.phone?.replace(/^\++/, '') ?? '');
     setDiscoverable(user.discoverable);
+    if (!user.emailVerified && user.email) {
+      setOptionalContact(user.email);
+    } else if (!user.phoneVerified && user.phone) {
+      setOptionalContact(user.phone);
+    }
   }, [user]);
 
   async function pickAvatar() {
@@ -64,6 +74,55 @@ export function ProfileSettingsScreen() {
     input.click();
   }
 
+  async function handleLinkContact() {
+    const channel: AccountChannel = !user?.emailVerified ? 'email' : 'phone';
+    const normalized = normalizeIdentifier(channel, optionalContact);
+    if (!normalized) {
+      setError(channel === 'email' ? 'Enter an email.' : 'Enter a phone number.');
+      return;
+    }
+    if (channel === 'email' && !normalized.includes('@')) {
+      setError('Enter a valid email.');
+      return;
+    }
+
+    setLinkLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      if (!linkSent) {
+        let recaptchaToken: string | undefined;
+        if (channel === 'phone') {
+          const meta = await fetchAppMeta();
+          if (!meta.auth.firebase) {
+            throw new Error('Phone verification is not configured yet.');
+          }
+          recaptchaToken = await getPhoneRecaptchaToken(meta.auth.firebase);
+        }
+        await requestAuthCode(normalized, 'link', { channel, recaptchaToken });
+        setOptionalContact(normalized);
+        setLinkSent(true);
+        setMessage('Code sent.');
+        return;
+      }
+
+      const digits = linkCode.replace(/\D/g, '');
+      if (digits.length !== 6) {
+        setError('Enter the 6-digit code.');
+        return;
+      }
+      await verifyWithOtp(normalized, digits, 'link', { channel });
+      setOptionalContact('');
+      setLinkCode('');
+      setLinkSent(false);
+      setMessage(channel === 'email' ? 'Email added.' : 'Phone added.');
+    } catch (err) {
+      setError(formatApiError(err, 'Could not verify that contact.'));
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
   async function handleSave() {
     const trimmedName = displayName.trim();
     if (!trimmedName) {
@@ -79,7 +138,6 @@ export function ProfileSettingsScreen() {
         displayName: trimmedName,
         status: status.trim() || undefined,
         bio: bio.trim() || undefined,
-        phone: phone.trim() || undefined,
         discoverable,
       });
 
@@ -174,13 +232,50 @@ export function ProfileSettingsScreen() {
           multiline
           style={styles.bio}
         />
-        <BrandInput
-          placeholder="Phone (optional)"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-          autoComplete="tel"
-        />
+        <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.typography.sans, fontSize: 13 }}>
+          Email {user?.emailVerified ? '(verified)' : user?.email ? '(unverified)' : '(optional)'}
+        </Text>
+        <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans, fontSize: 16 }}>
+          {user?.email ?? 'Not added'}
+        </Text>
+        <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.typography.sans, fontSize: 13 }}>
+          Phone {user?.phoneVerified ? '(verified)' : user?.phone ? '(unverified)' : '(optional)'}
+        </Text>
+        <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans, fontSize: 16 }}>
+          {user?.phone ?? 'Not added'}
+        </Text>
+        {(!user?.emailVerified || !user?.phoneVerified) ? (
+          <>
+            <BrandInput
+              placeholder={!user?.emailVerified ? 'Add email' : 'Add phone with country code'}
+              value={optionalContact}
+              onChangeText={(text) => {
+                setOptionalContact(text);
+                setLinkSent(false);
+                setLinkCode('');
+              }}
+              autoCapitalize="none"
+              keyboardType={!user?.emailVerified ? 'email-address' : 'phone-pad'}
+              autoComplete={!user?.emailVerified ? 'email' : 'tel'}
+            />
+            {linkSent ? (
+              <BrandInput
+                placeholder="6-digit code"
+                value={linkCode}
+                onChangeText={(text) => setLinkCode(text.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+              />
+            ) : null}
+            <CtaButton
+              label={linkSent ? 'Verify contact' : 'Send verification code'}
+              loading={linkLoading}
+              onPress={() => {
+                void handleLinkContact();
+              }}
+            />
+          </>
+        ) : null}
 
         <View
           style={[

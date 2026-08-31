@@ -16,8 +16,13 @@ class AccountFoundationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_phone_signup_request_is_not_available_yet(): void
+    public function test_phone_signup_request_is_blocked_when_firebase_is_not_configured(): void
     {
+        config([
+            'gocha.firebase.web_api_key' => null,
+            'gocha.firebase.project_id' => null,
+        ]);
+
         $this->postJson('/api/auth/otp/request', [
             'channel' => AccountChannel::PHONE,
             'identifier' => '+15551234567',

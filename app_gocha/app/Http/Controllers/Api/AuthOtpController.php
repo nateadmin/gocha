@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Exceptions\OtpVerificationException;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Auth\AccountIdentifierService;
 use App\Services\Auth\DeviceTokenService;
 use App\Services\Auth\OtpAuthService;
@@ -28,12 +29,26 @@ class AuthOtpController extends Controller
             'channel' => ['sometimes', 'string', Rule::in(AccountChannel::all())],
             'identifier' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email:rfc', 'max:255'],
-            'mode' => ['required', 'string', 'in:signin,signup'],
+            'mode' => ['required', 'string', 'in:signin,signup,link'],
+            'recaptchaToken' => ['sometimes', 'nullable', 'string', 'max:8000'],
         ]);
 
-        [$channel, $identifier] = $this->resolveChannelIdentifier($validated);
+        try {
+            [$channel, $identifier] = $this->resolveChannelIdentifier($validated);
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'identifier' => [$e->getMessage()],
+            ]);
+        }
+        $actor = $validated['mode'] === 'link' ? $this->requireActor($request) : $this->optionalActor($request);
 
-        $payload = $this->otpAuth->requestCode($channel, $identifier, $validated['mode']);
+        $payload = $this->otpAuth->requestCode(
+            $channel,
+            $identifier,
+            $validated['mode'],
+            $validated['recaptchaToken'] ?? null,
+            $actor,
+        );
 
         return response()->json($payload);
     }
@@ -45,10 +60,17 @@ class AuthOtpController extends Controller
             'identifier' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email:rfc', 'max:255'],
             'code' => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
-            'mode' => ['required', 'string', 'in:signin,signup'],
+            'mode' => ['required', 'string', 'in:signin,signup,link'],
         ]);
 
-        [$channel, $identifier] = $this->resolveChannelIdentifier($validated);
+        try {
+            [$channel, $identifier] = $this->resolveChannelIdentifier($validated);
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'identifier' => [$e->getMessage()],
+            ]);
+        }
+        $actor = $validated['mode'] === 'link' ? $this->requireActor($request) : $this->optionalActor($request);
 
         try {
             $user = $this->otpAuth->verifyCode(
@@ -56,9 +78,16 @@ class AuthOtpController extends Controller
                 $identifier,
                 $validated['code'],
                 $validated['mode'],
+                $actor,
             );
         } catch (OtpVerificationException $e) {
             throw $e;
+        }
+
+        if ($validated['mode'] === 'link') {
+            return response()->json([
+                'user' => $user->load('activeBusinessListing')->toAuthPayload(),
+            ]);
         }
 
         Auth::login($user, remember: true);
@@ -148,7 +177,7 @@ class AuthOtpController extends Controller
         ]);
     }
 
-  /**
+    /**
      * @param  array<string, mixed>  $validated
      * @return array{0: string, 1: string}
      */
@@ -170,5 +199,27 @@ class AuthOtpController extends Controller
         throw ValidationException::withMessages([
             'identifier' => ['Provide channel and identifier, or email.'],
         ]);
+    }
+
+    private function requireActor(Request $request): User
+    {
+        $actor = $this->optionalActor($request);
+        if (! $actor) {
+            abort(401, 'Sign in required.');
+        }
+
+        return $actor;
+    }
+
+    private function optionalActor(Request $request): ?User
+    {
+        $user = $request->user();
+        if ($user instanceof User) {
+            return $user;
+        }
+
+        $resolved = $this->deviceTokens->resolveUser($request->bearerToken());
+
+        return $resolved instanceof User ? $resolved : null;
     }
 }

@@ -153,6 +153,8 @@ class User extends Authenticatable
             'id' => $this->id,
             'email' => $this->email,
             'phone' => $this->phone,
+            'emailVerified' => $this->email_verified_at !== null,
+            'phoneVerified' => $this->phone_verified_at !== null,
             'primaryLoginChannel' => $this->primary_login_channel,
             'displayName' => $this->publicDisplayName(),
             'username' => $this->username,

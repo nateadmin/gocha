@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Auth\FirebasePhoneAuthService;
 use App\Http\Controllers\Api\Admin\AdminBusinessListingController;
 use App\Http\Controllers\Api\Admin\AdminVerificationController;
 use App\Http\Controllers\Api\AuthOtpController;
@@ -19,7 +20,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/health', [HealthController::class, 'show']);
 Route::get('/version', [VersionController::class, 'show']);
 
-Route::get('/meta', function () {
+Route::get('/meta', function (FirebasePhoneAuthService $firebasePhone) {
+    $phoneEnabled = $firebasePhone->isConfigured();
+
     return response()->json([
         'service' => 'gocha-api',
         'message' => 'Mobile-first API. Web shell is served at the site root.',
@@ -30,10 +33,13 @@ Route::get('/meta', function () {
             'otpRequest' => url('/api/auth/otp/request'),
             'otpVerify' => url('/api/auth/otp/verify'),
             'me' => url('/api/me'),
+            'channels' => ['email', 'phone'],
+            'phoneSignInEnabled' => $phoneEnabled,
+            'firebase' => $phoneEnabled ? $firebasePhone->publicConfig() : null,
         ],
         'account' => [
             'channels' => ['email', 'phone'],
-            'phoneSignInEnabled' => false,
+            'phoneSignInEnabled' => $phoneEnabled,
             'multiAccount' => true,
         ],
     ]);

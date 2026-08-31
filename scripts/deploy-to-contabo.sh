@@ -36,6 +36,22 @@ if [[ -x "$ROOT/scripts/infisical-pull.sh" ]] && command -v infisical >/dev/null
   else
     echo "Infisical pull succeeded but GOOGLE_PLACES_API_KEY was empty" >&2
   fi
+  if [[ -n "${FIREBASE_WEB_API_KEY:-}" ]]; then
+    printf 'FIREBASE_WEB_API_KEY=%s\n' "$FIREBASE_WEB_API_KEY" >> "$INJECT_ENV_FILE"
+  else
+    echo "Infisical pull succeeded but FIREBASE_WEB_API_KEY was empty" >&2
+  fi
+  if [[ -n "${FIREBASE_PROJECT_ID:-}" ]]; then
+    printf 'FIREBASE_PROJECT_ID=%s\n' "$FIREBASE_PROJECT_ID" >> "$INJECT_ENV_FILE"
+  else
+    echo "Infisical pull succeeded but FIREBASE_PROJECT_ID was empty" >&2
+  fi
+  if [[ -n "${FIREBASE_AUTH_DOMAIN:-}" ]]; then
+    printf 'FIREBASE_AUTH_DOMAIN=%s\n' "$FIREBASE_AUTH_DOMAIN" >> "$INJECT_ENV_FILE"
+  fi
+  if [[ -n "${FIREBASE_APP_ID:-}" ]]; then
+    printf 'FIREBASE_APP_ID=%s\n' "$FIREBASE_APP_ID" >> "$INJECT_ENV_FILE"
+  fi
   unset OPENAI_VALUE
   if [[ -s "$INJECT_ENV_FILE" ]]; then
     scp -q -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
@@ -79,7 +95,7 @@ for raw in incoming.read_text().splitlines():
     if not raw.strip() or "=" not in raw:
         continue
     key, value = raw.split("=", 1)
-    if key in {"OPENAI_API_KEY", "GOOGLE_PLACES_API_KEY"}:
+    if key in {"OPENAI_API_KEY", "GOOGLE_PLACES_API_KEY", "FIREBASE_WEB_API_KEY", "FIREBASE_PROJECT_ID", "FIREBASE_AUTH_DOMAIN", "FIREBASE_APP_ID"}:
         updates[key] = value.strip()
 lines = env_path.read_text().splitlines()
 found = set()

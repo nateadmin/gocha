@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View, StyleSheet } from 'react-native';
 
-import { ApiError } from '../../api/client';
-import type { OtpAuthMode } from '../../api/client';
+import { ApiError, fetchAppMeta, type AccountChannel, type OtpAuthMode } from '../../api/client';
+import { normalizeIdentifier } from '../../auth/accountChannel';
+import { getPhoneRecaptchaToken } from '../../auth/phoneRecaptcha';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
@@ -12,7 +13,7 @@ import { useGochaTheme } from '../../theme';
 
 type Props = {
   mode: OtpAuthMode;
-  onCodeSent: (email: string) => void;
+  onCodeSent: (identifier: string, channel: AccountChannel) => void;
   onSwitchMode: () => void;
   onBack?: () => void;
 };
@@ -20,13 +21,25 @@ type Props = {
 export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const { theme } = useGochaTheme();
   const { requestAuthCode } = useAuth();
-  const [email, setEmail] = useState('');
+  const [channel, setChannel] = useState<AccountChannel>('email');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
+  const [phoneEnabled, setPhoneEnabled] = useState(true);
 
   const isSignUp = mode === 'signup';
   const blocked = retryAfterSeconds > 0;
+
+  useEffect(() => {
+    void fetchAppMeta()
+      .then((meta) => {
+        setPhoneEnabled(meta.account.phoneSignInEnabled || meta.auth.phoneSignInEnabled);
+      })
+      .catch(() => {
+        setPhoneEnabled(true);
+      });
+  }, []);
 
   useEffect(() => {
     if (retryAfterSeconds <= 0) {
@@ -41,9 +54,13 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   }, [retryAfterSeconds]);
 
   async function handleContinue() {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) {
-      setError('Enter your email.');
+    const normalized = normalizeIdentifier(channel, identifier);
+    if (!normalized) {
+      setError(channel === 'email' ? 'Enter your email.' : 'Enter your phone number.');
+      return;
+    }
+    if (channel === 'email' && !normalized.includes('@')) {
+      setError('Enter a valid email.');
       return;
     }
 
@@ -54,11 +71,19 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const payload = await requestAuthCode(trimmed, mode);
+      let recaptchaToken: string | undefined;
+      if (channel === 'phone') {
+        const meta = await fetchAppMeta();
+        if (!meta.auth.firebase) {
+          throw new Error('Phone sign-in is not configured yet.');
+        }
+        recaptchaToken = await getPhoneRecaptchaToken(meta.auth.firebase);
+      }
+      const payload = await requestAuthCode(normalized, mode, { channel, recaptchaToken });
       if (payload.resendAvailableInSeconds > 0) {
         setRetryAfterSeconds(payload.resendAvailableInSeconds);
       }
-      onCodeSent(trimmed);
+      onCodeSent(normalized, channel);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -66,7 +91,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
           setRetryAfterSeconds(err.body.retryAfterSeconds);
         }
       } else {
-        setError('Could not send a code.');
+        setError(err instanceof Error ? err.message : 'Could not send a code.');
       }
     } finally {
       setLoading(false);
@@ -84,17 +109,68 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
           </BrandText>
           <BrandText muted style={styles.subtitle}>
             {isSignUp
-              ? 'Enter your email. We will send a verification code.'
-              : 'Enter the email for your existing Gocha account.'}
+              ? 'Use email or phone. The other is optional later.'
+              : 'Use the email or phone on your Gocha account.'}
           </BrandText>
+
+          <View style={styles.channelRow}>
+            <Pressable
+              onPress={() => {
+                setChannel('email');
+                setError(null);
+              }}
+              style={[
+                styles.channelChip,
+                {
+                  borderColor: theme.colors.border,
+                  backgroundColor: channel === 'email' ? theme.colors.primary : theme.colors.card,
+                },
+              ]}>
+              <BrandText
+                style={{
+                  color: channel === 'email' ? '#fff' : theme.colors.cardForeground,
+                  textAlign: 'center',
+                }}>
+                Email
+              </BrandText>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                if (!phoneEnabled) {
+                  setError('Phone sign-in is not configured yet.');
+                  return;
+                }
+                setChannel('phone');
+                setError(null);
+              }}
+              style={[
+                styles.channelChip,
+                {
+                  borderColor: theme.colors.border,
+                  backgroundColor: channel === 'phone' ? theme.colors.primary : theme.colors.card,
+                },
+              ]}>
+              <BrandText
+                style={{
+                  color: channel === 'phone' ? '#fff' : theme.colors.cardForeground,
+                  textAlign: 'center',
+                }}>
+                Phone
+              </BrandText>
+            </Pressable>
+          </View>
 
           <BrandInput
             autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
+            autoComplete={channel === 'email' ? 'email' : 'tel'}
+            keyboardType={channel === 'email' ? 'email-address' : 'phone-pad'}
+            placeholder={channel === 'email' ? 'Email' : 'Phone with country code'}
+            value={identifier}
+            onChangeText={setIdentifier}
+            onSubmitEditing={() => {
+              void handleContinue();
+            }}
+            returnKeyType="go"
             style={styles.input}
           />
 
@@ -146,4 +222,15 @@ const styles = StyleSheet.create({
   },
   subtitle: { marginBottom: 8 },
   input: { marginBottom: 8 },
+  channelRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  channelChip: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
 });

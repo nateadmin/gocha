@@ -187,7 +187,6 @@ class AuthOtpTest extends TestCase
             'displayName' => 'Neon Rider',
             'status' => 'Online',
             'bio' => 'Building Gocha.',
-            'phone' => '+15551234567',
             'discoverable' => true,
         ]);
 

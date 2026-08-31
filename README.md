@@ -35,9 +35,11 @@ SSH: key-only via Infisical secret `CONTABO_PRIVATE_SSH_KEY` (user `root` today;
 
 Project: `Rydit / Gocha` (id `e8bb8347-d16d-4614-930a-94912a2b354e`). Environments: Development, Staging, Production.
 
-Production secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_KEY`, `RESEND_API_KEY`, `OPEN_AI_API_KEY`, `GOOGLE_PLACES_API_KEY`, `SERVER_HOST`, `SERVER_APP_PATH`, `SERVER_SSH_USER`.
+Production secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_KEY`, `RESEND_API_KEY`, `OPEN_AI_API_KEY`, `GOOGLE_PLACES_API_KEY`, `FIREBASE_WEB_API_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_APP_ID`, `SERVER_HOST`, `SERVER_APP_PATH`, `SERVER_SSH_USER`.
 
-Laravel reads the OpenAI key as `OPENAI_API_KEY` (also accepts `OPEN_AI_API_KEY`) and Places as `GOOGLE_PLACES_API_KEY`. Deploy injects those Infisical values into the server `.env` without printing them. Places calls go out over IPv4 so an API-key IP restriction of `212.47.68.106` matches. The host also has IPv6 `2a02:c207:2291:8811::1` if a Google key is left on dual-stack.
+Laravel reads the OpenAI key as `OPENAI_API_KEY` (also accepts `OPEN_AI_API_KEY`), Places as `GOOGLE_PLACES_API_KEY`, and Firebase Phone Auth as `FIREBASE_WEB_API_KEY` plus `FIREBASE_PROJECT_ID` (`FIREBASE_AUTH_DOMAIN` and `FIREBASE_APP_ID` optional). Deploy injects those Infisical values into the server `.env` without printing them. Places and Firebase Identity Toolkit calls go out over IPv4 so an API-key IP restriction of `212.47.68.106` matches. The host also has IPv6 `2a02:c207:2291:8811::1` if a Google key is left on dual-stack.
+
+Sign-up and sign-in accept email or phone as the primary channel. The other contact is optional and is added only after a verification code. Phone SMS is sent by Firebase Identity Toolkit. `GET /api/meta` sets `account.phoneSignInEnabled` when the Firebase key is present, and includes the public Firebase web config the client needs for reCAPTCHA. That web API key is a public Firebase client identifier, stored in Infisical as the source of truth.
 
 ## Catch Up pipeline
 
@@ -92,6 +94,8 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/c/{slug}` → 200 mobile web shell (HTML) for a share page; Chat on that page requires a signed-in account
 - GET `https://gocha.ai/api/catch-up` as an authenticated session → 200 JSON `{ briefing, generatedAt, attention, conversations }` (401 without a session is expected)
 - POST `https://gocha.ai/api/businesses/import-google` without a session → 401 `UNAUTHENTICATED`
+- GET `https://gocha.ai/api/meta` → 200 JSON, `account.phoneSignInEnabled` true after Firebase secrets are injected
+- GET `https://gocha.ai/` login/sign-up → email or phone as primary, the other optional on profile setup
 
 ### Log check
 
