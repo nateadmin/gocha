@@ -62,6 +62,8 @@ export type ChatRecord = {
   labelIds: string[];
   disappearingTimerSec?: number | null;
   otherUserId?: number;
+  hasStatus?: boolean;
+  statusUnseen?: boolean;
 };
 
 export type ChatList = {

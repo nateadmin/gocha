@@ -12,7 +12,11 @@ import {
   requestProfileCardAccess,
   type ProfileCardSummary,
 } from '../../api/client';
+import { fetchUserStatuses } from '../../api/client';
 import { Avatar, UniversalLoader } from '../../components/app';
+import { StatusRing } from '../../components/status/StatusRing';
+import { openStatusViewer } from '../../navigation/rootNavigation';
+import { statusRingTone } from '../../status/statusLogic';
 import { ProfileCardTile } from '../../components/profileCards/ProfileCardTile';
 import { useChat } from '../../chat/ChatContext';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
@@ -33,6 +37,8 @@ export function ChatInfoScreen() {
   const [username, setUsername] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [hasStatus, setHasStatus] = useState(false);
+  const [statusUnseen, setStatusUnseen] = useState(false);
 
   const otherUserId = chat?.otherUserId;
 
@@ -52,6 +58,15 @@ export function ChatInfoScreen() {
         .catch((err) => {
           setError(formatApiError(err, 'Could not load profiles.'));
           setCards([]);
+        });
+      fetchUserStatuses(otherUserId)
+        .then((payload) => {
+          setHasStatus(payload.items.length > 0);
+          setStatusUnseen(payload.items.some((item) => !item.viewed));
+        })
+        .catch(() => {
+          setHasStatus(false);
+          setStatusUnseen(false);
         });
     }, [otherUserId]),
   );
@@ -100,7 +115,17 @@ export function ChatInfoScreen() {
       </Text>
 
       <View style={styles.hero}>
-        <Avatar label={chat.avatarLabel} color={chat.avatarColor} size={88} />
+        <Pressable
+          onPress={() => {
+            if (hasStatus && otherUserId) {
+              openStatusViewer(otherUserId);
+            }
+          }}
+          accessibilityRole="button">
+          <StatusRing tone={statusRingTone(hasStatus, statusUnseen)} size={88}>
+            <Avatar label={chat.avatarLabel} color={chat.avatarColor} size={88} />
+          </StatusRing>
+        </Pressable>
         <Text
           style={{
             color: theme.colors.cardForeground,

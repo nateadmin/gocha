@@ -18,6 +18,10 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('gocha:catch-up-watchdog')
             ->everyTenMinutes();
+
+        $schedule->command('gocha:status-prune')
+            ->hourly()
+            ->withoutOverlapping(10);
     }
 
     /**

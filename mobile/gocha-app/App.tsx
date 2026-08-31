@@ -11,6 +11,8 @@ import { appNavigationRef } from './src/navigation/rootNavigation';
 import type { AppStackParamList } from './src/navigation/types';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
 import { PublicProfileCardScreen } from './src/screens/chats/PublicProfileCardScreen';
+import { StatusComposerScreen } from './src/screens/status/StatusComposerScreen';
+import { StatusViewerScreen } from './src/screens/status/StatusViewerScreen';
 import { SplashScreen, useSplashGate } from './src/screens/splash/SplashScreen';
 import { AuthProvider, useAuthGate } from './src/context/AuthContext';
 import { LanguageProvider } from './src/i18n/LanguageContext';
@@ -92,6 +94,8 @@ function AppShell() {
       <AppStack.Navigator screenOptions={{ headerShown: false }}>
         <AppStack.Screen name="Main" component={MainSwitch} />
         <AppStack.Screen name="PublicProfileCard" component={PublicProfileCardScreen} />
+        <AppStack.Screen name="StatusViewer" component={StatusViewerScreen} />
+        <AppStack.Screen name="StatusComposer" component={StatusComposerScreen} />
       </AppStack.Navigator>
     </NavigationContainer>
   );

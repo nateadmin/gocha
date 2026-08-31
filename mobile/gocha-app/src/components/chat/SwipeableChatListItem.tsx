@@ -8,9 +8,10 @@ type Props = {
   selected?: boolean;
   onPress: () => void;
   onLongPress: () => void;
+  onAvatarPress?: () => void;
 };
 
-export function SwipeableChatListItem({ chat, selected, onPress, onLongPress }: Props) {
+export function SwipeableChatListItem({ chat, selected, onPress, onLongPress, onAvatarPress }: Props) {
   const { preferences, applySwipeAction } = useChat();
 
   return (
@@ -26,6 +27,7 @@ export function SwipeableChatListItem({ chat, selected, onPress, onLongPress }: 
         selected={selected}
         onPress={onPress}
         onLongPress={onLongPress}
+        onAvatarPress={onAvatarPress}
       />
     </SwipeableRow>
   );

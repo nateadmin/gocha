@@ -12,6 +12,7 @@ import { useAccounts } from '../../context/AccountsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { languageLabel } from '../../i18n/languages';
+import { openStatusComposer, openStatusViewer } from '../../navigation/rootNavigation';
 import { useGochaTheme } from '../../theme';
 
 type SettingsNavigationProp = CompositeNavigationProp<
@@ -139,6 +140,15 @@ export function SettingsScreen() {
         <Pressable onPress={() => navigation.navigate('UsernameSettings')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
             {t('settings.username')} {user?.username ? `(@${user.username})` : ''}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable
+          onPress={() => (user?.id ? openStatusViewer(user.id) : openStatusComposer())}
+          style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            {t('status.myStatus')}
           </Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>

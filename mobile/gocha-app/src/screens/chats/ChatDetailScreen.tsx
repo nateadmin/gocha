@@ -16,6 +16,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar, HeaderOverflowMenu, type DropdownMenuItem } from '../../components/app';
 import { ActionSheet, ChatComposer, DurationPickerSheet, MessageBubble } from '../../components/chat';
+import { StatusRing } from '../../components/status/StatusRing';
+import { openStatusViewer } from '../../navigation/rootNavigation';
+import { statusRingTone } from '../../status/statusLogic';
 import type { ActionSheetItem } from '../../components/chat/ActionSheet';
 import { useChat } from '../../chat/ChatContext';
 import { ORDER_ASSISTANT_SUGGESTIONS } from '../../chat/orderAssistant';
@@ -275,7 +278,19 @@ export function ChatDetailScreen() {
         <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.colors.primary} />
         </Pressable>
-        <Avatar label={chat.avatarLabel} color={chat.avatarColor} size={40} />
+        <Pressable
+          onPress={() => {
+            if (chat.hasStatus && chat.otherUserId) {
+              openStatusViewer(chat.otherUserId);
+              return;
+            }
+            navigation.navigate('ChatInfo', { chatId: chat.id });
+          }}
+          accessibilityRole="button">
+          <StatusRing tone={statusRingTone(Boolean(chat.hasStatus), Boolean(chat.statusUnseen))} size={40}>
+            <Avatar label={chat.avatarLabel} color={chat.avatarColor} size={40} />
+          </StatusRing>
+        </Pressable>
         <Pressable
           style={styles.headerText}
           onPress={() => navigation.navigate('ChatInfo', { chatId: chat.id })}>

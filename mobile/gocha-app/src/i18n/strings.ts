@@ -35,7 +35,28 @@ export type StringKey =
   | 'auth.tagline'
   | 'auth.signInNote'
   | 'auth.signUp'
-  | 'auth.signIn';
+  | 'auth.signIn'
+  | 'status.myStatus'
+  | 'status.add'
+  | 'status.post'
+  | 'status.text'
+  | 'status.photo'
+  | 'status.video'
+  | 'status.color'
+  | 'status.textPlaceholder'
+  | 'status.captionPlaceholder'
+  | 'status.textRequired'
+  | 'status.postFailed'
+  | 'status.loadFailed'
+  | 'status.delete'
+  | 'status.deleteFailed'
+  | 'status.seenBy'
+  | 'status.viewersFailed'
+  | 'status.closeViewers'
+  | 'status.noViews'
+  | 'status.viewer'
+  | 'status.confirmDeleteTitle'
+  | 'status.confirmDeleteBody';
 
 type Dictionary = Record<StringKey, string>;
 
@@ -75,6 +96,27 @@ const en: Dictionary = {
   'auth.signInNote': 'Sign in with email or phone.',
   'auth.signUp': 'Sign up',
   'auth.signIn': 'Sign in',
+  'status.myStatus': 'My status',
+  'status.add': 'Add status',
+  'status.post': 'Post',
+  'status.text': 'Text',
+  'status.photo': 'Photo',
+  'status.video': 'Video',
+  'status.color': 'Color',
+  'status.textPlaceholder': 'Type a status',
+  'status.captionPlaceholder': 'Add a caption',
+  'status.textRequired': 'Write something first.',
+  'status.postFailed': 'Could not post that status.',
+  'status.loadFailed': 'Could not load status.',
+  'status.delete': 'Delete',
+  'status.deleteFailed': 'Could not delete that status.',
+  'status.seenBy': 'Seen by',
+  'status.viewersFailed': 'Could not load viewers.',
+  'status.closeViewers': 'Close',
+  'status.noViews': 'No views yet',
+  'status.viewer': 'Status',
+  'status.confirmDeleteTitle': 'Delete this status?',
+  'status.confirmDeleteBody': 'This status will be removed for everyone.',
 };
 
 const he: Dictionary = {
@@ -114,6 +156,27 @@ const he: Dictionary = {
   'auth.signInNote': 'התחברות עם אימייל או טלפון.',
   'auth.signUp': 'הרשמה',
   'auth.signIn': 'התחברות',
+  'status.myStatus': 'הסטטוס שלי',
+  'status.add': 'הוסף סטטוס',
+  'status.post': 'פרסם',
+  'status.text': 'טקסט',
+  'status.photo': 'תמונה',
+  'status.video': 'וידאו',
+  'status.color': 'צבע',
+  'status.textPlaceholder': 'כתוב סטטוס',
+  'status.captionPlaceholder': 'הוסף כיתוב',
+  'status.textRequired': 'כתוב משהו קודם.',
+  'status.postFailed': 'לא ניתן לפרסם את הסטטוס.',
+  'status.loadFailed': 'לא ניתן לטעון את הסטטוס.',
+  'status.delete': 'מחק',
+  'status.deleteFailed': 'לא ניתן למחוק את הסטטוס.',
+  'status.seenBy': 'נצפה על ידי',
+  'status.viewersFailed': 'לא ניתן לטעון צפיות.',
+  'status.closeViewers': 'סגור',
+  'status.noViews': 'אין צפיות עדיין',
+  'status.viewer': 'סטטוס',
+  'status.confirmDeleteTitle': 'למחוק את הסטטוס?',
+  'status.confirmDeleteBody': 'הסטטוס יוסר לכולם.',
 };
 
 const es: Dictionary = {

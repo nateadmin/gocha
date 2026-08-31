@@ -81,6 +81,11 @@ class User extends Authenticatable
         return $this->hasMany(ProfileCard::class);
     }
 
+    public function statusItems(): HasMany
+    {
+        return $this->hasMany(StatusItem::class);
+    }
+
     public function needsOnboarding(): bool
     {
         return $this->onboarding_completed_at === null;

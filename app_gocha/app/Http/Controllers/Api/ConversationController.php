@@ -9,6 +9,7 @@ use App\Models\Message;
 use App\Models\User;
 use App\Services\Locale\MessageTranslationService;
 use App\Services\Locale\TranslationBudget;
+use App\Services\Status\StatusService;
 use App\Support\ConversationType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,10 @@ use Illuminate\Validation\Rule;
 
 class ConversationController extends Controller
 {
-    public function __construct(private readonly MessageTranslationService $translations) {}
+    public function __construct(
+        private readonly MessageTranslationService $translations,
+        private readonly StatusService $statuses,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -29,8 +33,16 @@ class ConversationController extends Controller
             ->with(['participants', 'participantRows'])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
-            ->get()
-            ->map(fn (Conversation $conversation) => $this->toConversationPayload($conversation, $user))
+            ->get();
+
+        $otherIds = $conversations
+            ->map(fn (Conversation $conversation) => $conversation->otherParticipant($user)?->id)
+            ->filter()
+            ->values();
+        $statusFlags = $this->statuses->summariesForUsers($user, $otherIds);
+
+        $conversations = $conversations
+            ->map(fn (Conversation $conversation) => $this->toConversationPayload($conversation, $user, $statusFlags))
             ->values();
 
         return response()->json(['conversations' => $conversations]);
@@ -57,7 +69,7 @@ class ConversationController extends Controller
             $existing->load(['participants', 'participantRows']);
 
             return response()->json([
-                'conversation' => $this->toConversationPayload($existing, $user),
+                'conversation' => $this->toConversationPayload($existing, $user, $this->statusFlagsFor($user, $existing)),
             ]);
         }
 
@@ -84,7 +96,7 @@ class ConversationController extends Controller
         $conversation->load(['participants', 'participantRows']);
 
         return response()->json([
-            'conversation' => $this->toConversationPayload($conversation, $user),
+            'conversation' => $this->toConversationPayload($conversation, $user, $this->statusFlagsFor($user, $conversation)),
         ], 201);
     }
 
@@ -211,8 +223,20 @@ class ConversationController extends Controller
             ->first();
     }
 
-    /** @return array<string, mixed> */
-    private function toConversationPayload(Conversation $conversation, User $viewer): array
+    /**
+     * @return array<int, array{hasStatus: bool, unseen: bool}>
+     */
+    private function statusFlagsFor(User $viewer, Conversation $conversation): array
+    {
+        $otherId = $conversation->otherParticipant($viewer)?->id;
+
+        return $this->statuses->summariesForUsers($viewer, $otherId ? [$otherId] : []);
+    }
+
+    /**
+     * @param  array<int, array{hasStatus: bool, unseen: bool}>  $statusFlags
+     */
+    private function toConversationPayload(Conversation $conversation, User $viewer, array $statusFlags = []): array
     {
         $other = $conversation->otherParticipant($viewer);
         $participantRow = $conversation->participantRows
@@ -251,6 +275,8 @@ class ConversationController extends Controller
             'lastActivityAt' => $lastActivityAt,
             'unreadCount' => (int) ($participantRow?->unread_count ?? 0),
             'isBusiness' => $other?->isBusinessProfileMode() ?? false,
+            'hasStatus' => (bool) ($statusFlags[$other?->id ?? 0]['hasStatus'] ?? false),
+            'statusUnseen' => (bool) ($statusFlags[$other?->id ?? 0]['unseen'] ?? false),
         ];
     }
 

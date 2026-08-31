@@ -54,6 +54,8 @@ export function mapConversationRecord(
     listIds: existing?.listIds ?? [],
     labelIds: existing?.labelIds ?? [],
     otherUserId: record.otherUserId ?? undefined,
+    hasStatus: record.hasStatus ?? existing?.hasStatus ?? false,
+    statusUnseen: record.statusUnseen ?? existing?.statusUnseen ?? false,
   };
 }
 

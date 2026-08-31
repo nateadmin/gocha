@@ -53,6 +53,28 @@ Sign-up and sign-in accept email or phone as the primary channel. The other cont
 
 Poll answers: job every 5 minutes; client poll 60 seconds; no realtime push.
 
+## Status updates
+
+24-hour text, image, and video updates. Visible to the owner and DM contacts only. Statuses are not editable (they expire); the owner can delete. Open a user's status from their profile/avatar on Chats, the chat header, Chat info, Settings > My status, or the Chats status tray. Hold to pause; tap left for previous, tap right or wait for next.
+
+Poll answers: Chats tray refreshes on tab focus and every 60 seconds while focused. No realtime push.
+
+Prune: `gocha:status-prune` hourly. Lock domain: Laravel `withoutOverlapping` mutex `gocha:status-prune` (10 minute expiry). No outbound HTTP. Max run is a short disk delete, well under the hourly interval.
+
+Statuses are not a staff-managed table. There is no edit form. Required on create: text for a text status; an image or video file for media (caption optional).
+
+API (Sanctum session or bearer token):
+
+- `GET /api/statuses` → `{ mine, recent }` author payloads with items
+- `POST /api/statuses` JSON `{ text, backgroundColor? }` → `{ item }`
+- `POST /api/statuses/media` multipart `type` (`image`|`video`), `media`, optional `text`, optional `durationMs` → `{ item }`
+- `GET /api/statuses/users/{user}` → `{ userId, displayName, avatarUrl, items }`
+- `POST /api/statuses/{id}/view` records a unique view
+- `GET /api/statuses/{id}/viewers` owner only
+- `DELETE /api/statuses/{id}` owner only
+
+Image max 8MB. Video max 20MB and 30 seconds. Max 30 active statuses per user. Media lives on the public disk under `statuses/{userId}/`.
+
 Infisical API host: `https://app.infisical.com` (not `api.infisical.com`).
 
 ## Smoke checks
@@ -97,6 +119,7 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/businesses/mine` without a session → 401 `UNAUTHENTICATED` (must not 404; that route is not a public slug)
 - GET `https://gocha.ai/api/meta` → 200 JSON, `account.phoneSignInEnabled` true after Firebase secrets are injected, `languages` includes `en` and `he`
 - POST `https://gocha.ai/api/profile/language` without a session → 401 `UNAUTHENTICATED`
+- GET `https://gocha.ai/api/statuses` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/` login/sign-up → email or phone as primary, the other optional on profile setup
 
 ### Log check

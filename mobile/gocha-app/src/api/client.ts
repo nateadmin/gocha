@@ -703,6 +703,8 @@ export type ConversationRecord = {
   lastActivityAt: string | null;
   unreadCount: number;
   isBusiness: boolean;
+  hasStatus?: boolean;
+  statusUnseen?: boolean;
 };
 
 export type ConversationMessageRecord = {
@@ -973,4 +975,99 @@ export async function declineProfileCardAccess(accessId: number): Promise<Profil
     { method: 'POST' },
   );
   return payload.access;
+}
+
+export type StatusItemRecord = {
+  id: number;
+  userId: number;
+  type: 'text' | 'image' | 'video' | string;
+  text: string | null;
+  mediaUrl: string | null;
+  backgroundColor: string;
+  durationMs: number;
+  createdAt: string | null;
+  expiresAt: string | null;
+  viewed: boolean;
+  viewCount?: number;
+};
+
+export type StatusAuthorRecord = {
+  userId: number;
+  displayName: string;
+  avatarUrl: string | null;
+  itemCount: number;
+  unseenCount: number;
+  latestAt: string | null;
+  items: StatusItemRecord[];
+};
+
+export type StatusFeed = {
+  mine: StatusAuthorRecord;
+  recent: StatusAuthorRecord[];
+};
+
+export type StatusViewerRecord = {
+  userId: number;
+  displayName: string;
+  avatarUrl: string | null;
+  viewedAt: string | null;
+};
+
+export async function fetchStatusFeed(): Promise<StatusFeed> {
+  return apiRequest<StatusFeed>(API_PATHS.statuses);
+}
+
+export async function fetchUserStatuses(userId: number): Promise<{
+  userId: number;
+  displayName: string;
+  avatarUrl: string | null;
+  items: StatusItemRecord[];
+}> {
+  return apiRequest(`${API_PATHS.statuses}/users/${userId}`);
+}
+
+export async function createTextStatus(text: string, backgroundColor?: string): Promise<StatusItemRecord> {
+  const payload = await apiRequest<{ item: StatusItemRecord }>(API_PATHS.statuses, {
+    method: 'POST',
+    body: JSON.stringify({ text, backgroundColor }),
+  });
+  return payload.item;
+}
+
+export async function createMediaStatus(input: {
+  file: Blob;
+  filename: string;
+  type: 'image' | 'video';
+  text?: string;
+  durationMs?: number;
+}): Promise<StatusItemRecord> {
+  const form = new FormData();
+  form.append('type', input.type);
+  form.append('media', input.file, input.filename);
+  if (input.text) {
+    form.append('text', input.text);
+  }
+  if (input.durationMs) {
+    form.append('durationMs', String(input.durationMs));
+  }
+  const payload = await apiRequest<{ item: StatusItemRecord }>(`${API_PATHS.statuses}/media`, {
+    method: 'POST',
+    body: form,
+  });
+  return payload.item;
+}
+
+export async function markStatusViewed(statusId: number): Promise<void> {
+  await apiRequest(`${API_PATHS.statuses}/${statusId}/view`, { method: 'POST' });
+}
+
+export async function fetchStatusViewers(statusId: number): Promise<StatusViewerRecord[]> {
+  const payload = await apiRequest<{ viewers: StatusViewerRecord[] }>(
+    `${API_PATHS.statuses}/${statusId}/viewers`,
+  );
+  return payload.viewers;
+}
+
+export async function deleteStatus(statusId: number): Promise<void> {
+  await apiRequest(`${API_PATHS.statuses}/${statusId}`, { method: 'DELETE' });
 }

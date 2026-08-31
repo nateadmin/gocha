@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
+import { AppState, FlatList, Pressable, Text, TextInput, View, StyleSheet } from 'react-native';
+import type { AppStateStatus } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -32,11 +33,15 @@ import type { ChatRecord } from '../../chat/types';
 import { useAccounts } from '../../context/AccountsContext';
 import { useAuth } from '../../context/AuthContext';
 import {
+  fetchStatusFeed,
   globalSearch,
   type GlobalSearchContactResult,
   type GlobalSearchMessageResult,
   type PublicUserProfile,
+  type StatusAuthorRecord,
 } from '../../api/client';
+import { StatusTray } from '../../components/status/StatusTray';
+import { openStatusComposer, openStatusViewer } from '../../navigation/rootNavigation';
 import { useGochaTheme } from '../../theme';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 
@@ -66,6 +71,8 @@ export function ChatsScreen() {
   const [peopleResults, setPeopleResults] = useState<PublicUserProfile[]>([]);
   const [remoteSearchLoading, setRemoteSearchLoading] = useState(false);
   const [startingChatUserId, setStartingChatUserId] = useState<number | null>(null);
+  const [statusMine, setStatusMine] = useState<StatusAuthorRecord | null>(null);
+  const [statusRecent, setStatusRecent] = useState<StatusAuthorRecord[]>([]);
 
   const accountMenuTop = insets.top + 12 + 44;
   const trimmedQuery = query.trim();
@@ -192,6 +199,70 @@ export function ChatsScreen() {
 
   function openConversationById(conversationId: number) {
     openChat(String(conversationId));
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      let inFlight = false;
+      const load = async () => {
+        if (inFlight) {
+          return;
+        }
+        inFlight = true;
+        try {
+          const feed = await fetchStatusFeed();
+          if (!cancelled) {
+            setStatusMine(feed.mine);
+            setStatusRecent(feed.recent);
+          }
+        } catch {
+          // Keep the last tray. A feed error must not sign the user out.
+        } finally {
+          inFlight = false;
+        }
+      };
+      void load();
+      const timer = setInterval(() => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+          return;
+        }
+        if (AppState.currentState !== 'active' && typeof document === 'undefined') {
+          return;
+        }
+        void load();
+      }, 60_000);
+      const onAppState = (state: AppStateStatus) => {
+        if (state === 'active') {
+          void load();
+        }
+      };
+      const appSub = AppState.addEventListener('change', onAppState);
+      const onVisibility = () => {
+        if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+          void load();
+        }
+      };
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', onVisibility);
+      }
+      return () => {
+        cancelled = true;
+        clearInterval(timer);
+        appSub.remove();
+        if (typeof document !== 'undefined') {
+          document.removeEventListener('visibilitychange', onVisibility);
+        }
+      };
+    }, []),
+  );
+
+  function openProfileStatus(chatRecord: ChatRecord) {
+    if (chatRecord.hasStatus && chatRecord.otherUserId) {
+      openStatusViewer(chatRecord.otherUserId);
+      return;
+    }
+    openChat(chatRecord.id);
   }
 
   const headerMenuItems: DropdownMenuItem[] = [
@@ -337,6 +408,16 @@ export function ChatsScreen() {
         />
       ) : null}
 
+      {!isSearching && chat.activeFilter !== 'archived' ? (
+        <StatusTray
+          mine={statusMine}
+          recent={statusRecent}
+          onOpenMine={() => user?.id && openStatusViewer(user.id)}
+          onAdd={() => openStatusComposer()}
+          onOpenUser={(userId) => openStatusViewer(userId)}
+        />
+      ) : null}
+
       {isSearching ? (
         <GlobalSearchResults
           query={query}
@@ -380,6 +461,13 @@ export function ChatsScreen() {
                   return;
                 }
                 openChat(item.id);
+              }}
+              onAvatarPress={() => {
+                if (item.locked) {
+                  navigation.navigate('ChatLock', { chatId: item.id });
+                  return;
+                }
+                openProfileStatus(item);
               }}
               onLongPress={() => setContextChat(item)}
             />

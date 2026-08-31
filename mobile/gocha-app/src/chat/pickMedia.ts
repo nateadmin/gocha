@@ -11,3 +11,11 @@ export async function pickCameraPhoto(): Promise<PickedMedia | null> {
 export async function pickDocument(): Promise<PickedMedia | null> {
   return null;
 }
+
+export async function pickImage(): Promise<PickedMedia | null> {
+  return null;
+}
+
+export async function pickVideo(): Promise<PickedMedia | null> {
+  return null;
+}

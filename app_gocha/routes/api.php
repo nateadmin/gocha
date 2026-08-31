@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\GlobalSearchController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProfileCardController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\VersionController;
 use App\Support\AppLanguage;
@@ -87,6 +88,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
     Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
+    Route::get('/statuses', [StatusController::class, 'index']);
+    Route::post('/statuses', [StatusController::class, 'store']);
+    Route::post('/statuses/media', [StatusController::class, 'storeMedia']);
+    Route::get('/statuses/users/{user}', [StatusController::class, 'showUser']);
+    Route::post('/statuses/{statusItem}/view', [StatusController::class, 'view']);
+    Route::get('/statuses/{statusItem}/viewers', [StatusController::class, 'viewers']);
+    Route::delete('/statuses/{statusItem}', [StatusController::class, 'destroy']);
     Route::get('/catch-up', [CatchUpController::class, 'show']);
 
     Route::get('/profile-cards', [ProfileCardController::class, 'index']);

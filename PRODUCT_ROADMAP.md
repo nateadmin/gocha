@@ -10,7 +10,7 @@ Source: Gocha Product Roadmap (product PDF in repo uploads). Product name: Gocha
 | --- | --- | --- |
 | Personal and business messaging in one app | Shell + mock | `ChatsTab`, business chats flagged in `mock.ts` |
 | Business profile activation + verification docs | Not built | Needs onboarding flow + document upload (file-handling standard) |
-| Status updates | Shell entry | Status control on Chats header (Build 1.1 UI) |
+| Status updates | Live | 24h text/image/video statuses, hold to pause, open from profile/avatar |
 | AI Catch Up (summaries, highlights) | Live | `GET /api/catch-up`, `gocha:catch-up-generate` every 5 minutes, Catch Up tab |
 | OpenAI/ChatGPT until proprietary AI | Live | `gpt-4o-mini` via Infisical `OPEN_AI_API_KEY` |
 | Around Me / Nearby discoverable groups | Shell + mock | Discover → Around Me |

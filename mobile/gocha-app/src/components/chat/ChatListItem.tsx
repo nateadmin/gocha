@@ -2,8 +2,10 @@ import { Pressable, View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar } from '../app/Avatar';
+import { StatusRing } from '../status/StatusRing';
 import type { ChatRecord } from '../../chat/types';
 import { useChat } from '../../chat/ChatContext';
+import { statusRingTone } from '../../status/statusLogic';
 import { useGochaTheme } from '../../theme';
 
 function formatDraftDateLabel(timestamp: number): string {
@@ -26,9 +28,10 @@ type Props = {
   selected?: boolean;
   onPress: () => void;
   onLongPress?: () => void;
+  onAvatarPress?: () => void;
 };
 
-export function ChatListItem({ chat, selected, onPress, onLongPress }: Props) {
+export function ChatListItem({ chat, selected, onPress, onLongPress, onAvatarPress }: Props) {
   const { theme } = useGochaTheme();
   const { labels, preferences, getChatDraft, getChatDraftUpdatedAt } = useChat();
 
@@ -51,11 +54,18 @@ export function ChatListItem({ chat, selected, onPress, onLongPress }: Props) {
       onPress={onPress}
       onLongPress={onLongPress}
       style={[styles.row, { backgroundColor: rowBackground }]}>
-      <Avatar
-        label={chat.avatarLabel}
-        color={chat.avatarColor}
-        badge={chat.isGroup ? chat.groupCount : undefined}
-      />
+      <Pressable
+        onPress={onAvatarPress ?? onPress}
+        hitSlop={8}
+        accessibilityRole="button">
+        <StatusRing tone={statusRingTone(Boolean(chat.hasStatus), Boolean(chat.statusUnseen))} size={48}>
+          <Avatar
+            label={chat.avatarLabel}
+            color={chat.avatarColor}
+            badge={chat.isGroup ? chat.groupCount : undefined}
+          />
+        </StatusRing>
+      </Pressable>
       <View style={styles.content}>
         <View style={styles.topRow}>
           <View style={styles.nameRow}>
