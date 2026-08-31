@@ -20,6 +20,11 @@ class Handler extends ExceptionHandler
      *
      * @var array<int, string>
      */
+    protected $dontReport = [
+        OtpRequestException::class,
+        OtpVerificationException::class,
+    ];
+
     protected $dontFlash = [
         'current_password',
         'password',

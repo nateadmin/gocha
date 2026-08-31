@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 
 import { ApiError, fetchAppMeta, type AccountChannel, type OtpAuthMode } from '../../api/client';
-import { getPhoneRecaptchaToken } from '../../auth/phoneRecaptcha';
+import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
@@ -53,7 +53,11 @@ export function OtpScreen({ email, channel = 'email', mode, onBack }: Props) {
     setLoading(true);
     setSubmitError(null);
     try {
-      await verifyWithOtp(email, digits, mode, { channel });
+      let firebaseIdToken: string | undefined;
+      if (channel === 'phone') {
+        firebaseIdToken = await confirmPhoneSms(digits);
+      }
+      await verifyWithOtp(email, digits, mode, { channel, firebaseIdToken });
     } catch (err) {
       setSubmitError(
         err instanceof ApiError ? err.message : 'Could not verify the code.',
@@ -83,14 +87,14 @@ export function OtpScreen({ email, channel = 'email', mode, onBack }: Props) {
     setSubmitError(null);
     setShowFormatError(false);
     try {
-      let recaptchaToken: string | undefined;
+      const payload = await requestAuthCode(email, mode, { channel });
       if (channel === 'phone') {
         const meta = await fetchAppMeta();
-        if (meta.auth.firebase) {
-          recaptchaToken = await getPhoneRecaptchaToken(meta.auth.firebase);
+        if (!meta.auth.firebase) {
+          throw new Error('Phone sign-in is not configured yet.');
         }
+        await sendPhoneSms(meta.auth.firebase, email);
       }
-      const payload = await requestAuthCode(email, mode, { channel, recaptchaToken });
       setCooldown(payload.resendAvailableInSeconds || 60);
     } catch (err) {
       setSubmitError(

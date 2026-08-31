@@ -10,7 +10,6 @@ use App\Services\Mail\ResendMailer;
 use App\Services\Profile\CharacterAvatarService;
 use App\Support\AccountChannel;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -52,15 +51,10 @@ class OtpAuthService
             return $this->cooldownPayload($channel, $identifier, $mode);
         }
 
-        $providerSession = null;
         $code = $this->generateCode();
 
         if ($channel === AccountChannel::PHONE) {
             $this->assertSmsQuota($identifier);
-            $providerSession = $this->firebasePhone->sendVerificationCode(
-                $identifier,
-                (string) $recaptchaToken,
-            );
             $this->incrementSmsQuota($identifier);
         }
 
@@ -73,7 +67,7 @@ class OtpAuthService
             'channel' => $channel,
             'identifier' => $identifier,
             'code_hash' => Hash::make($code),
-            'provider_session' => $providerSession ? Crypt::encryptString($providerSession) : null,
+            'provider_session' => null,
             'attempts' => 0,
             'expires_at' => now()->addMinutes((int) config('gocha.auth.otp_ttl_minutes', 10)),
         ]);
@@ -93,6 +87,7 @@ class OtpAuthService
         string $code,
         string $mode = 'signin',
         ?User $actor = null,
+        ?string $firebaseIdToken = null,
     ): User {
         $channel = Str::lower(trim($channel));
         $identifier = $this->identifiers->normalize($channel, $identifier);
@@ -122,10 +117,7 @@ class OtpAuthService
 
         try {
             if ($channel === AccountChannel::PHONE) {
-                $sessionInfo = $otp->provider_session
-                    ? Crypt::decryptString($otp->provider_session)
-                    : '';
-                $this->firebasePhone->verifyCode($sessionInfo, $code, $identifier);
+                $this->firebasePhone->verifyIdToken((string) $firebaseIdToken, $identifier);
             } elseif (! Hash::check($code, $otp->code_hash)) {
                 throw new OtpVerificationException('OTP_INVALID', 'That code is incorrect. Try again.');
             }

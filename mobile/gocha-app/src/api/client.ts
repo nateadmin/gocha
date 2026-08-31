@@ -220,7 +220,7 @@ export async function fetchAppMeta(): Promise<AppMeta> {
 export async function requestOtp(
   identifier: string,
   mode: OtpAuthMode,
-  options?: { channel?: AccountChannel; recaptchaToken?: string },
+  options?: { channel?: AccountChannel },
 ): Promise<{
   message: string;
   resendAvailableInSeconds: number;
@@ -232,7 +232,6 @@ export async function requestOtp(
       channel,
       identifier,
       mode,
-      recaptchaToken: options?.recaptchaToken,
     }),
   });
 }
@@ -241,7 +240,7 @@ export async function verifyOtp(
   identifier: string,
   code: string,
   mode: OtpAuthMode,
-  options?: { channel?: AccountChannel },
+  options?: { channel?: AccountChannel; firebaseIdToken?: string },
 ): Promise<OtpVerifyResult> {
   const channel = options?.channel ?? 'email';
   return apiRequest(API_PATHS.otpVerify, {
@@ -251,6 +250,7 @@ export async function verifyOtp(
       identifier,
       code,
       mode,
+      firebaseIdToken: options?.firebaseIdToken,
     }),
   });
 }

@@ -39,7 +39,7 @@ Production secrets (names only): `CONTABO_PRIVATE_SSH_KEY`, `CONTABO_PUBLIC_SSH_
 
 Laravel reads the OpenAI key as `OPENAI_API_KEY` (also accepts `OPEN_AI_API_KEY`), Places as `GOOGLE_PLACES_API_KEY`, and Firebase Phone Auth as `FIREBASE_WEB_API_KEY` plus `FIREBASE_PROJECT_ID` (`FIREBASE_AUTH_DOMAIN` and `FIREBASE_APP_ID` optional). Deploy injects those Infisical values into the server `.env` without printing them. Places and Firebase Identity Toolkit calls go out over IPv4 so an API-key IP restriction of `212.47.68.106` matches. The host also has IPv6 `2a02:c207:2291:8811::1` if a Google key is left on dual-stack.
 
-Sign-up and sign-in accept email or phone as the primary channel. The other contact is optional and is added only after a verification code. Phone SMS is sent by Firebase Identity Toolkit. `GET /api/meta` sets `account.phoneSignInEnabled` when the Firebase key is present, and includes the public Firebase web config the client needs for reCAPTCHA. That web API key is a public Firebase client identifier, stored in Infisical as the source of truth.
+Sign-up and sign-in accept email or phone as the primary channel. The other contact is optional and is added only after a verification code. Phone SMS is sent by the Firebase JS SDK in the browser (`signInWithPhoneNumber`). The API only checks signup/signin rules, then verifies the Firebase ID token with Identity Toolkit `accounts:lookup`. `GET /api/meta` sets `account.phoneSignInEnabled` when the Firebase key is present, and includes the public Firebase web config the client needs. That web API key is a public Firebase client identifier, stored in Infisical as the source of truth. The Firebase project must be on Blaze for live SMS.
 
 ## Catch Up pipeline
 

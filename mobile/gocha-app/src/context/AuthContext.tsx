@@ -35,12 +35,12 @@ type AuthContextValue = {
     identifier: string,
     code: string,
     mode: OtpAuthMode,
-    options?: { channel?: 'email' | 'phone' },
+    options?: { channel?: 'email' | 'phone'; firebaseIdToken?: string },
   ) => Promise<void>;
   requestAuthCode: (
     identifier: string,
     mode: OtpAuthMode,
-    options?: { channel?: 'email' | 'phone'; recaptchaToken?: string },
+    options?: { channel?: 'email' | 'phone' },
   ) => Promise<{ resendAvailableInSeconds: number }>;
   finishOnboarding: (input: {
     displayName: string;
@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (
       identifier: string,
       mode: OtpAuthMode,
-      options?: { channel?: 'email' | 'phone'; recaptchaToken?: string },
+      options?: { channel?: 'email' | 'phone' },
     ) => {
       const payload = await requestOtp(identifier, mode, options);
       return { resendAvailableInSeconds: payload.resendAvailableInSeconds };
@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       identifier: string,
       code: string,
       mode: OtpAuthMode,
-      options?: { channel?: 'email' | 'phone' },
+      options?: { channel?: 'email' | 'phone'; firebaseIdToken?: string },
     ) => {
       const payload = await verifyOtp(identifier, code, mode, options);
       if (mode === 'link') {

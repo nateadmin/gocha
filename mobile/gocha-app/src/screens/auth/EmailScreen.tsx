@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, View, StyleSheet } from 'rea
 
 import { ApiError, fetchAppMeta, type AccountChannel, type OtpAuthMode } from '../../api/client';
 import { normalizeIdentifier } from '../../auth/accountChannel';
-import { getPhoneRecaptchaToken } from '../../auth/phoneRecaptcha';
+import { sendPhoneSms } from '../../auth/phoneFirebase';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
@@ -71,15 +71,14 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
     setLoading(true);
     setError(null);
     try {
-      let recaptchaToken: string | undefined;
+      const payload = await requestAuthCode(normalized, mode, { channel });
       if (channel === 'phone') {
         const meta = await fetchAppMeta();
         if (!meta.auth.firebase) {
           throw new Error('Phone sign-in is not configured yet.');
         }
-        recaptchaToken = await getPhoneRecaptchaToken(meta.auth.firebase);
+        await sendPhoneSms(meta.auth.firebase, normalized);
       }
-      const payload = await requestAuthCode(normalized, mode, { channel, recaptchaToken });
       if (payload.resendAvailableInSeconds > 0) {
         setRetryAfterSeconds(payload.resendAvailableInSeconds);
       }

@@ -33,35 +33,16 @@ class AuthPhoneOtpTest extends TestCase
             ->assertJsonPath('auth.firebase.projectId', 'gocha-test');
     }
 
-    public function test_phone_signup_requires_recaptcha(): void
+    public function test_phone_signup_request_does_not_need_recaptcha_on_the_server(): void
     {
-        $this->postJson('/api/auth/otp/request', [
-            'channel' => AccountChannel::PHONE,
-            'identifier' => '+15551234567',
-            'mode' => 'signup',
-        ])
-            ->assertStatus(422)
-            ->assertJsonPath('code', 'RECAPTCHA_REQUIRED');
-    }
-
-    public function test_phone_signup_request_sends_firebase_sms(): void
-    {
-        Http::fake([
-            'https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode*' => Http::response([
-                'sessionInfo' => 'sess-signup',
-            ], 200),
-        ]);
-
         $this->postJson('/api/auth/otp/request', [
             'channel' => AccountChannel::PHONE,
             'identifier' => '15551234567',
             'mode' => 'signup',
-            'recaptchaToken' => 'test-recaptcha',
         ])
             ->assertOk()
             ->assertJsonPath('message', 'A verification code has been sent to your phone.');
 
-        $this->assertDatabaseCount('login_otps', 1);
         $this->assertDatabaseHas('login_otps', [
             'channel' => AccountChannel::PHONE,
             'identifier' => '+15551234567',
@@ -71,11 +52,8 @@ class AuthPhoneOtpTest extends TestCase
     public function test_phone_signup_verify_creates_user_without_email(): void
     {
         Http::fake([
-            'https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode*' => Http::response([
-                'sessionInfo' => 'sess-signup',
-            ], 200),
-            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber*' => Http::response([
-                'phoneNumber' => '+15551239999',
+            'https://identitytoolkit.googleapis.com/v1/accounts:lookup*' => Http::response([
+                'users' => [['phoneNumber' => '+15551239999']],
             ], 200),
         ]);
 
@@ -83,7 +61,6 @@ class AuthPhoneOtpTest extends TestCase
             'channel' => AccountChannel::PHONE,
             'identifier' => '+15551239999',
             'mode' => 'signup',
-            'recaptchaToken' => 'test-recaptcha',
         ])->assertOk();
 
         $this->postJson('/api/auth/otp/verify', [
@@ -91,6 +68,7 @@ class AuthPhoneOtpTest extends TestCase
             'identifier' => '+15551239999',
             'code' => '123456',
             'mode' => 'signup',
+            'firebaseIdToken' => 'test-id-token',
         ])
             ->assertOk()
             ->assertJsonPath('user.phone', '+15551239999')
@@ -107,13 +85,37 @@ class AuthPhoneOtpTest extends TestCase
         ]);
     }
 
+    public function test_phone_verify_rejects_token_for_a_different_number(): void
+    {
+        Http::fake([
+            'https://identitytoolkit.googleapis.com/v1/accounts:lookup*' => Http::response([
+                'users' => [['phoneNumber' => '+15550001111']],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/auth/otp/request', [
+            'channel' => AccountChannel::PHONE,
+            'identifier' => '+15551239999',
+            'mode' => 'signup',
+        ])->assertOk();
+
+        $this->postJson('/api/auth/otp/verify', [
+            'channel' => AccountChannel::PHONE,
+            'identifier' => '+15551239999',
+            'code' => '123456',
+            'mode' => 'signup',
+            'firebaseIdToken' => 'test-id-token',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'OTP_INVALID');
+    }
+
     public function test_phone_signin_rejects_unknown_number(): void
     {
         $this->postJson('/api/auth/otp/request', [
             'channel' => AccountChannel::PHONE,
             'identifier' => '+15550000000',
             'mode' => 'signin',
-            'recaptchaToken' => 'test-recaptcha',
         ])
             ->assertStatus(422)
             ->assertJsonPath('code', 'PHONE_NOT_FOUND');
@@ -131,7 +133,6 @@ class AuthPhoneOtpTest extends TestCase
             'channel' => AccountChannel::PHONE,
             'identifier' => '+15551112222',
             'mode' => 'signin',
-            'recaptchaToken' => 'test-recaptcha',
         ])
             ->assertStatus(422)
             ->assertJsonPath('code', 'PHONE_NOT_FOUND');
@@ -176,11 +177,8 @@ class AuthPhoneOtpTest extends TestCase
         $user = User::factory()->create(['email' => 'owner@example.com']);
 
         Http::fake([
-            'https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode*' => Http::response([
-                'sessionInfo' => 'sess-link',
-            ], 200),
-            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber*' => Http::response([
-                'phoneNumber' => '+15556667777',
+            'https://identitytoolkit.googleapis.com/v1/accounts:lookup*' => Http::response([
+                'users' => [['phoneNumber' => '+15556667777']],
             ], 200),
         ]);
 
@@ -188,7 +186,6 @@ class AuthPhoneOtpTest extends TestCase
             'channel' => AccountChannel::PHONE,
             'identifier' => '+15556667777',
             'mode' => 'link',
-            'recaptchaToken' => 'test-recaptcha',
         ])->assertOk();
 
         $this->actingAs($user)->postJson('/api/auth/otp/verify', [
@@ -196,6 +193,7 @@ class AuthPhoneOtpTest extends TestCase
             'identifier' => '+15556667777',
             'code' => '111111',
             'mode' => 'link',
+            'firebaseIdToken' => 'test-id-token',
         ])
             ->assertOk()
             ->assertJsonPath('user.phone', '+15556667777')

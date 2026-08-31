@@ -16,7 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { fetchAppMeta, type AccountChannel } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
 import { normalizeIdentifier } from '../../auth/accountChannel';
-import { getPhoneRecaptchaToken } from '../../auth/phoneRecaptcha';
+import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
@@ -91,15 +91,14 @@ export function ProfileSettingsScreen() {
     setMessage(null);
     try {
       if (!linkSent) {
-        let recaptchaToken: string | undefined;
+        await requestAuthCode(normalized, 'link', { channel });
         if (channel === 'phone') {
           const meta = await fetchAppMeta();
           if (!meta.auth.firebase) {
             throw new Error('Phone verification is not configured yet.');
           }
-          recaptchaToken = await getPhoneRecaptchaToken(meta.auth.firebase);
+          await sendPhoneSms(meta.auth.firebase, normalized);
         }
-        await requestAuthCode(normalized, 'link', { channel, recaptchaToken });
         setOptionalContact(normalized);
         setLinkSent(true);
         setMessage('Code sent.');
@@ -111,7 +110,11 @@ export function ProfileSettingsScreen() {
         setError('Enter the 6-digit code.');
         return;
       }
-      await verifyWithOtp(normalized, digits, 'link', { channel });
+      let firebaseIdToken: string | undefined;
+      if (channel === 'phone') {
+        firebaseIdToken = await confirmPhoneSms(digits);
+      }
+      await verifyWithOtp(normalized, digits, 'link', { channel, firebaseIdToken });
       setOptionalContact('');
       setLinkCode('');
       setLinkSent(false);

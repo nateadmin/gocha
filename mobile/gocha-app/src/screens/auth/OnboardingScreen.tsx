@@ -12,7 +12,7 @@ import {
 import { fetchAppMeta, type AccountChannel } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
 import { normalizeIdentifier } from '../../auth/accountChannel';
-import { getPhoneRecaptchaToken } from '../../auth/phoneRecaptcha';
+import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
@@ -78,15 +78,14 @@ export function OnboardingScreen() {
   const optionalChannel: AccountChannel = user?.primaryLoginChannel === 'phone' ? 'email' : 'phone';
 
   async function requestOptionalLink(identifier: string): Promise<void> {
-    let recaptchaToken: string | undefined;
+    await requestAuthCode(identifier, 'link', { channel: optionalChannel });
     if (optionalChannel === 'phone') {
       const meta = await fetchAppMeta();
       if (!meta.auth.firebase) {
         throw new Error('Phone verification is not configured yet.');
       }
-      recaptchaToken = await getPhoneRecaptchaToken(meta.auth.firebase);
+      await sendPhoneSms(meta.auth.firebase, identifier);
     }
-    await requestAuthCode(identifier, 'link', { channel: optionalChannel, recaptchaToken });
   }
 
   async function saveProfileAndAvatar(): Promise<void> {
@@ -151,8 +150,14 @@ export function OnboardingScreen() {
           setLoading(false);
           return;
         }
-        await verifyWithOtp(normalizeIdentifier(optionalChannel, optionalContact), digits, 'link', {
+        const identifier = normalizeIdentifier(optionalChannel, optionalContact);
+        let firebaseIdToken: string | undefined;
+        if (optionalChannel === 'phone') {
+          firebaseIdToken = await confirmPhoneSms(digits);
+        }
+        await verifyWithOtp(identifier, digits, 'link', {
           channel: optionalChannel,
+          firebaseIdToken,
         });
       }
       await saveProfileAndAvatar();

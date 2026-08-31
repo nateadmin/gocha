@@ -61,6 +61,7 @@ class AuthOtpController extends Controller
             'email' => ['sometimes', 'email:rfc', 'max:255'],
             'code' => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
             'mode' => ['required', 'string', 'in:signin,signup,link'],
+            'firebaseIdToken' => ['sometimes', 'nullable', 'string', 'max:4000'],
         ]);
 
         try {
@@ -79,6 +80,7 @@ class AuthOtpController extends Controller
                 $validated['code'],
                 $validated['mode'],
                 $actor,
+                $validated['firebaseIdToken'] ?? null,
             );
         } catch (OtpVerificationException $e) {
             throw $e;
