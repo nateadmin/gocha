@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar } from '../app/Avatar';
 import { StatusRing } from '../status/StatusRing';
+import { chatListAvatarBadge } from '../../chat/chatListPresentation';
 import type { ChatRecord } from '../../chat/types';
 import { useChat } from '../../chat/ChatContext';
 import { statusRingTone } from '../../status/statusLogic';
@@ -62,7 +63,7 @@ export function ChatListItem({ chat, selected, onPress, onLongPress, onAvatarPre
           <Avatar
             label={chat.avatarLabel}
             color={chat.avatarColor}
-            badge={chat.isGroup ? chat.groupCount : undefined}
+            badge={chatListAvatarBadge(chat)}
           />
         </StatusRing>
       </Pressable>
