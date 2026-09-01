@@ -55,9 +55,9 @@ Poll answers: job every 5 minutes; client poll 60 seconds; no realtime push.
 
 ## Status updates
 
-24-hour text, image, and video updates. Visible to the owner and DM contacts only. Statuses are not editable (they expire); the owner can delete. Open a user's status from their profile/avatar on Chats, the chat header, or Chat info. Add or open your own from the compact status control to the left of the Chats header menu, or Settings > My status. Hold to pause; tap left for previous, tap right or wait for next.
+24-hour text, image, and video updates. Visible to the owner and DM contacts only. Statuses are not editable (they expire); the owner can delete. Tap the circular Chats logo to play every contact status (unseen first). A highlighted ring around the logo means there are unread status updates. Hold the logo for two seconds to switch accounts. Add your own from the compact + control, or Settings > My status. Hold a status to pause for as long as you hold; swipe up to message that person. Tap left for previous, tap right or wait for next.
 
-Poll answers: the header status control refreshes your own status on tab focus and every 60 seconds while focused. No realtime push. Other people's statuses are not listed in a tray; they open from the profile/avatar.
+Poll answers: the header status control refreshes your own status on tab focus and every 60 seconds while focused. No realtime push. The logo ring uses the same `GET /api/statuses` `{ mine, recent }` feed.
 
 ## Chat composer
 

@@ -1,8 +1,15 @@
 import {
+  ACCOUNT_SWITCH_HOLD_MS,
+  isStatusSwipeUp,
+  isStatusTap,
+  nextAuthorIndex,
   nextBackground,
   nextStatusIndex,
+  previousAuthorIndex,
   previousStatusIndex,
+  shouldAdvanceStatus,
   statusDurationMs,
+  statusPlaylistUserIds,
   statusProgressRatio,
   statusRingTone,
   tapSide,
@@ -46,5 +53,36 @@ describe('statusLogic', () => {
     const resumed = tickStatusElapsed(paused.elapsedMs, paused.lastTickMs, 10_400);
     expect(resumed.elapsedMs).toBe(1600);
     expect(statusProgressRatio(resumed.elapsedMs, 5000)).toBe(0.32);
+  });
+
+  it('does not advance while the status is held or paused', () => {
+    expect(shouldAdvanceStatus(true, false)).toBe(false);
+    expect(shouldAdvanceStatus(false, true)).toBe(false);
+    expect(shouldAdvanceStatus(true, true)).toBe(false);
+    expect(shouldAdvanceStatus(false, false)).toBe(true);
+  });
+
+  it('treats a long hold as pause not a tap, and swipe up as a reply gesture', () => {
+    expect(isStatusTap(120, false)).toBe(true);
+    expect(isStatusTap(2000, false)).toBe(false);
+    expect(isStatusSwipeUp(400, 330)).toBe(true);
+    expect(isStatusSwipeUp(400, 380)).toBe(false);
+    expect(ACCOUNT_SWITCH_HOLD_MS).toBe(2000);
+  });
+
+  it('builds a global status playlist from the feed', () => {
+    expect(
+      statusPlaylistUserIds(
+        [
+          { userId: 4, itemCount: 2 },
+          { userId: 8, itemCount: 0 },
+          { userId: 9, itemCount: 1 },
+        ],
+        { userId: 1, itemCount: 1 },
+      ),
+    ).toEqual([4, 9, 1]);
+    expect(nextAuthorIndex(0, 3)).toBe(1);
+    expect(nextAuthorIndex(2, 3)).toBeNull();
+    expect(previousAuthorIndex(2)).toBe(1);
   });
 });

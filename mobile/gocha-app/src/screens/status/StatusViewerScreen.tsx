@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { Image, Pressable, ScrollView, Text, TextInput, View, StyleSheet } from 'react-native';
+import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,12 +17,18 @@ import {
 import { formatApiError } from '../../api/formatApiError';
 import { ConfirmDialog, ProfileAvatar, UniversalLoader } from '../../components/app';
 import { StatusVideo } from '../../components/status/StatusVideo';
+import { useChat } from '../../chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { AppStackParamList } from '../../navigation/types';
 import {
+  isStatusSwipeUp,
+  isStatusTap,
+  nextAuthorIndex,
   nextStatusIndex,
+  previousAuthorIndex,
   previousStatusIndex,
+  shouldAdvanceStatus,
   statusDurationMs,
   statusProgressRatio,
   tapSide,
@@ -39,6 +45,9 @@ export function StatusViewerScreen() {
   const { theme } = useGochaTheme();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { startDirectMessage, sendTextMessage } = useChat();
+  const playlist = route.params.userIds?.length ? route.params.userIds : [route.params.userId];
+  const [authorUserId, setAuthorUserId] = useState(route.params.userId);
   const [items, setItems] = useState<StatusItemRecord[]>([]);
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -49,57 +58,53 @@ export function StatusViewerScreen() {
   const [error, setError] = useState<string | null>(null);
   const [viewers, setViewers] = useState<StatusViewerRecord[] | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const holding = useRef(false);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [reply, setReply] = useState('');
+  const [replyBusy, setReplyBusy] = useState(false);
+  const holdingRef = useRef(false);
+  const pausedRef = useRef(false);
   const pressX = useRef(0);
+  const pressY = useRef(0);
+  const downAt = useRef(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const elapsedRef = useRef(0);
   const lastTickRef = useRef<number | null>(null);
   const indexRef = useRef(0);
   const itemsRef = useRef<StatusItemRecord[]>([]);
+  const authorRef = useRef(authorUserId);
   const item = items[index];
-  const isOwn = user?.id === route.params.userId;
+  const isOwn = user?.id === authorUserId;
   indexRef.current = index;
   itemsRef.current = items;
+  authorRef.current = authorUserId;
+  pausedRef.current = paused || replyOpen || Boolean(viewers);
 
   const close = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
-  const goNext = useCallback(() => {
-    const next = nextStatusIndex(indexRef.current, itemsRef.current.length);
-    if (next == null) {
-      close();
-      return;
-    }
-    setIndex(next);
-    setProgress(0);
-    setViewers(null);
-  }, [close]);
-
-  const goPrev = useCallback(() => {
-    setIndex(previousStatusIndex(indexRef.current));
-    setProgress(0);
-    setViewers(null);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
+  const loadAuthor = useCallback(
+    (userId: number, startAt: 'first' | 'last' | number = 'first') => {
       setLoading(true);
       setError(null);
-      fetchUserStatuses(route.params.userId)
+      setReplyOpen(false);
+      setViewers(null);
+      fetchUserStatuses(userId)
         .then((payload) => {
-          if (cancelled) return;
+          setAuthorUserId(userId);
           setDisplayName(payload.displayName);
           setAvatarUrl(payload.avatarUrl);
           setItems(payload.items);
-          const startId = route.params.startItemId;
-          const start = startId ? payload.items.findIndex((entry) => entry.id === startId) : 0;
+          const start =
+            startAt === 'last'
+              ? Math.max(0, payload.items.length - 1)
+              : typeof startAt === 'number'
+                ? payload.items.findIndex((entry) => entry.id === startAt)
+                : 0;
           setIndex(start >= 0 ? start : 0);
           setProgress(0);
           setLoading(false);
-          if (payload.items.length === 0 && isOwn) {
+          if (payload.items.length === 0 && user?.id === userId) {
             navigation.replace('StatusComposer', {});
             return;
           }
@@ -108,15 +113,51 @@ export function StatusViewerScreen() {
           }
         })
         .catch((err) => {
-          if (!cancelled) {
-            setLoading(false);
-            setError(formatApiError(err, t('status.loadFailed')));
-          }
+          setLoading(false);
+          setError(formatApiError(err, t('status.loadFailed')));
         });
-      return () => {
-        cancelled = true;
-      };
-    }, [close, isOwn, navigation, route.params.startItemId, route.params.userId, t]),
+    },
+    [close, navigation, t, user?.id],
+  );
+
+  const goNext = useCallback(() => {
+    const next = nextStatusIndex(indexRef.current, itemsRef.current.length);
+    if (next != null) {
+      setIndex(next);
+      setProgress(0);
+      setViewers(null);
+      return;
+    }
+    const authorPos = playlist.indexOf(authorRef.current);
+    const nextAuthor = nextAuthorIndex(authorPos < 0 ? 0 : authorPos, playlist.length);
+    if (nextAuthor == null) {
+      close();
+      return;
+    }
+    loadAuthor(playlist[nextAuthor] as number, 'first');
+  }, [close, loadAuthor, playlist]);
+
+  const goPrev = useCallback(() => {
+    if (indexRef.current > 0) {
+      setIndex(previousStatusIndex(indexRef.current));
+      setProgress(0);
+      setViewers(null);
+      return;
+    }
+    const authorPos = playlist.indexOf(authorRef.current);
+    if (authorPos <= 0) {
+      setIndex(0);
+      setProgress(0);
+      return;
+    }
+    loadAuthor(playlist[previousAuthorIndex(authorPos)] as number, 'last');
+  }, [loadAuthor, playlist]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const startId = route.params.startItemId;
+      loadAuthor(route.params.userId, startId ?? 'first');
+    }, [loadAuthor, route.params.startItemId, route.params.userId]),
   );
 
   useEffect(() => {
@@ -133,13 +174,17 @@ export function StatusViewerScreen() {
   }, [item?.id]);
 
   useEffect(() => {
-    if (!item || paused || viewers) {
+    if (!item) {
       lastTickRef.current = null;
       return;
     }
     const duration = statusDurationMs(item);
     let advanced = false;
     const timer = setInterval(() => {
+      if (!shouldAdvanceStatus(holdingRef.current, pausedRef.current)) {
+        lastTickRef.current = null;
+        return;
+      }
       const tick = tickStatusElapsed(elapsedRef.current, lastTickRef.current, Date.now());
       elapsedRef.current = tick.elapsedMs;
       lastTickRef.current = tick.lastTickMs;
@@ -151,53 +196,85 @@ export function StatusViewerScreen() {
       }
     }, 50);
     return () => clearInterval(timer);
-  }, [goNext, item, paused, viewers]);
+  }, [goNext, item]);
 
   useEffect(() => {
     const node = videoRef.current;
     if (!node) {
       return;
     }
-    if (paused || viewers) {
+    if (!shouldAdvanceStatus(holdingRef.current, pausedRef.current)) {
       node.pause();
     } else {
       void node.play().catch(() => undefined);
     }
-  }, [paused, viewers, item?.id]);
+  }, [paused, replyOpen, viewers, item?.id]);
 
-  function handlePressIn(event: { nativeEvent: { pageX?: number; locationX?: number } }) {
-    pressX.current = event.nativeEvent.locationX ?? event.nativeEvent.pageX ?? 0;
-    holding.current = false;
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-    }
-    holdTimer.current = setTimeout(() => {
-      holding.current = true;
-      setPaused(true);
-    }, 160);
-  }
-
-  function handlePressOut() {
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-    }
-    if (holding.current) {
-      holding.current = false;
-      setPaused(false);
-    }
-  }
-
-  function handlePress() {
-    if (holding.current || viewers) {
+  function releasePointer(endX: number, endY: number) {
+    const holdMs = Date.now() - downAt.current;
+    const swiped = isStatusSwipeUp(pressY.current, endY);
+    holdingRef.current = false;
+    setPaused(false);
+    if (viewers) {
       return;
     }
-    const width = typeof window !== 'undefined' ? window.innerWidth : 400;
-    if (tapSide(pressX.current, width) === 'prev') {
-      goPrev();
-    } else {
-      goNext();
+    if (swiped && !isOwn) {
+      setReplyOpen(true);
+      setPaused(true);
+      return;
+    }
+    if (isStatusTap(holdMs, swiped)) {
+      const width = typeof window !== 'undefined' ? window.innerWidth : 400;
+      if (tapSide(endX || pressX.current, width) === 'prev') {
+        goPrev();
+      } else {
+        goNext();
+      }
     }
   }
+
+  function handlePressIn(event: {
+    nativeEvent: { pageX?: number; pageY?: number; locationX?: number; locationY?: number };
+  }) {
+    pressX.current = event.nativeEvent.pageX ?? event.nativeEvent.locationX ?? 0;
+    pressY.current = event.nativeEvent.pageY ?? event.nativeEvent.locationY ?? 0;
+    downAt.current = Date.now();
+    holdingRef.current = true;
+    lastTickRef.current = null;
+    setPaused(true);
+  }
+
+  function handlePressOut(event?: {
+    nativeEvent?: { pageX?: number; pageY?: number; locationX?: number; locationY?: number };
+  }) {
+    if (typeof window !== 'undefined') {
+      return;
+    }
+    if (!holdingRef.current) {
+      return;
+    }
+    const endX = event?.nativeEvent?.pageX ?? event?.nativeEvent?.locationX ?? pressX.current;
+    const endY = event?.nativeEvent?.pageY ?? event?.nativeEvent?.locationY ?? pressY.current;
+    releasePointer(endX, endY);
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const end = (event: PointerEvent) => {
+      if (!holdingRef.current) {
+        return;
+      }
+      releasePointer(event.clientX, event.clientY);
+    };
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    return () => {
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+  }, [goNext, goPrev, isOwn, viewers]);
 
   async function handleDelete() {
     if (!item || !isOwn) {
@@ -231,6 +308,31 @@ export function StatusViewerScreen() {
     }
   }
 
+  async function openDirectMessage(text?: string) {
+    if (isOwn || replyBusy) {
+      return;
+    }
+    setReplyBusy(true);
+    try {
+      const chatId = await startDirectMessage(authorUserId);
+      if (text?.trim()) {
+        sendTextMessage(chatId, text.trim());
+      }
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Main',
+          params: {
+            screen: 'ChatsTab',
+            params: { screen: 'ChatDetail', params: { chatId } },
+          },
+        }),
+      );
+    } catch (err) {
+      setError(formatApiError(err, t('status.loadFailed')));
+      setReplyBusy(false);
+    }
+  }
+
   const background = item?.type === 'text' ? item.backgroundColor : '#000';
 
   return (
@@ -260,7 +362,7 @@ export function StatusViewerScreen() {
         <ProfileAvatar
           avatarUrl={avatarUrl}
           displayName={displayName}
-          userId={route.params.userId}
+          userId={authorUserId}
           size={36}
         />
         <Text style={styles.name} numberOfLines={1}>
@@ -282,7 +384,6 @@ export function StatusViewerScreen() {
           style={styles.stage}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
-          onPress={handlePress}
           accessibilityRole="button"
           accessibilityLabel={t('status.viewer')}>
           {item?.type === 'text' ? <Text style={styles.textStatus}>{item.text}</Text> : null}
@@ -292,7 +393,7 @@ export function StatusViewerScreen() {
           {item?.type === 'video' && item.mediaUrl ? (
             <StatusVideo
               uri={item.mediaUrl}
-              paused={paused || Boolean(viewers)}
+              paused={!shouldAdvanceStatus(holdingRef.current, pausedRef.current)}
               caption={item.text}
               videoRef={videoRef}
             />
@@ -320,6 +421,31 @@ export function StatusViewerScreen() {
           <Pressable onPress={() => setConfirmDelete(true)} style={styles.ownAction}>
             <Ionicons name="trash-outline" size={18} color="#fff" />
             <Text style={styles.ownLabel}>{t('status.delete')}</Text>
+          </Pressable>
+        </View>
+      ) : replyOpen && !isOwn ? (
+        <View style={[styles.replyBar, { paddingBottom: insets.bottom + 12 }]}>
+          <Pressable
+            onPress={() => void openDirectMessage()}
+            style={styles.messageChip}
+            accessibilityRole="button">
+            <Ionicons name="chatbubble-outline" size={16} color="#fff" />
+            <Text style={styles.ownLabel}>{t('status.message')}</Text>
+          </Pressable>
+          <TextInput
+            value={reply}
+            onChangeText={setReply}
+            placeholder={t('status.replyPlaceholder')}
+            placeholderTextColor="rgba(255,255,255,0.6)"
+            style={styles.replyInput}
+            onFocus={() => setPaused(true)}
+          />
+          <Pressable
+            onPress={() => void openDirectMessage(reply)}
+            disabled={replyBusy}
+            accessibilityRole="button"
+            accessibilityLabel={t('status.reply')}>
+            <Ionicons name="send" size={20} color="#fff" />
           </Pressable>
         </View>
       ) : (
@@ -405,7 +531,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
-  },
+    userSelect: 'none',
+  } as object,
   textStatus: {
     color: '#fff',
     fontSize: 28,
@@ -441,6 +568,28 @@ const styles = StyleSheet.create({
   ownLabel: {
     color: '#fff',
     fontSize: 13,
+  },
+  replyBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  replyInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 20,
+    color: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    fontSize: 15,
+  },
+  messageChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   viewersSheet: {
     position: 'absolute',

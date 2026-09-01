@@ -44,7 +44,8 @@ import {
   type StatusAuthorRecord,
 } from '../../api/client';
 import { StatusHeaderButton } from '../../components/status/StatusHeaderButton';
-import { openStatusComposer, openStatusViewer } from '../../navigation/rootNavigation';
+import { openStatusComposer, openStatusFeed, openStatusViewer } from '../../navigation/rootNavigation';
+import { statusPlaylistUserIds, statusRingTone } from '../../status/statusLogic';
 import { useGochaTheme } from '../../theme';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 
@@ -78,6 +79,7 @@ export function ChatsScreen() {
   const [remoteSearchLoading, setRemoteSearchLoading] = useState(false);
   const [startingChatUserId, setStartingChatUserId] = useState<number | null>(null);
   const [statusMine, setStatusMine] = useState<StatusAuthorRecord | null>(null);
+  const [statusRecent, setStatusRecent] = useState<StatusAuthorRecord[]>([]);
 
   const accountMenuTop = insets.top + 12 + 44;
   const trimmedQuery = query.trim();
@@ -219,6 +221,7 @@ export function ChatsScreen() {
           const feed = await fetchStatusFeed();
           if (!cancelled) {
             setStatusMine(feed.mine);
+            setStatusRecent(feed.recent);
           }
         } catch {
           // Keep the last header status. A feed error must not sign the user out.
@@ -260,6 +263,15 @@ export function ChatsScreen() {
       };
     }, []),
   );
+
+  function openGlobalStatuses() {
+    const playlist = statusPlaylistUserIds(statusRecent, statusMine);
+    if (playlist.length === 0) {
+      openStatusComposer();
+      return;
+    }
+    openStatusFeed(playlist);
+  }
 
   function openProfileStatus(chatRecord: ChatRecord) {
     if (chatRecord.hasStatus && chatRecord.otherUserId) {
@@ -376,8 +388,14 @@ export function ChatsScreen() {
             </Pressable>
           ) : (
             <AccountLogoButton
-              onPress={() => setAccountMenuOpen(true)}
+              onPress={openGlobalStatuses}
+              onHold={() => setAccountMenuOpen(true)}
               showBadge={showAccountBadge}
+              statusTone={statusRingTone(
+                Boolean(statusMine?.itemCount || statusRecent.some((author) => author.itemCount > 0)),
+                (statusMine?.unseenCount ?? 0) > 0 ||
+                  statusRecent.some((author) => author.unseenCount > 0),
+              )}
               accessibilityLabel={
                 showAccountBadge ? t('accounts.logoUnread') : t('accounts.logo')
               }

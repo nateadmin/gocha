@@ -20,6 +20,9 @@ export type StringKey =
   | 'settings.accounts'
   | 'accounts.logo'
   | 'accounts.logoUnread'
+  | 'status.reply'
+  | 'status.message'
+  | 'status.replyPlaceholder'
   | 'settings.chatProfile'
   | 'settings.username'
   | 'settings.profileCards'
@@ -80,8 +83,11 @@ const en: Dictionary = {
   'settings.signOut': 'Sign out',
   'settings.signOutThis': 'Sign out of this account',
   'settings.accounts': 'Accounts',
-  'accounts.logo': 'Switch account',
-  'accounts.logoUnread': 'Switch account. Other accounts have new messages.',
+  'accounts.logo': 'View statuses. Hold to switch account.',
+  'accounts.logoUnread': 'View statuses. Other accounts have new messages. Hold to switch account.',
+  'status.reply': 'Reply',
+  'status.message': 'Message',
+  'status.replyPlaceholder': 'Message',
   'settings.chatProfile': 'Chat profile',
   'settings.username': 'Username',
   'settings.profileCards': 'Profile cards',
@@ -142,8 +148,11 @@ const he: Dictionary = {
   'settings.signOut': 'התנתקות',
   'settings.signOutThis': 'התנתקות מהחשבון הזה',
   'settings.accounts': 'חשבונות',
-  'accounts.logo': 'החלף חשבון',
-  'accounts.logoUnread': 'החלף חשבון. לחשבונות אחרים יש הודעות חדשות.',
+  'accounts.logo': 'צפה בסטטוסים. החזק להחלפת חשבון.',
+  'accounts.logoUnread': 'צפה בסטטוסים. לחשבונות אחרים יש הודעות חדשות. החזק להחלפת חשבון.',
+  'status.reply': 'השב',
+  'status.message': 'הודעה',
+  'status.replyPlaceholder': 'הודעה',
   'settings.chatProfile': 'פרופיל צ׳אט',
   'settings.username': 'שם משתמש',
   'settings.profileCards': 'כרטיסי פרופיל',

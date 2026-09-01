@@ -5,7 +5,7 @@ import type { ProfileCardType } from '../api/client';
 export type AppStackParamList = {
   Main: undefined;
   PublicProfileCard: { slug: string };
-  StatusViewer: { userId: number; startItemId?: number };
+  StatusViewer: { userId: number; startItemId?: number; userIds?: number[] };
   StatusComposer: { type?: 'text' | 'media' } | undefined;
 };
 

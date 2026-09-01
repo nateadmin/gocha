@@ -67,3 +67,41 @@ export function tickStatusElapsed(
   }
   return { elapsedMs: elapsedMs + (nowMs - lastTickMs), lastTickMs: nowMs };
 }
+
+export const ACCOUNT_SWITCH_HOLD_MS = 2000;
+export const STATUS_TAP_MAX_MS = 280;
+export const STATUS_SWIPE_UP_PX = 56;
+
+export function shouldAdvanceStatus(holding: boolean, paused: boolean): boolean {
+  return !holding && !paused;
+}
+
+export function isStatusSwipeUp(startY: number, endY: number, minPx = STATUS_SWIPE_UP_PX): boolean {
+  return startY - endY >= minPx;
+}
+
+export function isStatusTap(holdMs: number, swiped: boolean, tapMaxMs = STATUS_TAP_MAX_MS): boolean {
+  return !swiped && holdMs < tapMaxMs;
+}
+
+export function statusPlaylistUserIds(
+  recent: Array<{ userId: number; itemCount: number }>,
+  mine?: { userId: number; itemCount: number } | null,
+): number[] {
+  const ids = recent.filter((author) => author.itemCount > 0).map((author) => author.userId);
+  if (mine && mine.itemCount > 0 && !ids.includes(mine.userId)) {
+    ids.push(mine.userId);
+  }
+  return ids;
+}
+
+export function nextAuthorIndex(current: number, total: number): number | null {
+  if (total <= 0 || current + 1 >= total) {
+    return null;
+  }
+  return current + 1;
+}
+
+export function previousAuthorIndex(current: number): number {
+  return Math.max(0, current - 1);
+}
