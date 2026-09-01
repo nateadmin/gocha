@@ -67,7 +67,7 @@ Paste an image into the focused message field (Ctrl/Cmd+V or a screenshot). It a
 
 Each account has a language (Settings). Incoming text in direct chats and group chats is translated to that language by default. The sender still sees the original. Recipients can show the original. Translation is viewer-scoped: one group can have members in different languages and each person sees the thread in their own language.
 
-`POST /api/conversations` with `{ type: "group", name, participantUserIds }` creates a group chat. `GET /api/conversations/{id}` returns one thread you belong to so the client can open a group that is not in the list yet. Messages use the same `GET`/`POST /api/conversations/{id}/messages` contract as DMs, including `text`, `originalText`, and `isTranslated`.
+`POST /api/conversations` with `{ type: "group", name, participantUserIds }` creates a group chat. New group Add people is a typeahead over people you already chat with (`GET /api/search` `contacts`, plus local DM names), not exact-name Discover search. `GET /api/conversations/{id}` returns one thread you belong to so the client can open a group that is not in the list yet. Messages use the same `GET`/`POST /api/conversations/{id}/messages` contract as DMs, including `text`, `originalText`, and `isTranslated`.
 
 Poll answers: Chats list 8 seconds; open thread 4 seconds. No realtime push.
 
@@ -155,6 +155,7 @@ After DNS + nginx for `gocha.ai`:
 - POST `https://gocha.ai/api/profile/language` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/statuses` without a session → 401 `UNAUTHENTICATED`
 - PATCH `https://gocha.ai/api/statuses/1` without a session → 401 `UNAUTHENTICATED`
+- GET `https://gocha.ai/api/search?q=ab` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/inbox/unread` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/conversations/1` without a session → 401 `UNAUTHENTICATED`
 - POST `https://gocha.ai/api/conversations/1/messages/1/act` without a session → 401 `UNAUTHENTICATED`
