@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { StoredAccount } from '../../accounts/accountStore';
 import { useGochaTheme } from '../../theme';
 import { ProfileAvatar } from './ProfileAvatar';
+import { UnreadDot } from './UnreadDot';
 
 type Props = {
   visible: boolean;
@@ -115,14 +116,7 @@ export function AccountSwitcherMenu({
                       {account.label}
                     </Text>
                   </View>
-                  {hasUnread ? (
-                    <View
-                      style={[
-                        styles.unreadDot,
-                        { backgroundColor: theme.colors.accent, borderColor: theme.colors.card },
-                      ]}
-                    />
-                  ) : null}
+                  {hasUnread ? <UnreadDot /> : null}
                   {active ? (
                     <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
                   ) : null}
@@ -204,11 +198,5 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
   },
 });

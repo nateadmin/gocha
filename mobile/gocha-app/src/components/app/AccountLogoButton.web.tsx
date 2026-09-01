@@ -5,6 +5,7 @@ import { StatusRing } from '../status/StatusRing';
 import type { StatusRingTone } from '../../status/statusLogic';
 import { ACCOUNT_SWITCH_HOLD_MS } from '../../status/statusLogic';
 import { useGochaTheme } from '../../theme';
+import { UnreadDot } from './UnreadDot';
 
 type Props = {
   onPress: () => void;
@@ -63,23 +64,25 @@ export function AccountLogoButton({
       onPointerLeave={clearHold}
       onContextMenu={(event) => event.preventDefault()}
       aria-label={accessibilityLabel}>
-      <span style={{ width: logoSize + 6, height: logoSize + 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <StatusRing tone={statusTone} size={logoSize}>
-        <LogoWrap $size={logoSize}>
-          <img
-            src="/Logo.jpeg"
-            alt=""
-            aria-hidden
-            draggable={false}
-            width={logoSize}
-            height={logoSize}
-          />
-          {showBadge ? (
-            <Badge $fill={theme.colors.accent} $border={theme.colors.background} />
-          ) : null}
-        </LogoWrap>
-      </StatusRing>
-      </span>
+      <LogoFrame $size={logoSize}>
+        <StatusRing tone={statusTone} size={logoSize}>
+          <LogoWrap $size={logoSize}>
+            <img
+              src="/Logo.jpeg"
+              alt=""
+              aria-hidden
+              draggable={false}
+              width={logoSize}
+              height={logoSize}
+            />
+          </LogoWrap>
+        </StatusRing>
+        {showBadge ? (
+          <BadgeSlot>
+            <UnreadDot borderColor={theme.colors.background} />
+          </BadgeSlot>
+        ) : null}
+      </LogoFrame>
     </LogoButton>
   );
 }
@@ -94,6 +97,16 @@ const LogoButton = styled.button`
   padding: 0;
   user-select: none;
   -webkit-user-select: none;
+`;
+
+const LogoFrame = styled.span<{ $size: number }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: ${(props) => props.$size + 6}px;
+  overflow: visible;
+  position: relative;
+  width: ${(props) => props.$size + 6}px;
 `;
 
 const LogoWrap = styled.span<{ $size: number }>`
@@ -115,13 +128,9 @@ const LogoWrap = styled.span<{ $size: number }>`
   }
 `;
 
-const Badge = styled.span<{ $fill: string; $border: string }>`
-  background: ${(props) => props.$fill};
-  border: 2px solid ${(props) => props.$border};
-  border-radius: 5px;
-  height: 10px;
+const BadgeSlot = styled.span`
+  pointer-events: none;
   position: absolute;
-  right: -1px;
-  top: -1px;
-  width: 10px;
+  right: 0;
+  top: 0;
 `;

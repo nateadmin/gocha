@@ -6,6 +6,7 @@ import { StatusRing } from '../status/StatusRing';
 import type { StatusRingTone } from '../../status/statusLogic';
 import { ACCOUNT_SWITCH_HOLD_MS } from '../../status/statusLogic';
 import { useGochaTheme } from '../../theme';
+import { UnreadDot } from './UnreadDot';
 
 type Props = {
   onPress: () => void;
@@ -59,23 +60,17 @@ export function AccountLogoButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={styles.button}>
-      <View style={{ width: logoSize + 6, height: logoSize + 6, alignItems: 'center', justifyContent: 'center' }}>
-      <StatusRing tone={statusTone} size={logoSize}>
-        <View style={[styles.circle, { width: logoSize, height: logoSize, borderRadius: logoSize / 2 }]}>
-          <BrandLogo size={logoSize} style={styles.logo} />
-          {showBadge ? (
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: theme.colors.accent,
-                  borderColor: theme.colors.background,
-                },
-              ]}
-            />
-          ) : null}
-        </View>
-      </StatusRing>
+      <View style={[styles.wrap, { width: logoSize + 6, height: logoSize + 6 }]}>
+        <StatusRing tone={statusTone} size={logoSize}>
+          <View style={[styles.circle, { width: logoSize, height: logoSize, borderRadius: logoSize / 2 }]}>
+            <BrandLogo size={logoSize} style={styles.logo} />
+          </View>
+        </StatusRing>
+        {showBadge ? (
+          <View style={styles.badgeSlot} pointerEvents="none">
+            <UnreadDot borderColor={theme.colors.background} />
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -87,6 +82,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'visible',
   },
+  wrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+    position: 'relative',
+  },
   circle: {
     overflow: 'hidden',
     alignItems: 'center',
@@ -96,13 +97,9 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     borderRadius: 999,
   },
-  badge: {
+  badgeSlot: {
     position: 'absolute',
-    top: -1,
-    right: -1,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
+    top: 0,
+    right: 0,
   },
 });
