@@ -68,7 +68,7 @@ describe('statusLogic', () => {
     expect(isStatusTap(2000, false)).toBe(false);
     expect(isStatusSwipeUp(400, 330)).toBe(true);
     expect(isStatusSwipeUp(400, 380)).toBe(false);
-    expect(ACCOUNT_SWITCH_HOLD_MS).toBe(2000);
+    expect(ACCOUNT_SWITCH_HOLD_MS).toBe(1000);
   });
 
   it('builds a global status playlist from the feed', () => {

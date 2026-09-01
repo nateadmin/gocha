@@ -55,7 +55,7 @@ Poll answers: job every 5 minutes; client poll 60 seconds; no realtime push.
 
 ## Status updates
 
-24-hour text, image, and video updates. Visible to the owner and DM contacts only. Settings > My status lists your updates so you can add, edit, or delete them. `PATCH /api/statuses/{id}` edits text, caption, or background. `POST /api/statuses/{id}` with a `media` file replaces a photo or video. Edit does not extend the 24-hour expiry. Tap the circular Chats logo to play every contact status (unseen first). A highlighted ring around the logo means there are unread status updates. Hold the logo for two seconds to switch accounts. Add from the compact + control or Settings. Hold a status to pause for as long as you hold; swipe up to message that person. Tap left for previous, tap right or wait for next.
+24-hour text, image, and video updates. Visible to the owner and DM contacts only. Settings > My status lists your updates so you can add, edit, or delete them. `PATCH /api/statuses/{id}` edits text, caption, or background. `POST /api/statuses/{id}` with a `media` file replaces a photo or video. Edit does not extend the 24-hour expiry. Tap the circular Chats logo to play every contact status (unseen first). A highlighted ring around the logo means there are unread status updates. Hold the logo for one second to switch accounts. Add from the compact + control or Settings. Hold a status to pause for as long as you hold; swipe up to message that person. Tap left for previous, tap right or wait for next.
 
 Poll answers: the header status control refreshes your own status on tab focus and every 60 seconds while focused. No realtime push. The logo ring uses the same `GET /api/statuses` `{ mine, recent }` feed.
 

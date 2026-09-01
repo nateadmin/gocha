@@ -68,7 +68,7 @@ export function tickStatusElapsed(
   return { elapsedMs: elapsedMs + (nowMs - lastTickMs), lastTickMs: nowMs };
 }
 
-export const ACCOUNT_SWITCH_HOLD_MS = 2000;
+export const ACCOUNT_SWITCH_HOLD_MS = 1000;
 export const STATUS_TAP_MAX_MS = 280;
 export const STATUS_SWIPE_UP_PX = 56;
 
