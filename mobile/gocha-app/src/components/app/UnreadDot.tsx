@@ -1,9 +1,9 @@
 import { View, StyleSheet } from 'react-native';
 
 import { useGochaTheme } from '../../theme';
+import { UNREAD_DOT_BORDER_WIDTH, UNREAD_DOT_SIZE } from './unreadDotSize';
 
-export const UNREAD_DOT_SIZE = 10;
-export const UNREAD_DOT_BORDER_WIDTH = 2;
+export { UNREAD_DOT_BORDER_WIDTH, UNREAD_DOT_SIZE } from './unreadDotSize';
 
 type Props = {
   borderColor?: string;

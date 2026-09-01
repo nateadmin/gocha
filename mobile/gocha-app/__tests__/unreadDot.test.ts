@@ -1,4 +1,4 @@
-import { UNREAD_DOT_BORDER_WIDTH, UNREAD_DOT_SIZE } from '../src/components/app/UnreadDot';
+import { UNREAD_DOT_BORDER_WIDTH, UNREAD_DOT_SIZE } from '../src/components/app/unreadDotSize';
 
 describe('UnreadDot', () => {
   it('keeps the logo and account-menu dots the same size', () => {
