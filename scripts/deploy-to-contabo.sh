@@ -65,9 +65,23 @@ rsync -az --delete -e "$RSYNC_SSH" \
   --exclude '.env' \
   --exclude 'node_modules' \
   --exclude 'vendor' \
-  --exclude 'storage/logs/*' \
-  --exclude 'storage/framework/cache/data/*' \
+  --exclude 'storage/app/' \
+  --exclude 'storage/logs/' \
+  --exclude 'storage/framework/cache/' \
+  --exclude 'storage/framework/sessions/' \
+  --exclude 'storage/framework/views/' \
   "$APP_DIR/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/"
+
+# php-fpm runs as www-data. rsync as root used to recreate session files and
+# leave them unwritable until the late chown, which 500'd signed-in writes.
+ssh "${SSH_OPTS[@]}" "$REMOTE_USER@$REMOTE_HOST" bash -s "$REMOTE_PATH" <<'REMOTE_PERMS'
+set -euo pipefail
+REMOTE_PATH="$1"
+cd "$REMOTE_PATH"
+mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R ug+rwx storage bootstrap/cache
+REMOTE_PERMS
 
 ssh "${SSH_OPTS[@]}" "$REMOTE_USER@$REMOTE_HOST" bash -s "$REMOTE_PATH" "$COMMIT_SHA" <<'REMOTE'
 set -euo pipefail

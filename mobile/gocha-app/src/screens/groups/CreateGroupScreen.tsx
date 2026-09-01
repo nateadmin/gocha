@@ -7,7 +7,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand';
 import { AddressAutocompleteField } from '../../components/places/AddressAutocompleteField';
-import { ApiError, createCommunityGroup, globalSearch, type PublicUserProfile } from '../../api/client';
+import { createCommunityGroup, globalSearch, type PublicUserProfile } from '../../api/client';
+import { formatApiError } from '../../api/formatApiError';
 import { isSelectedPlace } from '../../places/addressPlaces';
 import { useChat } from '../../chat/ChatContext';
 import { searchLocalContacts } from '../../chat/globalSearchLocal';
@@ -154,26 +155,22 @@ export function CreateGroupScreen() {
       );
       const wantsCommunity = Boolean(description.trim() || isPublic || showInAroundMe);
       if (wantsCommunity) {
-        try {
-          await createCommunityGroup({
-            name: name.trim(),
-            description: description.trim() || undefined,
-            privacy: isPublic ? 'public' : 'private',
-            showInAroundMe,
-            address: showInAroundMe ? address.trim() : undefined,
-            city: showInAroundMe ? city ?? undefined : undefined,
-            state: showInAroundMe ? region ?? undefined : undefined,
-            googlePlaceId: showInAroundMe ? placeId ?? undefined : undefined,
-            latitude: showInAroundMe ? latitude : undefined,
-            longitude: showInAroundMe ? longitude : undefined,
-          });
-        } catch {
-          // Chat group already exists; Around Me listing is optional.
-        }
+        await createCommunityGroup({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          privacy: isPublic ? 'public' : 'private',
+          showInAroundMe,
+          address: showInAroundMe ? address.trim() : undefined,
+          city: showInAroundMe ? city ?? undefined : undefined,
+          state: showInAroundMe ? region ?? undefined : undefined,
+          googlePlaceId: showInAroundMe ? placeId ?? undefined : undefined,
+          latitude: showInAroundMe ? latitude : undefined,
+          longitude: showInAroundMe ? longitude : undefined,
+        });
       }
       navigation.replace('ChatDetail', { chatId });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not create group.');
+      setError(formatApiError(err, 'Could not create group.'));
     } finally {
       setLoading(false);
     }

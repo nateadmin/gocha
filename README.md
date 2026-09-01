@@ -131,6 +131,7 @@ Run in order before push:
 2. Export SSH key path and deploy API + web shell:
    `GOCHA_SSH_KEY=/path/to/key ./scripts/deploy-to-contabo.sh`
    (Web-only: `./scripts/deploy-web-preview-to-contabo.sh` with the same env var.)
+   Rsync leaves live `storage/app`, logs, cache, sessions, and compiled views in place, then chowns `storage` and `bootstrap/cache` to `www-data` before artisan runs.
 3. On server: confirm `php artisan route:list --path=api` shows health and version.
 4. Confirm the web bundle changed: view source on https://gocha.ai/ and check the `assets/index-*.js` filename is not `index-CbZMhqcY.js` (stale).
 
