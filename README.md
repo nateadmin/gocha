@@ -59,6 +59,10 @@ Poll answers: job every 5 minutes; client poll 60 seconds; no realtime push.
 
 Poll answers: the header status control refreshes your own status on tab focus and every 60 seconds while focused. No realtime push. Other people's statuses are not listed in a tray; they open from the profile/avatar.
 
+## Chat composer
+
+Paste an image into the focused message field (Ctrl/Cmd+V or a screenshot). It attaches the same way as the paperclip image path. Images over 8MB are ignored so a text paste still goes through.
+
 ## Account switcher unread badge
 
 When more than one account is saved on the device, the Chats logo shows a notification circle if another (not visible) account has unread messages. The account menu marks those rows. The client polls `GET /api/inbox/unread` with each inactive account's device token and `credentials: omit` so the active session cookie is not sent and a 401 on a stale token cannot sign the current user out.

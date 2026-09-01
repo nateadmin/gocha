@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   TextInput,
@@ -9,6 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { filesFromClipboardData, pickedMediaFromImageFile } from '../../chat/clipboardImage';
 import type { PickedMedia } from '../../chat/pickMedia';
 import { pickCameraPhoto, pickDocument } from '../../chat/pickMedia';
 import type { RecordedVoice } from '../../chat/voiceRecording';
@@ -53,6 +54,39 @@ export function ChatComposer({
   const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState(false);
   const [panel, setPanel] = useState<Panel>('none');
+  const lastPasteAt = useRef(0);
+
+  const attachPastedImages = useCallback(
+    (files: File[]) => {
+      if (!onAttachImage || files.length === 0) {
+        return false;
+      }
+      const now = Date.now();
+      if (now - lastPasteAt.current < 200) {
+        return true;
+      }
+      lastPasteAt.current = now;
+      files.forEach((file) => {
+        onAttachImage(pickedMediaFromImageFile(file));
+      });
+      return true;
+    },
+    [onAttachImage],
+  );
+
+  useEffect(() => {
+    if (!focused || typeof document === 'undefined') {
+      return;
+    }
+    const onPaste = (event: ClipboardEvent) => {
+      const files = filesFromClipboardData(event.clipboardData);
+      if (attachPastedImages(files)) {
+        event.preventDefault();
+      }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [attachPastedImages, focused]);
 
   const webInputReset =
     Platform.OS === 'web'
@@ -233,6 +267,17 @@ export function ChatComposer({
                       if (event.key === 'Enter' && !event.shiftKey) {
                         event.preventDefault?.();
                         submitMessage();
+                      }
+                    },
+                    onPaste: (event: {
+                      clipboardData?: DataTransfer | null;
+                      nativeEvent?: { clipboardData?: DataTransfer | null };
+                      preventDefault?: () => void;
+                    }) => {
+                      const data = event.clipboardData ?? event.nativeEvent?.clipboardData;
+                      const files = filesFromClipboardData(data);
+                      if (attachPastedImages(files)) {
+                        event.preventDefault?.();
                       }
                     },
                   }
