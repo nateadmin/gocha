@@ -105,3 +105,23 @@ export function nextAuthorIndex(current: number, total: number): number | null {
 export function previousAuthorIndex(current: number): number {
   return Math.max(0, current - 1);
 }
+
+export function statusExpiresLabel(expiresAt: string | null | undefined, nowMs = Date.now()): string {
+  if (!expiresAt) {
+    return '';
+  }
+  const expiresMs = new Date(expiresAt).getTime();
+  if (Number.isNaN(expiresMs)) {
+    return '';
+  }
+  const remaining = expiresMs - nowMs;
+  if (remaining <= 0) {
+    return 'Expired';
+  }
+  const hours = Math.floor(remaining / 3_600_000);
+  const minutes = Math.max(1, Math.round((remaining % 3_600_000) / 60_000));
+  if (hours >= 1) {
+    return hours === 1 ? 'Expires in 1 hour' : `Expires in ${hours} hours`;
+  }
+  return minutes === 1 ? 'Expires in 1 minute' : `Expires in ${minutes} minutes`;
+}

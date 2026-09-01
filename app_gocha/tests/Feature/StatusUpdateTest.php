@@ -119,6 +119,34 @@ class StatusUpdateTest extends TestCase
         $this->assertDatabaseMissing('status_items', ['id' => $item->id]);
     }
 
+    public function test_owner_can_edit_status(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+        $this->startConversation($alice, $bob);
+
+        $itemId = $this->actingAs($alice)->postJson('/api/statuses', [
+            'text' => 'Draft',
+            'backgroundColor' => '#1B00D8',
+        ])->json('item.id');
+
+        $this->actingAs($bob)->patchJson("/api/statuses/{$itemId}", [
+            'text' => 'Hijack',
+        ])->assertForbidden();
+
+        $this->actingAs($alice)->patchJson("/api/statuses/{$itemId}", [
+            'text' => 'Updated hello',
+            'backgroundColor' => '#00734a',
+        ])
+            ->assertOk()
+            ->assertJsonPath('item.text', 'Updated hello')
+            ->assertJsonPath('item.backgroundColor', '#00734a');
+
+        $this->actingAs($alice)->patchJson("/api/statuses/{$itemId}", [
+            'text' => '   ',
+        ])->assertStatus(422);
+    }
+
     public function test_owner_can_delete_status(): void
     {
         $alice = User::factory()->create();
@@ -174,6 +202,37 @@ class StatusUpdateTest extends TestCase
     public function test_statuses_require_auth(): void
     {
         $this->getJson('/api/statuses')->assertUnauthorized();
+        $this->patchJson('/api/statuses/1', [
+            'text' => 'Nope',
+        ])->assertUnauthorized();
+    }
+
+    public function test_owner_can_replace_status_media(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+
+        $itemId = $this->actingAs($user)->post('/api/statuses/media', [
+            'type' => 'image',
+            'text' => 'First',
+            'media' => UploadedFile::fake()->createWithContent('first.png', $png),
+        ])->json('item.id');
+
+        $originalPath = StatusItem::query()->findOrFail($itemId)->media_path;
+
+        $this->actingAs($user)->post("/api/statuses/{$itemId}", [
+            'type' => 'image',
+            'text' => 'Second',
+            'media' => UploadedFile::fake()->createWithContent('second.png', $png),
+        ])
+            ->assertOk()
+            ->assertJsonPath('item.text', 'Second');
+
+        $fresh = StatusItem::query()->findOrFail($itemId);
+        $this->assertNotSame($originalPath, $fresh->media_path);
+        Storage::disk('public')->assertExists($fresh->media_path);
+        Storage::disk('public')->assertMissing($originalPath);
     }
 
     private function startConversation(User $alice, User $bob): int

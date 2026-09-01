@@ -248,6 +248,86 @@ class StatusService
             ->all();
     }
 
+    public function update(StatusItem $item, User $actor, array $input, ?UploadedFile $media = null): StatusItem
+    {
+        if ((int) $item->user_id !== (int) $actor->id) {
+            abort(403, 'You can only edit your own status.');
+        }
+
+        if (! $item->isActive()) {
+            abort(404, 'That status has expired.');
+        }
+
+        $type = (string) ($input['type'] ?? $item->type);
+        if (! in_array($type, StatusType::all(), true)) {
+            $type = $item->type;
+        }
+
+        if ($media) {
+            $type = in_array((string) ($input['type'] ?? ''), [StatusType::IMAGE, StatusType::VIDEO], true)
+                ? (string) $input['type']
+                : $type;
+            if (! in_array($type, [StatusType::IMAGE, StatusType::VIDEO], true)) {
+                $type = StatusType::IMAGE;
+            }
+        }
+
+        if ($type === StatusType::TEXT) {
+            $text = array_key_exists('text', $input)
+                ? trim((string) $input['text'])
+                : trim((string) $item->body);
+            if ($text === '') {
+                throw ValidationException::withMessages([
+                    'text' => ['Write something first.'],
+                ]);
+            }
+            $color = isset($input['backgroundColor']) && in_array($input['backgroundColor'], StatusType::backgrounds(), true)
+                ? (string) $input['backgroundColor']
+                : (string) $item->background_color;
+            if ($item->media_path) {
+                $item->deleteMedia();
+            }
+            $item->forceFill([
+                'type' => StatusType::TEXT,
+                'body' => $text,
+                'media_path' => null,
+                'background_color' => $color ?: StatusType::backgrounds()[0],
+                'duration_ms' => StatusType::TEXT_DURATION_MS,
+            ])->save();
+
+            return $item->fresh() ?? $item;
+        }
+
+        if ($media) {
+            $item->deleteMedia();
+            $path = $media->store('statuses/'.$actor->id, 'public');
+            $duration = StatusType::defaultDuration($type);
+            if ($type === StatusType::VIDEO && isset($input['durationMs'])) {
+                $duration = max(3000, min(StatusType::VIDEO_MAX_MS, (int) $input['durationMs']));
+            }
+            $item->forceFill([
+                'type' => $type,
+                'media_path' => $path,
+                'duration_ms' => $duration,
+            ]);
+        } elseif (! $item->media_path) {
+            throw ValidationException::withMessages([
+                'media' => ['Choose a photo or video.'],
+            ]);
+        } else {
+            $item->type = $type;
+        }
+
+        if (array_key_exists('text', $input)) {
+            $caption = trim((string) $input['text']);
+            $item->body = $caption !== '' ? $caption : null;
+        }
+
+        $item->save();
+
+        return $item->fresh() ?? $item;
+    }
+
     public function delete(StatusItem $item, User $actor): void
     {
         if ((int) $item->user_id !== (int) $actor->id) {

@@ -1189,6 +1189,43 @@ export async function fetchStatusViewers(statusId: number): Promise<StatusViewer
   return payload.viewers;
 }
 
+export async function updateStatus(
+  statusId: number,
+  input: { text?: string; backgroundColor?: string; type?: 'text' | 'image' | 'video' },
+): Promise<StatusItemRecord> {
+  const payload = await apiRequest<{ item: StatusItemRecord }>(`${API_PATHS.statuses}/${statusId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return payload.item;
+}
+
+export async function updateStatusMedia(
+  statusId: number,
+  input: {
+    file: Blob;
+    filename: string;
+    type: 'image' | 'video';
+    text?: string;
+    durationMs?: number;
+  },
+): Promise<StatusItemRecord> {
+  const form = new FormData();
+  form.append('type', input.type);
+  form.append('media', input.file, input.filename);
+  if (input.text) {
+    form.append('text', input.text);
+  }
+  if (input.durationMs) {
+    form.append('durationMs', String(input.durationMs));
+  }
+  const payload = await apiRequest<{ item: StatusItemRecord }>(`${API_PATHS.statuses}/${statusId}`, {
+    method: 'POST',
+    body: form,
+  });
+  return payload.item;
+}
+
 export async function deleteStatus(statusId: number): Promise<void> {
   await apiRequest(`${API_PATHS.statuses}/${statusId}`, { method: 'DELETE' });
 }

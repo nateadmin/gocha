@@ -414,6 +414,12 @@ export function StatusViewerScreen() {
               {t('status.seenBy')} {item.viewCount ?? 0}
             </Text>
           </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('StatusComposer', { itemId: item.id, afterSave: 'viewer' })}
+            style={styles.ownAction}>
+            <Ionicons name="create-outline" size={18} color="#fff" />
+            <Text style={styles.ownLabel}>{t('status.edit')}</Text>
+          </Pressable>
           <Pressable onPress={() => navigation.navigate('StatusComposer', {})} style={styles.ownAction}>
             <Ionicons name="add" size={18} color="#fff" />
             <Text style={styles.ownLabel}>{t('status.add')}</Text>

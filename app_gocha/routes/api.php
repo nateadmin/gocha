@@ -97,6 +97,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/statuses/users/{user}', [StatusController::class, 'showUser']);
     Route::post('/statuses/{statusItem}/view', [StatusController::class, 'view']);
     Route::get('/statuses/{statusItem}/viewers', [StatusController::class, 'viewers']);
+    Route::patch('/statuses/{statusItem}', [StatusController::class, 'update']);
+    Route::post('/statuses/{statusItem}', [StatusController::class, 'update']);
     Route::delete('/statuses/{statusItem}', [StatusController::class, 'destroy']);
     Route::get('/catch-up', [CatchUpController::class, 'show']);
 

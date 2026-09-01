@@ -6,7 +6,7 @@ export type AppStackParamList = {
   Main: undefined;
   PublicProfileCard: { slug: string };
   StatusViewer: { userId: number; startItemId?: number; userIds?: number[] };
-  StatusComposer: { type?: 'text' | 'media' } | undefined;
+  StatusComposer: { type?: 'text' | 'media'; itemId?: number; afterSave?: 'viewer' | 'back' } | undefined;
 };
 
 export type RootTabParamList = {
@@ -57,4 +57,5 @@ export type SettingsStackParamList = {
   AddProfileCard: undefined;
   EditProfileCard: { cardId?: number; type?: ProfileCardType } | undefined;
   ProfileCardRequests: undefined;
+  StatusSettings: undefined;
 };

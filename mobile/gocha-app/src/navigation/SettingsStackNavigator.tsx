@@ -18,6 +18,7 @@ import { ProfileCardsScreen } from '../screens/settings/ProfileCardsScreen';
 import { AddProfileCardScreen } from '../screens/settings/AddProfileCardScreen';
 import { EditProfileCardScreen } from '../screens/settings/EditProfileCardScreen';
 import { ProfileCardRequestsScreen } from '../screens/settings/ProfileCardRequestsScreen';
+import { StatusSettingsScreen } from '../screens/settings/StatusSettingsScreen';
 import type { SettingsStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
@@ -43,6 +44,7 @@ export function SettingsStackNavigator() {
       <Stack.Screen name="AddProfileCard" component={AddProfileCardScreen} />
       <Stack.Screen name="EditProfileCard" component={EditProfileCardScreen} />
       <Stack.Screen name="ProfileCardRequests" component={ProfileCardRequestsScreen} />
+      <Stack.Screen name="StatusSettings" component={StatusSettingsScreen} />
     </Stack.Navigator>
   );
 }

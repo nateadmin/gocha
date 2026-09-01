@@ -18,9 +18,9 @@ export function openStatusFeed(userIds: number[], startUserId?: number): void {
   openStatusViewer(userId, undefined, userIds);
 }
 
-export function openStatusComposer(): void {
+export function openStatusComposer(params?: AppStackParamList['StatusComposer']): void {
   if (appNavigationRef.isReady()) {
-    appNavigationRef.navigate('StatusComposer', {});
+    appNavigationRef.navigate('StatusComposer', params ?? {});
   }
 }
 

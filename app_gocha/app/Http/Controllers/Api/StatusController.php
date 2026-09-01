@@ -93,6 +93,37 @@ class StatusController extends Controller
         ]);
     }
 
+    public function update(Request $request, StatusItem $statusItem): JsonResponse
+    {
+        $hasFile = $request->hasFile('media');
+        $isVideo = $request->input('type') === StatusType::VIDEO;
+        $validated = $request->validate([
+            'type' => ['sometimes', 'string', Rule::in(StatusType::all())],
+            'text' => ['sometimes', 'nullable', 'string', 'max:700'],
+            'backgroundColor' => ['sometimes', 'nullable', 'string', Rule::in(StatusType::backgrounds())],
+            'durationMs' => ['sometimes', 'nullable', 'integer', 'min:1000', 'max:'.StatusType::VIDEO_MAX_MS],
+            'media' => $hasFile
+                ? [
+                    'required',
+                    'file',
+                    $isVideo ? 'mimetypes:video/mp4,video/quicktime,video/webm' : 'image',
+                    $isVideo ? 'max:20480' : 'max:8192',
+                ]
+                : ['sometimes'],
+        ]);
+
+        $item = $this->statuses->update(
+            $statusItem,
+            $request->user(),
+            $validated,
+            $hasFile ? $request->file('media') : null,
+        );
+
+        return response()->json([
+            'item' => $item->toViewerPayload($request->user(), true),
+        ]);
+    }
+
     public function destroy(Request $request, StatusItem $statusItem): JsonResponse
     {
         $this->statuses->delete($statusItem, $request->user());

@@ -9,6 +9,7 @@ import {
   previousStatusIndex,
   shouldAdvanceStatus,
   statusDurationMs,
+  statusExpiresLabel,
   statusPlaylistUserIds,
   statusProgressRatio,
   statusRingTone,
@@ -84,5 +85,12 @@ describe('statusLogic', () => {
     expect(nextAuthorIndex(0, 3)).toBe(1);
     expect(nextAuthorIndex(2, 3)).toBeNull();
     expect(previousAuthorIndex(2)).toBe(1);
+  });
+
+  it('labels remaining status lifetime', () => {
+    const now = Date.parse('2026-09-01T12:00:00.000Z');
+    expect(statusExpiresLabel('2026-09-01T14:00:00.000Z', now)).toBe('Expires in 2 hours');
+    expect(statusExpiresLabel('2026-09-01T12:20:00.000Z', now)).toBe('Expires in 20 minutes');
+    expect(statusExpiresLabel('2026-09-01T11:00:00.000Z', now)).toBe('Expired');
   });
 });

@@ -61,7 +61,13 @@ export type StringKey =
   | 'status.noViews'
   | 'status.viewer'
   | 'status.confirmDeleteTitle'
-  | 'status.confirmDeleteBody';
+  | 'status.confirmDeleteBody'
+  | 'status.edit'
+  | 'status.save'
+  | 'status.empty'
+  | 'status.manageHint'
+  | 'status.updateFailed'
+  | 'status.mediaRequired';
 
 type Dictionary = Record<StringKey, string>;
 
@@ -127,6 +133,12 @@ const en: Dictionary = {
   'status.viewer': 'Status',
   'status.confirmDeleteTitle': 'Delete this status?',
   'status.confirmDeleteBody': 'This status will be removed for everyone.',
+  'status.edit': 'Edit status',
+  'status.save': 'Save',
+  'status.empty': 'No status updates yet.',
+  'status.manageHint': 'Add, edit, or delete your 24-hour status updates.',
+  'status.updateFailed': 'Could not save that status.',
+  'status.mediaRequired': 'Choose a photo or video.',
 };
 
 const he: Dictionary = {
@@ -192,6 +204,12 @@ const he: Dictionary = {
   'status.viewer': 'סטטוס',
   'status.confirmDeleteTitle': 'למחוק את הסטטוס?',
   'status.confirmDeleteBody': 'הסטטוס יוסר לכולם.',
+  'status.edit': 'ערוך סטטוס',
+  'status.save': 'שמור',
+  'status.empty': 'אין עדכוני סטטוס עדיין.',
+  'status.manageHint': 'הוסף, ערוך או מחק את עדכוני הסטטוס ל-24 שעות.',
+  'status.updateFailed': 'לא ניתן לשמור את הסטטוס.',
+  'status.mediaRequired': 'בחר תמונה או סרטון.',
 };
 
 const es: Dictionary = {

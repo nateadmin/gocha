@@ -55,7 +55,7 @@ Poll answers: job every 5 minutes; client poll 60 seconds; no realtime push.
 
 ## Status updates
 
-24-hour text, image, and video updates. Visible to the owner and DM contacts only. Statuses are not editable (they expire); the owner can delete. Tap the circular Chats logo to play every contact status (unseen first). A highlighted ring around the logo means there are unread status updates. Hold the logo for two seconds to switch accounts. Add your own from the compact + control, or Settings > My status. Hold a status to pause for as long as you hold; swipe up to message that person. Tap left for previous, tap right or wait for next.
+24-hour text, image, and video updates. Visible to the owner and DM contacts only. Settings > My status lists your updates so you can add, edit, or delete them. `PATCH /api/statuses/{id}` edits text, caption, or background. `POST /api/statuses/{id}` with a `media` file replaces a photo or video. Edit does not extend the 24-hour expiry. Tap the circular Chats logo to play every contact status (unseen first). A highlighted ring around the logo means there are unread status updates. Hold the logo for two seconds to switch accounts. Add from the compact + control or Settings. Hold a status to pause for as long as you hold; swipe up to message that person. Tap left for previous, tap right or wait for next.
 
 Poll answers: the header status control refreshes your own status on tab focus and every 60 seconds while focused. No realtime push. The logo ring uses the same `GET /api/statuses` `{ mine, recent }` feed.
 
@@ -93,7 +93,7 @@ Poll answers: 30 seconds while the app is visible; refetch on focus. No realtime
 
 Prune: `gocha:status-prune` hourly. Lock domain: Laravel `withoutOverlapping` mutex `gocha:status-prune` (10 minute expiry). No outbound HTTP. Max run is a short disk delete, well under the hourly interval.
 
-Statuses are not a staff-managed table. There is no edit form. Required on create: text for a text status; an image or video file for media (caption optional).
+Statuses are owner-managed from Settings > My status. Required on create: text for a text status; an image or video file for media (caption optional). Edit can change text, caption, background, or replace media. Edit does not extend the 24-hour expiry.
 
 API (Sanctum session or bearer token):
 
@@ -103,6 +103,8 @@ API (Sanctum session or bearer token):
 - `GET /api/statuses/users/{user}` → `{ userId, displayName, avatarUrl, items }`
 - `POST /api/statuses/{id}/view` records a unique view
 - `GET /api/statuses/{id}/viewers` owner only
+- `PATCH /api/statuses/{id}` JSON `{ type?, text?, backgroundColor? }` owner only
+- `POST /api/statuses/{id}` multipart `media` plus optional `type`, `text`, `durationMs` owner only (replace photo or video)
 - `DELETE /api/statuses/{id}` owner only
 
 Image max 8MB. Video max 20MB and 30 seconds. Max 30 active statuses per user. Media lives on the public disk under `statuses/{userId}/`.
@@ -152,6 +154,7 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/meta` → 200 JSON, `account.phoneSignInEnabled` true after Firebase secrets are injected, `languages` includes `en` and `he`
 - POST `https://gocha.ai/api/profile/language` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/statuses` without a session → 401 `UNAUTHENTICATED`
+- PATCH `https://gocha.ai/api/statuses/1` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/inbox/unread` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/conversations/1` without a session → 401 `UNAUTHENTICATED`
 - POST `https://gocha.ai/api/conversations/1/messages/1/act` without a session → 401 `UNAUTHENTICATED`
