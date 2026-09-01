@@ -66,6 +66,28 @@ class GlobalSearchTest extends TestCase
             ->assertJsonCount(0, 'people');
     }
 
+    public function test_global_search_names_group_messages_with_the_group_title(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+
+        $conversationId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'type' => 'group',
+            'name' => 'Trail Crew',
+            'participantUserIds' => [$bob->id],
+        ])->json('conversation.id');
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'Bring the quarterly maps',
+        ]);
+
+        $this->actingAs($bob)->getJson('/api/search?q=quarterly')
+            ->assertOk()
+            ->assertJsonCount(1, 'messages')
+            ->assertJsonPath('messages.0.conversationName', 'Trail Crew')
+            ->assertJsonPath('messages.0.conversationId', $conversationId);
+    }
+
     public function test_discoverable_user_requires_exact_full_name(): void
     {
         $searcher = User::factory()->create();

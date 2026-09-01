@@ -103,6 +103,67 @@ class MessageTranslationTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_group_members_each_see_incoming_messages_in_their_language(): void
+    {
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::sequence()
+                ->push($this->openaiPayload([
+                    'source' => 'he',
+                    'text' => 'Hello everyone',
+                ]), 200)
+                ->push($this->openaiPayload([
+                    'source' => 'he',
+                    'text' => 'Hola a todos',
+                ]), 200),
+        ]);
+
+        $alice = User::factory()->create(['language' => 'he']);
+        $bob = User::factory()->create(['language' => 'en']);
+        $carol = User::factory()->create(['language' => 'he']);
+        $dana = User::factory()->create(['language' => 'es']);
+
+        $conversationId = (int) $this->actingAs($alice)->postJson('/api/conversations', [
+            'type' => 'group',
+            'name' => 'Mixed languages',
+            'participantUserIds' => [$bob->id, $carol->id, $dana->id],
+        ])->json('conversation.id');
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'שלום לכולם',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('message.text', 'שלום לכולם')
+            ->assertJsonPath('message.isTranslated', false);
+
+        $this->actingAs($bob)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.0.text', 'Hello everyone')
+            ->assertJsonPath('messages.0.originalText', 'שלום לכולם')
+            ->assertJsonPath('messages.0.isTranslated', true)
+            ->assertJsonPath('messages.0.sourceLanguage', 'he')
+            ->assertJsonPath('messages.0.isOutgoing', false);
+
+        $this->actingAs($carol)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.0.text', 'שלום לכולם')
+            ->assertJsonPath('messages.0.isTranslated', false)
+            ->assertJsonPath('messages.0.sourceLanguage', 'he');
+
+        $this->actingAs($dana)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.0.text', 'Hola a todos')
+            ->assertJsonPath('messages.0.originalText', 'שלום לכולם')
+            ->assertJsonPath('messages.0.isTranslated', true);
+
+        $this->actingAs($alice)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.0.text', 'שלום לכולם')
+            ->assertJsonPath('messages.0.isOutgoing', true)
+            ->assertJsonPath('messages.0.isTranslated', false);
+
+        Http::assertSentCount(2);
+    }
+
     public function test_translation_failure_returns_original_without_signing_out(): void
     {
         Http::fake([

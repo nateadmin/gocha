@@ -31,8 +31,8 @@ class CatchUpController extends Controller
                 $latestGenerated = $brief->generated_at;
             }
 
-            $other = $conversation->otherParticipant($user);
-            $displayName = $other?->chatDisplayName() ?? 'Conversation';
+            $other = $conversation->isGroup() ? null : $conversation->otherParticipant($user);
+            $displayName = $conversation->displayNameFor($user);
             $participantRow = $conversation->participantRows
                 ->firstWhere('user_id', $user->id);
             $unread = (int) ($participantRow?->unread_count ?? 0);

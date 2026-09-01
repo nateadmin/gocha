@@ -188,6 +188,57 @@ class ConversationTest extends TestCase
             ->assertJsonPath('messages.0.status', 'read');
     }
 
+    public function test_user_can_create_a_group_conversation(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+        $carol = User::factory()->create();
+
+        $create = $this->actingAs($alice)->postJson('/api/conversations', [
+            'type' => 'group',
+            'name' => 'Family',
+            'participantUserIds' => [$bob->id, $carol->id, $alice->id],
+        ])->assertCreated()
+            ->assertJsonPath('conversation.type', 'group')
+            ->assertJsonPath('conversation.name', 'Family')
+            ->assertJsonPath('conversation.isGroup', true)
+            ->assertJsonPath('conversation.groupCount', 3)
+            ->assertJsonPath('conversation.otherUserId', null);
+
+        $conversationId = $create->json('conversation.id');
+
+        $this->actingAs($bob)->getJson('/api/conversations')
+            ->assertOk()
+            ->assertJsonPath('conversations.0.id', $conversationId)
+            ->assertJsonPath('conversations.0.name', 'Family')
+            ->assertJsonPath('conversations.0.isGroup', true);
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'Hi group',
+        ])->assertCreated();
+
+        $this->actingAs($carol)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonCount(1, 'messages')
+            ->assertJsonPath('messages.0.text', 'Hi group')
+            ->assertJsonPath('messages.0.isOutgoing', false);
+
+        $outsider = User::factory()->create();
+        $this->actingAs($outsider)->getJson("/api/conversations/{$conversationId}/messages")
+            ->assertForbidden();
+    }
+
+    public function test_group_create_requires_a_name(): void
+    {
+        $alice = User::factory()->create();
+
+        $this->actingAs($alice)->postJson('/api/conversations', [
+            'type' => 'group',
+            'name' => '   ',
+            'participantUserIds' => [],
+        ])->assertStatus(422);
+    }
+
     public function test_fetching_messages_as_recipient_marks_them_delivered(): void
     {
         $alice = User::factory()->create();

@@ -40,6 +40,7 @@ import {
   loadConversations,
   markChatReadOnServer,
   openDirectConversation,
+  openGroupConversation,
   postEmojiMessage,
   postTextMessage,
 } from './conversationApi';
@@ -121,6 +122,7 @@ type ChatContextValue = {
   openChat: (chatId: string) => void;
   refreshConversations: () => Promise<void>;
   startDirectMessage: (userId: number) => Promise<string>;
+  startGroupConversation: (name: string, participantUserIds: number[]) => Promise<string>;
   ensureMessagesLoaded: (chatId: string) => Promise<void>;
   refreshMessagesForChat: (chatId: string) => Promise<void>;
   conversationsLoading: boolean;
@@ -277,6 +279,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const startDirectMessage = useCallback(
     async (userId: number) => {
       const chat = await openDirectConversation(userId);
+      setChats((prev) => {
+        const assistant = prev.find((item) => isOrderAssistantChat(item.id)) ?? orderAssistantChat;
+        const rest = prev.filter(
+          (item) => !isOrderAssistantChat(item.id) && item.id !== chat.id,
+        );
+        return [assistant, chat, ...rest];
+      });
+      setMessages((prev) => ({ ...prev, [chat.id]: prev[chat.id] ?? [] }));
+      return chat.id;
+    },
+    [orderAssistantChat],
+  );
+
+  const startGroupConversation = useCallback(
+    async (name: string, participantUserIds: number[]) => {
+      const chat = await openGroupConversation(name, participantUserIds);
       setChats((prev) => {
         const assistant = prev.find((item) => isOrderAssistantChat(item.id)) ?? orderAssistantChat;
         const rest = prev.filter(
@@ -1119,6 +1137,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       openChat,
       refreshConversations,
       startDirectMessage,
+      startGroupConversation,
       ensureMessagesLoaded,
       refreshMessagesForChat,
       conversationsLoading,
@@ -1202,6 +1221,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       openChat,
       refreshConversations,
       startDirectMessage,
+      startGroupConversation,
       ensureMessagesLoaded,
       refreshMessagesForChat,
       conversationsLoading,

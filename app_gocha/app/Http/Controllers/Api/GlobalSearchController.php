@@ -99,8 +99,7 @@ class GlobalSearchController extends Controller
             ->get()
             ->map(function (Message $message) use ($user) {
                 $conversation = $message->conversation;
-                $other = $conversation?->otherParticipant($user);
-                $conversationName = $other?->chatDisplayName() ?? 'Conversation';
+                $conversationName = $conversation?->displayNameFor($user) ?? 'Conversation';
 
                 return [
                     'id' => (string) $message->id,

@@ -11,6 +11,7 @@ class Conversation extends Model
 {
     protected $fillable = [
         'type',
+        'name',
         'last_message_body',
         'last_message_at',
         'last_message_sender_user_id',
@@ -40,6 +41,22 @@ class Conversation extends Model
     public function isDirectMessage(): bool
     {
         return $this->type === ConversationType::DM;
+    }
+
+    public function isGroup(): bool
+    {
+        return $this->type === ConversationType::GROUP;
+    }
+
+    public function displayNameFor(User $viewer): string
+    {
+        if ($this->isGroup()) {
+            $name = trim((string) $this->name);
+
+            return $name !== '' ? $name : 'Group';
+        }
+
+        return $this->otherParticipant($viewer)?->chatDisplayName() ?? 'Conversation';
     }
 
     public function otherParticipant(User $viewer): ?User

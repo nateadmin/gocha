@@ -36,6 +36,7 @@ class ConversationController extends Controller
             ->get();
 
         $otherIds = $conversations
+            ->filter(fn (Conversation $conversation) => $conversation->isDirectMessage())
             ->map(fn (Conversation $conversation) => $conversation->otherParticipant($user)?->id)
             ->filter()
             ->values();
@@ -68,6 +69,11 @@ class ConversationController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $type = $request->input('type', ConversationType::DM);
+        if ($type === ConversationType::GROUP) {
+            return $this->storeGroup($request);
+        }
+
         $validated = $request->validate([
             'participantUserId' => ['required', 'integer', 'exists:users,id'],
         ]);
@@ -220,6 +226,58 @@ class ConversationController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    private function storeGroup(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'type' => ['required', 'string', Rule::in([ConversationType::GROUP])],
+            'name' => ['required', 'string', 'max:120'],
+            'participantUserIds' => ['sometimes', 'array', 'max:255'],
+            'participantUserIds.*' => ['integer', 'exists:users,id', 'distinct'],
+        ]);
+
+        $user = $request->user();
+        $name = trim($validated['name']);
+        if ($name === '') {
+            return response()->json([
+                'code' => 'INVALID_GROUP_NAME',
+                'message' => 'Group name is required.',
+            ], 422);
+        }
+
+        $memberIds = collect($validated['participantUserIds'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn (int $id) => $id === (int) $user->id)
+            ->unique()
+            ->values();
+
+        $conversation = DB::transaction(function () use ($user, $name, $memberIds) {
+            $conversation = Conversation::query()->create([
+                'type' => ConversationType::GROUP,
+                'name' => $name,
+            ]);
+
+            ConversationParticipant::query()->create([
+                'conversation_id' => $conversation->id,
+                'user_id' => $user->id,
+            ]);
+
+            foreach ($memberIds as $memberId) {
+                ConversationParticipant::query()->create([
+                    'conversation_id' => $conversation->id,
+                    'user_id' => $memberId,
+                ]);
+            }
+
+            return $conversation;
+        });
+
+        $conversation->load(['participants', 'participantRows']);
+
+        return response()->json([
+            'conversation' => $this->toConversationPayload($conversation, $user),
+        ], 201);
+    }
+
     private function authorizeParticipant(User $user, Conversation $conversation): void
     {
         $isParticipant = ConversationParticipant::query()
@@ -246,6 +304,10 @@ class ConversationController extends Controller
      */
     private function statusFlagsFor(User $viewer, Conversation $conversation): array
     {
+        if (! $conversation->isDirectMessage()) {
+            return [];
+        }
+
         $otherId = $conversation->otherParticipant($viewer)?->id;
 
         return $this->statuses->summariesForUsers($viewer, $otherId ? [$otherId] : []);
@@ -256,11 +318,12 @@ class ConversationController extends Controller
      */
     private function toConversationPayload(Conversation $conversation, User $viewer, array $statusFlags = []): array
     {
-        $other = $conversation->otherParticipant($viewer);
+        $isGroup = $conversation->isGroup();
+        $other = $isGroup ? null : $conversation->otherParticipant($viewer);
         $participantRow = $conversation->participantRows
             ->firstWhere('user_id', $viewer->id);
 
-        $displayName = $other?->chatDisplayName() ?? 'Conversation';
+        $displayName = $conversation->displayNameFor($viewer);
         $preview = $conversation->last_message_body ?? 'No messages yet';
         if ($preview !== 'No messages yet' && $conversation->last_message_sender_user_id !== $viewer->id) {
             $lastIncoming = $conversation->relationLoaded('messages')
@@ -293,6 +356,8 @@ class ConversationController extends Controller
             'lastActivityAt' => $lastActivityAt,
             'unreadCount' => (int) ($participantRow?->unread_count ?? 0),
             'isBusiness' => $other?->isBusinessProfileMode() ?? false,
+            'isGroup' => $isGroup,
+            'groupCount' => $isGroup ? $conversation->participants->count() : null,
             'hasStatus' => (bool) ($statusFlags[$other?->id ?? 0]['hasStatus'] ?? false),
             'statusUnseen' => (bool) ($statusFlags[$other?->id ?? 0]['unseen'] ?? false),
         ];

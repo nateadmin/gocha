@@ -1,5 +1,6 @@
 import {
   createConversation,
+  createGroupConversation,
   fetchConversationMessages,
   fetchConversations,
   markConversationRead,
@@ -48,7 +49,8 @@ export function mapConversationRecord(
     hidden: existing?.hidden ?? false,
     favorite: existing?.favorite ?? false,
     markedUnread: existing?.markedUnread ?? false,
-    isGroup: false,
+    isGroup: record.type === 'group' || record.isGroup === true,
+    groupCount: record.groupCount ?? existing?.groupCount,
     isBusiness: record.isBusiness,
     isSecret: existing?.isSecret ?? false,
     listIds: existing?.listIds ?? [],
@@ -78,6 +80,14 @@ export async function loadConversationMessages(
 
 export async function openDirectConversation(userId: number): Promise<ChatRecord> {
   const record = await createConversation(userId);
+  return mapConversationRecord(record);
+}
+
+export async function openGroupConversation(
+  name: string,
+  participantUserIds: number[],
+): Promise<ChatRecord> {
+  const record = await createGroupConversation({ name, participantUserIds });
   return mapConversationRecord(record);
 }
 

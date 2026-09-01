@@ -721,6 +721,8 @@ export type ConversationRecord = {
   lastActivityAt: string | null;
   unreadCount: number;
   isBusiness: boolean;
+  isGroup?: boolean;
+  groupCount?: number | null;
   hasStatus?: boolean;
   statusUnseen?: boolean;
 };
@@ -747,6 +749,21 @@ export async function createConversation(participantUserId: number): Promise<Con
   const payload = await apiRequest<{ conversation: ConversationRecord }>(API_PATHS.conversations, {
     method: 'POST',
     body: JSON.stringify({ participantUserId }),
+  });
+  return payload.conversation;
+}
+
+export async function createGroupConversation(input: {
+  name: string;
+  participantUserIds: number[];
+}): Promise<ConversationRecord> {
+  const payload = await apiRequest<{ conversation: ConversationRecord }>(API_PATHS.conversations, {
+    method: 'POST',
+    body: JSON.stringify({
+      type: 'group',
+      name: input.name,
+      participantUserIds: input.participantUserIds,
+    }),
   });
   return payload.conversation;
 }

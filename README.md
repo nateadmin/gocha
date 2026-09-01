@@ -63,6 +63,14 @@ Poll answers: the header status control refreshes your own status on tab focus a
 
 Paste an image into the focused message field (Ctrl/Cmd+V or a screenshot). It attaches the same way as the paperclip image path. Images over 8MB are ignored so a text paste still goes through.
 
+## Message languages
+
+Each account has a language (Settings). Incoming text in direct chats and group chats is translated to that language by default. The sender still sees the original. Recipients can show the original. Translation is viewer-scoped: one group can have members in different languages and each person sees the thread in their own language.
+
+`POST /api/conversations` with `{ type: "group", name, participantUserIds }` creates a group chat. Messages use the same `GET`/`POST /api/conversations/{id}/messages` contract as DMs, including `text`, `originalText`, and `isTranslated`.
+
+Poll answers: Chats list 8 seconds; open thread 4 seconds. No realtime push.
+
 ## Account switcher unread badge
 
 When more than one account is saved on the device, the Chats logo shows a notification circle if another (not visible) account has unread messages. The account menu marks those rows. The client polls `GET /api/inbox/unread` with each inactive account's device token and `credentials: omit` so the active session cookie is not sent and a 401 on a stale token cannot sign the current user out.
