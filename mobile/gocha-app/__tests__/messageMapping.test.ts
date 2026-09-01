@@ -38,6 +38,40 @@ describe('messageMapping', () => {
     expect(outgoing.isOutgoing).toBe(true);
   });
 
+  it('maps offer posts and list previews', () => {
+    const mapped = mapMessageRecord(
+      {
+        ...baseRecord,
+        type: 'offer',
+        text: 'Free accent chair',
+        senderName: 'Sarah M.',
+        post: {
+          offer: {
+            title: 'Free accent chair',
+            description: 'Great condition.',
+            location: 'Woodmere',
+            locationKind: 'pickup',
+            imageUrl: null,
+            status: 'available',
+            quantity: 1,
+            claimedCount: 0,
+            myClaimed: false,
+            canClaim: true,
+            canMarkTaken: false,
+            canRelease: false,
+            canUnclaim: false,
+          },
+        },
+      },
+      9,
+    );
+
+    expect(mapped.type).toBe('offer');
+    expect(mapped.senderName).toBe('Sarah M.');
+    expect(mapped.post?.offer?.title).toBe('Free accent chair');
+    expect(listPreviewForMessage(mapped)).toBe('Offer: Free accent chair');
+  });
+
   it('maps translation fields for incoming messages', () => {
     const mapped = mapMessageRecord(
       {

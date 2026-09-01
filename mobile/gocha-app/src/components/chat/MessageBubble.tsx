@@ -6,6 +6,7 @@ import type { ChatMessage } from '../../chat/types';
 import { receiptTicks } from '../../chat/receiptTicks';
 import { useChat } from '../../chat/ChatContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { OfferCard, PollCard, RsvpCard } from './GroupPostCards';
 import { VoiceMessagePlayer } from './VoiceMessagePlayer';
 import { useGochaTheme } from '../../theme';
 
@@ -13,9 +14,11 @@ type Props = {
   message: ChatMessage;
   replyPreview?: string;
   onLongPress?: () => void;
+  showSender?: boolean;
+  onAct?: (action: 'claim' | 'unclaim' | 'taken' | 'release' | 'vote' | 'close', choice?: string) => void;
 };
 
-export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
+export function MessageBubble({ message, replyPreview, onLongPress, showSender, onAct }: Props) {
   const { theme } = useGochaTheme();
   const { t } = useLanguage();
   const { stickerEmoji } = useChat();
@@ -113,6 +116,12 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
         );
       case 'emoji':
         return <Text style={{ fontSize: 40 }}>{message.text}</Text>;
+      case 'offer':
+        return <OfferCard message={message} onAct={onAct} />;
+      case 'poll':
+        return <PollCard message={message} onAct={onAct} />;
+      case 'rsvp':
+        return <RsvpCard message={message} onAct={onAct} />;
       default:
         return (
           <Text
@@ -132,12 +141,25 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
 
   const isMediaPreview =
     (message.type === 'image' || message.type === 'video') && Boolean(message.mediaUrl);
+  const isPost = message.type === 'offer' || message.type === 'poll' || message.type === 'rsvp';
 
   return (
     <View style={[styles.row, outgoing ? styles.rowOutgoing : styles.rowIncoming]}>
     <Pressable
       onLongPress={onLongPress}
       style={styles.wrap}>
+      {showSender && !outgoing && message.senderName ? (
+        <Text
+          style={{
+            color: theme.colors.primary,
+            fontFamily: theme.typography.sans,
+            fontSize: 12,
+            marginBottom: 4,
+            paddingHorizontal: 4,
+          }}>
+          {message.senderName}
+        </Text>
+      ) : null}
       {replyPreview ? (
         <View
           style={[
@@ -164,10 +186,10 @@ export function MessageBubble({ message, replyPreview, onLongPress }: Props) {
           message.type === 'sticker' || message.type === 'emoji'
             ? styles.stickerBubble
             : null,
-          isMediaPreview ? styles.mediaBubble : null,
+          isMediaPreview || isPost ? styles.mediaBubble : null,
           {
             backgroundColor:
-              message.type === 'sticker' || message.type === 'emoji' || isMediaPreview
+              message.type === 'sticker' || message.type === 'emoji' || isMediaPreview || isPost
                 ? 'transparent'
                 : outgoing
                   ? theme.colors.primary

@@ -6,6 +6,7 @@ use App\Models\Message;
 use App\Models\User;
 use App\Services\Ai\MeteredOpenAiClient;
 use App\Support\AppLanguage;
+use App\Support\MessageType;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -29,6 +30,10 @@ class MessageTranslationService
         ];
 
         if ((int) $message->sender_user_id === (int) $viewer->id) {
+            return $original;
+        }
+
+        if (MessageType::isInteractive((string) $message->type)) {
             return $original;
         }
 

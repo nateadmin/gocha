@@ -16,6 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar, HeaderOverflowMenu, type DropdownMenuItem } from '../../components/app';
 import { ActionSheet, ChatComposer, DurationPickerSheet, MessageBubble } from '../../components/chat';
+import { GroupPostComposer, type GroupPostKind } from '../../components/chat/GroupPostComposer';
 import { StatusRing } from '../../components/status/StatusRing';
 import { openStatusViewer } from '../../navigation/rootNavigation';
 import { statusRingTone } from '../../status/statusLogic';
@@ -49,6 +50,8 @@ export function ChatDetailScreen() {
   const [messageMenu, setMessageMenu] = useState<ChatMessage | null>(null);
   const [mutePickerOpen, setMutePickerOpen] = useState(false);
   const [disappearPickerOpen, setDisappearPickerOpen] = useState(false);
+  const [postMenuOpen, setPostMenuOpen] = useState(false);
+  const [postKind, setPostKind] = useState<GroupPostKind | null>(null);
 
   useEffect(() => {
     setDraft(chatApi.getChatDraft(chatId));
@@ -309,7 +312,13 @@ export function ChatDetailScreen() {
               fontFamily: theme.typography.sans,
               fontSize: 12,
             }}>
-            {chat.isSecret ? 'Secret chat' : chat.isOrderAssistant ? 'Book, chat, and order' : 'Tap for contact info'}
+            {chat.isGroup
+              ? `${chat.groupCount ?? 0} members`
+              : chat.isSecret
+                ? 'Secret chat'
+                : chat.isOrderAssistant
+                  ? 'Book, chat, and order'
+                  : 'Tap for contact info'}
           </Text>
         </Pressable>
         <View style={styles.headerActions}>
@@ -366,6 +375,10 @@ export function ChatDetailScreen() {
             <MessageBubble
               message={item}
               replyPreview={replySource?.text ?? replySource?.stickerKey}
+              showSender={Boolean(chat?.isGroup)}
+              onAct={(action, choice) => {
+                void chatApi.actOnMessage(chatId, item.id, action, choice).catch(() => undefined);
+              }}
               onLongPress={() => setMessageMenu(item)}
             />
           );
@@ -457,8 +470,45 @@ export function ChatDetailScreen() {
             mimeType: media.mimeType,
           })
         }
+        onOpenGroupPosts={chat.isGroup ? () => setPostMenuOpen(true) : undefined}
         replyLabel={replyTo?.text ?? replyTo?.stickerKey}
         onCancelReply={() => setReplyTo(null)}
+      />
+
+      <ActionSheet
+        visible={postMenuOpen}
+        title="Post"
+        items={[
+          { id: 'offer', label: 'Offer item', onPress: () => setPostKind('offer') },
+          { id: 'poll', label: 'Poll', onPress: () => setPostKind('poll') },
+          { id: 'rsvp', label: 'RSVP', onPress: () => setPostKind('rsvp') },
+        ]}
+        onClose={() => setPostMenuOpen(false)}
+      />
+
+      <GroupPostComposer
+        kind={postKind}
+        onClose={() => setPostKind(null)}
+        onSubmit={async (draft) => {
+          const image = draft.image
+            ? {
+                file: await fetch(draft.image.uri).then((response) => response.blob()),
+                filename: draft.image.fileName,
+              }
+            : undefined;
+          await chatApi.sendGroupPost(chatId, {
+            type: draft.type,
+            title: draft.title,
+            description: draft.description,
+            location: draft.location,
+            question: draft.question,
+            kind: draft.kind,
+            options: draft.options,
+            when: draft.when,
+            where: draft.where,
+            image,
+          });
+        }}
       />
 
       <ActionSheet

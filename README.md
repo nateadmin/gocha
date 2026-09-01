@@ -71,6 +71,18 @@ Each account has a language (Settings). Incoming text in direct chats and group 
 
 Poll answers: Chats list 8 seconds; open thread 4 seconds. No realtime push.
 
+## Group posts
+
+Group chats can post offers, polls, and RSVPs. These are group-only. Offers can be claimed by a member or marked taken by the poster; the card updates to TAKEN for everyone. Polls are single or multi choice. RSVP is Going / Maybe / Can't go.
+
+`POST /api/conversations/{id}/messages` with `type` `offer` | `poll` | `rsvp`. Offer required field: `title`. Poll required fields: `question` and at least two `options`. RSVP required field: `title`. Optional offer image is an `image` file (jpeg/png/webp/gif/heic, 8MB).
+
+`POST /api/conversations/{id}/messages/{messageId}/act` with `{ action, choice? }`. Actions: `claim`, `unclaim`, `taken`, `release`, `vote`, `close`. Claim is idempotent for the same user. A second claimer gets `409 ALREADY_TAKEN`. Vote toggles the same choice off.
+
+Message payloads include `post.offer`, `post.poll`, or `post.rsvp` plus `senderName`. Offers, polls, and RSVPs are not auto-translated.
+
+Poll answers: same open-thread 4 second refresh. No realtime push.
+
 ## Account switcher unread badge
 
 When more than one account is saved on the device, the Chats logo shows a notification circle if another (not visible) account has unread messages. The account menu marks those rows. The client polls `GET /api/inbox/unread` with each inactive account's device token and `credentials: omit` so the active session cookie is not sent and a 401 on a stale token cannot sign the current user out.
@@ -141,6 +153,7 @@ After DNS + nginx for `gocha.ai`:
 - POST `https://gocha.ai/api/profile/language` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/statuses` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/inbox/unread` without a session → 401 `UNAUTHENTICATED`
+- POST `https://gocha.ai/api/conversations/1/messages/1/act` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/` login/sign-up → email or phone as primary, the other optional on profile setup
 
 ### Log check

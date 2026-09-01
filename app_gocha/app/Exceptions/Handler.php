@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use App\Support\CorrelationId;
+use App\Exceptions\GroupPostException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
@@ -53,6 +54,16 @@ class Handler extends ExceptionHandler
 
     private function renderJson(Request $request, Throwable $e): JsonResponse
     {
+        if ($e instanceof GroupPostException) {
+            return response()->json([
+                'code' => $e->errorCode,
+                'message' => $e->getMessage(),
+                'correlationId' => CorrelationId::current(),
+                'retryable' => false,
+                'timestamp' => now()->toIso8601String(),
+            ], $e->status);
+        }
+
         if ($e instanceof OtpRequestException) {
             return response()->json([
                 'code' => $e->errorCode,

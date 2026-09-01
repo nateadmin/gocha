@@ -7,7 +7,64 @@ export type MessageType =
   | 'voice'
   | 'sticker'
   | 'emoji'
-  | 'file';
+  | 'file'
+  | 'offer'
+  | 'poll'
+  | 'rsvp';
+
+export type OfferPost = {
+  title: string;
+  description: string;
+  location: string;
+  locationKind: string;
+  imageUrl: string | null;
+  status: 'available' | 'taken' | string;
+  quantity: number;
+  claimedCount: number;
+  claimedByUserId?: number | null;
+  claimedByName?: string | null;
+  myClaimed: boolean;
+  canClaim: boolean;
+  canMarkTaken: boolean;
+  canRelease: boolean;
+  canUnclaim: boolean;
+};
+
+export type PollOption = {
+  id: string;
+  text: string;
+  count: number;
+  selected: boolean;
+  voters: { userId: number; name: string }[];
+};
+
+export type PollPost = {
+  kind: 'vote' | 'multi' | string;
+  question: string;
+  anonymous: boolean;
+  closed: boolean;
+  options: PollOption[];
+  totalVotes: number;
+  myChoices: string[];
+  canClose: boolean;
+};
+
+export type RsvpPost = {
+  title: string;
+  when: string;
+  where: string;
+  closed: boolean;
+  counts: { going: number; maybe: number; cant: number };
+  voters: Record<string, { userId: number; name: string }[]>;
+  myChoice: string | null;
+  canClose: boolean;
+};
+
+export type MessagePost = {
+  offer?: OfferPost;
+  poll?: PollPost;
+  rsvp?: RsvpPost;
+};
 
 export type ChatMessage = {
   id: string;
@@ -28,6 +85,9 @@ export type ChatMessage = {
   replyToId?: string;
   starred?: boolean;
   selfDestructSec?: number;
+  senderName?: string;
+  senderAvatarLabel?: string;
+  post?: MessagePost;
 };
 
 export type MuteDuration = '1h' | '8h' | '1w' | 'forever';

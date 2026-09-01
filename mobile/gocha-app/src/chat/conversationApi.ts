@@ -1,11 +1,14 @@
 import {
+  actOnConversationMessage,
   createConversation,
   createGroupConversation,
   fetchConversationMessages,
   fetchConversations,
   markConversationRead,
   sendConversationMessage,
+  sendGroupPost,
   type ConversationRecord,
+  type GroupPostInput,
 } from '../api/client';
 import { mapMessageRecord } from './messageMapping';
 import type { ChatRecord } from './types';
@@ -106,6 +109,26 @@ export async function postEmojiMessage(
   viewerUserId?: number | null,
 ) {
   const record = await sendConversationMessage(Number(chatId), emoji, 'emoji');
+  return mapMessageRecord(record, viewerUserId);
+}
+
+export async function postGroupPost(
+  chatId: string,
+  input: GroupPostInput,
+  viewerUserId?: number | null,
+) {
+  const record = await sendGroupPost(Number(chatId), input);
+  return mapMessageRecord(record, viewerUserId);
+}
+
+export async function actOnGroupPost(
+  chatId: string,
+  messageId: string,
+  action: 'claim' | 'unclaim' | 'taken' | 'release' | 'vote' | 'close',
+  choice?: string,
+  viewerUserId?: number | null,
+) {
+  const record = await actOnConversationMessage(Number(chatId), messageId, action, choice);
   return mapMessageRecord(record, viewerUserId);
 }
 

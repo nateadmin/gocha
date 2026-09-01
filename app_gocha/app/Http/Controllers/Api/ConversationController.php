@@ -7,10 +7,12 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Chat\GroupPostService;
 use App\Services\Locale\MessageTranslationService;
 use App\Services\Locale\TranslationBudget;
 use App\Services\Status\StatusService;
 use App\Support\ConversationType;
+use App\Support\MessageType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +23,7 @@ class ConversationController extends Controller
     public function __construct(
         private readonly MessageTranslationService $translations,
         private readonly StatusService $statuses,
+        private readonly GroupPostService $groupPosts,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -132,6 +135,7 @@ class ConversationController extends Controller
 
         $budget = new TranslationBudget;
         $messages = $conversation->messages()
+            ->with(['responses.user', 'sender'])
             ->orderBy('created_at')
             ->limit(200)
             ->get()
@@ -146,8 +150,13 @@ class ConversationController extends Controller
         $user = $request->user();
         $this->authorizeParticipant($user, $conversation);
 
+        $type = (string) $request->input('type', MessageType::TEXT);
+        if (MessageType::isInteractive($type)) {
+            return $this->storeGroupPost($request, $conversation);
+        }
+
         $validated = $request->validate([
-            'type' => ['sometimes', 'string', Rule::in(['text', 'emoji'])],
+            'type' => ['sometimes', 'string', Rule::in([MessageType::TEXT, MessageType::EMOJI])],
             'text' => ['required', 'string', 'max:4000'],
         ]);
 
@@ -224,6 +233,56 @@ class ConversationController extends Controller
             ->update(['delivered_at' => $now]);
 
         return response()->json(['ok' => true]);
+    }
+
+    public function actOnMessage(Request $request, Conversation $conversation, Message $message): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeParticipant($user, $conversation);
+
+        $validated = $request->validate([
+            'action' => ['required', 'string', Rule::in(['claim', 'unclaim', 'taken', 'release', 'vote', 'close'])],
+            'choice' => ['sometimes', 'nullable', 'string', 'max:40'],
+        ]);
+
+        $updated = $this->groupPosts->act($conversation, $message, $user, $validated);
+
+        return response()->json([
+            'message' => $this->toMessagePayload($updated, $user),
+        ]);
+    }
+
+    private function storeGroupPost(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeParticipant($user, $conversation);
+
+        $validated = $request->validate([
+            'type' => ['required', 'string', Rule::in(MessageType::interactive())],
+            'title' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'location' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'locationKind' => ['sometimes', 'nullable', 'string', Rule::in(GroupPostService::LOCATION_KINDS)],
+            'question' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'kind' => ['sometimes', 'nullable', 'string', Rule::in(['vote', 'multi'])],
+            'anonymous' => ['sometimes', 'boolean'],
+            'options' => ['sometimes', 'array', 'max:12'],
+            'options.*' => ['nullable'],
+            'when' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'where' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'image' => ['sometimes', 'file', 'image', 'max:8192'],
+        ]);
+
+        $message = $this->groupPosts->create(
+            $conversation,
+            $user,
+            $validated,
+            $request->file('image'),
+        );
+
+        return response()->json([
+            'message' => $this->toMessagePayload($message, $user),
+        ], 201);
     }
 
     private function storeGroup(Request $request): JsonResponse
@@ -368,6 +427,8 @@ class ConversationController extends Controller
     {
         $senderUserId = (int) $message->sender_user_id;
         $translated = $this->translations->decorate($message, $viewer, $budget);
+        $sender = $message->relationLoaded('sender') ? $message->sender : $message->sender()->first();
+        $senderName = $sender?->chatDisplayName() ?? 'Gocha user';
 
         return [
             'id' => (string) $message->id,
@@ -378,8 +439,11 @@ class ConversationController extends Controller
             'sourceLanguage' => $translated['sourceLanguage'],
             'sentAt' => $message->created_at?->toIso8601String(),
             'senderUserId' => $senderUserId,
+            'senderName' => $senderName,
+            'senderAvatarLabel' => $this->avatarLabel($senderName),
             'isOutgoing' => $senderUserId === (int) $viewer->id,
             'status' => $this->receiptStatus($message),
+            'post' => $this->groupPosts->payload($message, $viewer),
         ];
     }
 

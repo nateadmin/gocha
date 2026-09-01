@@ -30,6 +30,7 @@ type Props = {
   onAttachImage?: (media: PickedMedia) => void;
   onAttachVideo?: (media: PickedMedia) => void;
   onAttachFile?: (media: PickedMedia) => void;
+  onOpenGroupPosts?: () => void;
   replyLabel?: string;
   onCancelReply?: () => void;
   onDraftBlur?: () => void;
@@ -45,6 +46,7 @@ export function ChatComposer({
   onAttachImage,
   onAttachVideo,
   onAttachFile,
+  onOpenGroupPosts,
   replyLabel,
   onCancelReply,
   onDraftBlur,
@@ -235,6 +237,15 @@ export function ChatComposer({
             onPress={() => setPanel(panel === 'sticker' ? 'none' : 'sticker')}>
             <Ionicons name="happy-outline" size={22} color={theme.colors.primary} />
           </Pressable>
+          {onOpenGroupPosts ? (
+            <Pressable
+              hitSlop={6}
+              style={[styles.inlineAction, webActionStyle]}
+              accessibilityLabel="Offer, poll, RSVP"
+              onPress={onOpenGroupPosts}>
+              <Ionicons name="add-circle-outline" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ) : null}
           <Pressable
             hitSlop={6}
             style={[styles.inlineAction, webActionStyle]}

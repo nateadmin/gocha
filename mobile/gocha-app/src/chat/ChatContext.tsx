@@ -39,11 +39,14 @@ import {
   loadConversationMessages,
   loadConversations,
   markChatReadOnServer,
+  actOnGroupPost,
   openDirectConversation,
   openGroupConversation,
   postEmojiMessage,
+  postGroupPost,
   postTextMessage,
 } from './conversationApi';
+import type { GroupPostInput } from '../api/client';
 import { isOrderAssistantChat } from './orderAssistant';
 import { useAuth } from '../context/AuthContext';
 import type {
@@ -139,6 +142,13 @@ type ChatContextValue = {
     type: 'image' | 'video' | 'file',
     media?: { fileName?: string; mediaUrl?: string; mimeType?: string },
   ) => void;
+  sendGroupPost: (chatId: string, input: GroupPostInput) => Promise<void>;
+  actOnMessage: (
+    chatId: string,
+    messageId: string,
+    action: 'claim' | 'unclaim' | 'taken' | 'release' | 'vote' | 'close',
+    choice?: string,
+  ) => Promise<void>;
   getChatDraft: (chatId: string) => string;
   getChatDraftUpdatedAt: (chatId: string) => number | null;
   setChatDraft: (chatId: string, text: string) => void;
@@ -1004,6 +1014,40 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [appendMessage],
   );
 
+  const sendGroupPost = useCallback(
+    async (chatId: string, input: GroupPostInput) => {
+      if (!/^\d+$/.test(chatId)) {
+        return;
+      }
+      const saved = await postGroupPost(chatId, input, user?.id);
+      appendMessage(chatId, saved);
+    },
+    [appendMessage, user?.id],
+  );
+
+  const actOnMessage = useCallback(
+    async (
+      chatId: string,
+      messageId: string,
+      action: 'claim' | 'unclaim' | 'taken' | 'release' | 'vote' | 'close',
+      choice?: string,
+    ) => {
+      if (!/^\d+$/.test(chatId)) {
+        return;
+      }
+      const saved = await actOnGroupPost(chatId, messageId, action, choice, user?.id);
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: (prev[chatId] ?? []).map((message) => (message.id === saved.id ? saved : message)),
+      }));
+      syncChatFromMessages(chatId, [
+        ...((messagesRef.current[chatId] ?? []).filter((message) => message.id !== saved.id)),
+        saved,
+      ]);
+    },
+    [syncChatFromMessages, user?.id],
+  );
+
   const sendMediaMessage = useCallback(
     (
       chatId: string,
@@ -1147,6 +1191,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       sendStickerMessage,
       sendVoiceMessage,
       sendMediaMessage,
+      sendGroupPost,
+      actOnMessage,
       getChatDraft,
       getChatDraftUpdatedAt,
       setChatDraft,
@@ -1231,6 +1277,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       sendStickerMessage,
       sendVoiceMessage,
       sendMediaMessage,
+      sendGroupPost,
+      actOnMessage,
       getChatDraft,
       getChatDraftUpdatedAt,
       setChatDraft,

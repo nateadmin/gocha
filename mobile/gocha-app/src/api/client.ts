@@ -736,8 +736,15 @@ export type ConversationMessageRecord = {
   sourceLanguage?: string | null;
   sentAt: string | null;
   senderUserId?: number;
+  senderName?: string;
+  senderAvatarLabel?: string;
   isOutgoing: boolean;
   status?: 'sent' | 'delivered' | 'read';
+  post?: {
+    offer?: import('../chat/types').OfferPost;
+    poll?: import('../chat/types').PollPost;
+    rsvp?: import('../chat/types').RsvpPost;
+  };
 };
 
 export async function fetchConversations(): Promise<ConversationRecord[]> {
@@ -787,6 +794,78 @@ export async function sendConversationMessage(
     {
       method: 'POST',
       body: JSON.stringify({ text, type }),
+    },
+  );
+  return payload.message;
+}
+
+export type GroupPostInput = {
+  type: 'offer' | 'poll' | 'rsvp';
+  title?: string;
+  description?: string;
+  location?: string;
+  locationKind?: string;
+  question?: string;
+  kind?: 'vote' | 'multi';
+  anonymous?: boolean;
+  options?: string[];
+  when?: string;
+  where?: string;
+  image?: { file: Blob; filename: string };
+};
+
+export async function sendGroupPost(
+  conversationId: number,
+  input: GroupPostInput,
+): Promise<ConversationMessageRecord> {
+  if (input.image) {
+    const form = new FormData();
+    form.append('type', input.type);
+    if (input.title) form.append('title', input.title);
+    if (input.description) form.append('description', input.description);
+    if (input.location) form.append('location', input.location);
+    if (input.locationKind) form.append('locationKind', input.locationKind);
+    form.append('image', input.image.file, input.image.filename);
+    const payload = await apiRequest<{ message: ConversationMessageRecord }>(
+      `${API_PATHS.conversations}/${conversationId}/messages`,
+      { method: 'POST', body: form },
+    );
+    return payload.message;
+  }
+
+  const payload = await apiRequest<{ message: ConversationMessageRecord }>(
+    `${API_PATHS.conversations}/${conversationId}/messages`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        type: input.type,
+        title: input.title,
+        description: input.description,
+        location: input.location,
+        locationKind: input.locationKind,
+        question: input.question,
+        kind: input.kind,
+        anonymous: input.anonymous,
+        options: input.options,
+        when: input.when,
+        where: input.where,
+      }),
+    },
+  );
+  return payload.message;
+}
+
+export async function actOnConversationMessage(
+  conversationId: number,
+  messageId: string,
+  action: 'claim' | 'unclaim' | 'taken' | 'release' | 'vote' | 'close',
+  choice?: string,
+): Promise<ConversationMessageRecord> {
+  const payload = await apiRequest<{ message: ConversationMessageRecord }>(
+    `${API_PATHS.conversations}/${conversationId}/messages/${messageId}/act`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ action, choice }),
     },
   );
   return payload.message;

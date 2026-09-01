@@ -33,13 +33,30 @@ function parseSentAtMs(iso: string | null | undefined): number | undefined {
   return Number.isNaN(ms) ? undefined : ms;
 }
 
+function mapMessageType(type: string): ChatMessage['type'] {
+  if (
+    type === 'emoji' ||
+    type === 'offer' ||
+    type === 'poll' ||
+    type === 'rsvp' ||
+    type === 'image' ||
+    type === 'video' ||
+    type === 'voice' ||
+    type === 'sticker' ||
+    type === 'file'
+  ) {
+    return type;
+  }
+  return 'text';
+}
+
 export function mapMessageRecord(
   record: ConversationMessageRecord,
   viewerUserId?: number | null,
 ): ChatMessage {
   return {
     id: record.id,
-    type: record.type === 'emoji' ? 'emoji' : 'text',
+    type: mapMessageType(record.type),
     text: record.text ?? undefined,
     originalText: record.originalText ?? record.text ?? undefined,
     isTranslated: Boolean(record.isTranslated),
@@ -48,6 +65,9 @@ export function mapMessageRecord(
     sentAtMs: parseSentAtMs(record.sentAt),
     isOutgoing: resolveIsOutgoing(record, viewerUserId),
     status: record.status ?? 'sent',
+    senderName: record.senderName ?? undefined,
+    senderAvatarLabel: record.senderAvatarLabel ?? undefined,
+    post: record.post,
   };
 }
 
@@ -65,6 +85,12 @@ export function previewForMessage(message: ChatMessage): string {
       return message.stickerKey ?? 'Sticker';
     case 'emoji':
       return message.text ?? '';
+    case 'offer':
+      return message.post?.offer?.title ? `Offer: ${message.post.offer.title}` : 'Offer';
+    case 'poll':
+      return message.post?.poll?.question ? `Poll: ${message.post.poll.question}` : 'Poll';
+    case 'rsvp':
+      return message.post?.rsvp?.title ? `RSVP: ${message.post.rsvp.title}` : 'RSVP';
     default:
       return message.text ?? '';
   }
@@ -123,7 +149,8 @@ export function sameMessageList(previous: ChatMessage[], next: ChatMessage[]): b
       message.text === other.text &&
       message.originalText === other.originalText &&
       message.isTranslated === other.isTranslated &&
-      message.status === other.status
+      message.status === other.status &&
+      JSON.stringify(message.post ?? null) === JSON.stringify(other.post ?? null)
     );
   });
 }
