@@ -6,7 +6,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand';
+import { AddressAutocompleteField } from '../../components/places/AddressAutocompleteField';
 import { ApiError, createCommunityGroup, globalSearch, type PublicUserProfile } from '../../api/client';
+import { isSelectedPlace } from '../../places/addressPlaces';
 import { useChat } from '../../chat/ChatContext';
 import { searchLocalContacts } from '../../chat/globalSearchLocal';
 import { useAuth } from '../../context/AuthContext';
@@ -28,6 +30,11 @@ export function CreateGroupScreen() {
   const [isPublic, setIsPublic] = useState(false);
   const [showInAroundMe, setShowInAroundMe] = useState(false);
   const [address, setAddress] = useState('');
+  const [placeId, setPlaceId] = useState<string | null>(null);
+  const [city, setCity] = useState<string | null>(null);
+  const [region, setRegion] = useState<string | null>(null);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [memberQuery, setMemberQuery] = useState('');
   const [remoteContacts, setRemoteContacts] = useState<PublicUserProfile[]>([]);
   const [remotePeople, setRemotePeople] = useState<PublicUserProfile[]>([]);
@@ -71,6 +78,11 @@ export function CreateGroupScreen() {
     }
     if (!value) {
       setAddress('');
+      setPlaceId(null);
+      setCity(null);
+      setRegion(null);
+      setLatitude(null);
+      setLongitude(null);
     }
   }
 
@@ -129,8 +141,8 @@ export function CreateGroupScreen() {
       setError('Group name is required.');
       return;
     }
-    if (showInAroundMe && !address.trim()) {
-      setError('Enter a street address to show this group in Around Me.');
+    if (showInAroundMe && !isSelectedPlace(address, placeId)) {
+      setError('Select a suggested Google address for Around Me.');
       return;
     }
     setLoading(true);
@@ -149,6 +161,11 @@ export function CreateGroupScreen() {
             privacy: isPublic ? 'public' : 'private',
             showInAroundMe,
             address: showInAroundMe ? address.trim() : undefined,
+            city: showInAroundMe ? city ?? undefined : undefined,
+            state: showInAroundMe ? region ?? undefined : undefined,
+            googlePlaceId: showInAroundMe ? placeId ?? undefined : undefined,
+            latitude: showInAroundMe ? latitude : undefined,
+            longitude: showInAroundMe ? longitude : undefined,
           });
         } catch {
           // Chat group already exists; Around Me listing is optional.
@@ -252,16 +269,26 @@ export function CreateGroupScreen() {
         onValueChange={handleAroundMeToggle}
       />
       <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginBottom: 12 }}>
-        Turn this on to recommend the group to people nearby. Requires a public group and a street address.
+        Turn this on to recommend the group to people nearby. Requires a public group and a Google address.
       </Text>
 
       {showInAroundMe ? (
-        <TextInput
+        <AddressAutocompleteField
           value={address}
-          onChangeText={setAddress}
+          placeId={placeId}
           placeholder="Street address"
-          placeholderTextColor={theme.colors.mutedForeground}
-          style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+          onChangeText={(next) => {
+            setAddress(next);
+            setPlaceId(null);
+          }}
+          onSelect={(place) => {
+            setAddress(place.formattedAddress);
+            setPlaceId(place.placeId);
+            setCity(place.city);
+            setRegion(place.state);
+            setLatitude(place.latitude);
+            setLongitude(place.longitude);
+          }}
         />
       ) : null}
 

@@ -10,6 +10,7 @@ use App\Support\BusinessListingStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class BusinessListingController extends Controller
 {
@@ -218,7 +219,17 @@ class BusinessListingController extends Controller
             'submit' => ['nullable', 'boolean'],
         ];
 
-        return $request->validate($rules);
+        $validated = $request->validate($rules);
+        $noAddress = (bool) ($validated['no_physical_address'] ?? false);
+        $address = trim((string) ($validated['address'] ?? ''));
+        $placeId = trim((string) ($validated['google_place_id'] ?? ''));
+        if (! $noAddress && $address !== '' && $placeId === '') {
+            throw ValidationException::withMessages([
+                'google_place_id' => ['Select a suggested address from Google.'],
+            ]);
+        }
+
+        return $validated;
     }
 
     private function authorizeOwner(Request $request, BusinessListing $listing): void

@@ -74,6 +74,9 @@ class CommunityGroupController extends Controller
             'address' => $validated['address'] ?? null,
             'city' => $validated['city'] ?? null,
             'state' => $validated['state'] ?? null,
+            'google_place_id' => $validated['google_place_id'] ?? null,
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
             'show_in_around_me' => (bool) ($validated['show_in_around_me'] ?? false),
             'avatar_label' => $this->avatarLabel($validated['name']),
             'avatar_color' => $this->avatarColor(),
@@ -102,6 +105,15 @@ class CommunityGroupController extends Controller
             'state' => array_key_exists('state', $validated)
                 ? $validated['state']
                 : $communityGroup->state,
+            'google_place_id' => array_key_exists('google_place_id', $validated)
+                ? $validated['google_place_id']
+                : $communityGroup->google_place_id,
+            'latitude' => array_key_exists('latitude', $validated)
+                ? $validated['latitude']
+                : $communityGroup->latitude,
+            'longitude' => array_key_exists('longitude', $validated)
+                ? $validated['longitude']
+                : $communityGroup->longitude,
             'show_in_around_me' => array_key_exists('show_in_around_me', $validated)
                 ? (bool) $validated['show_in_around_me']
                 : $communityGroup->show_in_around_me,
@@ -122,6 +134,9 @@ class CommunityGroupController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:80'],
             'state' => ['nullable', 'string', 'max:80'],
+            'google_place_id' => ['nullable', 'string', 'max:128'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'show_in_around_me' => ['sometimes', 'boolean'],
         ]);
 
@@ -132,10 +147,19 @@ class CommunityGroupController extends Controller
         $address = array_key_exists('address', $validated)
             ? trim((string) ($validated['address'] ?? ''))
             : trim((string) ($existing?->address ?? ''));
+        $placeId = array_key_exists('google_place_id', $validated)
+            ? trim((string) ($validated['google_place_id'] ?? ''))
+            : trim((string) ($existing?->google_place_id ?? ''));
 
         if ($showInAroundMe && $address === '') {
             throw ValidationException::withMessages([
-                'address' => ['Enter a street address to show this group in Around Me recommendations.'],
+                'address' => ['Select a Google address to show this group in Around Me recommendations.'],
+            ]);
+        }
+
+        if ($showInAroundMe && $placeId === '') {
+            throw ValidationException::withMessages([
+                'google_place_id' => ['Select a suggested address from Google.'],
             ]);
         }
 
@@ -147,6 +171,13 @@ class CommunityGroupController extends Controller
 
         $validated['show_in_around_me'] = $showInAroundMe;
         $validated['address'] = $showInAroundMe ? $address : null;
+        $validated['google_place_id'] = $showInAroundMe ? $placeId : null;
+        if (! $showInAroundMe) {
+            $validated['city'] = $validated['city'] ?? null;
+            $validated['state'] = $validated['state'] ?? null;
+            $validated['latitude'] = null;
+            $validated['longitude'] = null;
+        }
 
         return $validated;
     }

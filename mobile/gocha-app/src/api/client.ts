@@ -572,6 +572,9 @@ export type CommunityGroupRecord = {
   address: string | null;
   city: string | null;
   state: string | null;
+  googlePlaceId: string | null;
+  latitude: number | null;
+  longitude: number | null;
   showInAroundMe: boolean;
   avatarLabel: string | null;
   avatarColor: string | null;
@@ -599,6 +602,9 @@ export async function createCommunityGroup(input: {
   address?: string;
   city?: string;
   state?: string;
+  googlePlaceId?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }): Promise<CommunityGroupRecord> {
   const payload = await apiRequest<{ group: CommunityGroupRecord }>(API_PATHS.groups, {
     method: 'POST',
@@ -610,6 +616,9 @@ export async function createCommunityGroup(input: {
       address: input.address,
       city: input.city,
       state: input.state,
+      google_place_id: input.googlePlaceId,
+      latitude: input.latitude,
+      longitude: input.longitude,
     }),
   });
   return payload.group;
@@ -625,6 +634,9 @@ export async function updateCommunityGroup(
     address?: string;
     city?: string;
     state?: string;
+    googlePlaceId?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
   }>,
 ): Promise<CommunityGroupRecord> {
   const payload = await apiRequest<{ group: CommunityGroupRecord }>(`${API_PATHS.groups}/${id}`, {
@@ -637,6 +649,9 @@ export async function updateCommunityGroup(
       address: input.address,
       city: input.city,
       state: input.state,
+      google_place_id: input.googlePlaceId,
+      latitude: input.latitude,
+      longitude: input.longitude,
     }),
   });
   return payload.group;
@@ -701,6 +716,45 @@ export async function fetchInboxUnread(deviceToken: string): Promise<InboxUnread
     },
   });
   return parseResponse<InboxUnread>(response);
+}
+
+export type PlacePredictionRecord = {
+  placeId: string;
+  description: string;
+  mainText: string;
+  secondaryText: string;
+};
+
+export type PlaceDetailsRecord = {
+  placeId: string;
+  formattedAddress: string;
+  city: string | null;
+  state: string | null;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+export async function fetchPlacePredictions(
+  query: string,
+  sessionToken?: string,
+  type: 'address' | 'geocode' = 'address',
+): Promise<PlacePredictionRecord[]> {
+  const params = new URLSearchParams({ query, type });
+  if (sessionToken) {
+    params.set('sessionToken', sessionToken);
+  }
+  const payload = await apiRequest<{ predictions: PlacePredictionRecord[] }>(
+    `${API_PATHS.placesAutocomplete}?${params.toString()}`,
+  );
+  return payload.predictions;
+}
+
+export async function fetchPlaceDetails(placeId: string, sessionToken?: string): Promise<PlaceDetailsRecord> {
+  const payload = await apiRequest<{ place: PlaceDetailsRecord }>(API_PATHS.placesDetails, {
+    method: 'POST',
+    body: JSON.stringify({ placeId, sessionToken }),
+  });
+  return payload.place;
 }
 
 export async function globalSearch(query: string): Promise<GlobalSearchResponse> {

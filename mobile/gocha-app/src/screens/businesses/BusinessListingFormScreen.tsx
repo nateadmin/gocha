@@ -30,6 +30,8 @@ import {
 import { IndustryPicker } from '../../components/business/IndustryPicker';
 import { SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand/CtaButton';
+import { AddressAutocompleteField } from '../../components/places/AddressAutocompleteField';
+import { isSelectedPlace } from '../../places/addressPlaces';
 import { formatApiError } from '../../api/formatApiError';
 import { useAuth } from '../../context/AuthContext';
 import type { DiscoverStackParamList, SettingsStackParamList } from '../../navigation/types';
@@ -253,6 +255,10 @@ export function BusinessListingFormScreen() {
       setError('Business name is required.');
       return;
     }
+    if (!noPhysicalAddress && address.trim() && !isSelectedPlace(address, googlePlaceId)) {
+      setError('Select a suggested Google address.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -300,6 +306,10 @@ export function BusinessListingFormScreen() {
     }
     if (!name.trim()) {
       setError('Business name is required.');
+      return;
+    }
+    if (!noPhysicalAddress && address.trim() && !isSelectedPlace(address, googlePlaceId)) {
+      setError('Select a suggested Google address.');
       return;
     }
     setLoading(true);
@@ -445,20 +455,32 @@ export function BusinessListingFormScreen() {
         label="No physical address"
         value={noPhysicalAddress}
         onValueChange={(value) => {
-          if (!readOnly) setNoPhysicalAddress(value);
+          if (!readOnly) {
+            setNoPhysicalAddress(value);
+            if (value) {
+              setAddress('');
+              setGooglePlaceId(null);
+            }
+          }
         }}
       />
 
       {!noPhysicalAddress ? (
         <>
           <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Address</Text>
-          <TextInput
+          <AddressAutocompleteField
             value={address}
-            onChangeText={setAddress}
-            editable={!readOnly}
+            placeId={googlePlaceId}
             placeholder="Street address"
-            placeholderTextColor={theme.colors.mutedForeground}
-            style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+            editable={!readOnly}
+            onChangeText={(next) => {
+              setAddress(next);
+              setGooglePlaceId(null);
+            }}
+            onSelect={(place) => {
+              setAddress(place.formattedAddress);
+              setGooglePlaceId(place.placeId);
+            }}
           />
         </>
       ) : null}

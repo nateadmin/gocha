@@ -2,6 +2,7 @@
 
 namespace App\Services\Business;
 
+use App\Services\Places\GooglePlacesClient;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -345,9 +346,7 @@ class GoogleBusinessImportService
 
   private function placesHttp(): PendingRequest
   {
-    return Http::timeout(12)
-      ->connectTimeout(5)
-      ->withOptions(['force_ip_resolve' => 'v4']);
+    return app(GooglePlacesClient::class)->http();
   }
 
   private function decodePathSegment(string $segment): string

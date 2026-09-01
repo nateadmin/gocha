@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\GlobalSearchController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProfileCardController;
+use App\Http\Controllers\Api\PlacesController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\VerificationController;
@@ -82,6 +83,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::get('/users/search', [ProfileController::class, 'search']);
     Route::get('/search', [GlobalSearchController::class, 'search']);
+    Route::get('/places/autocomplete', [PlacesController::class, 'autocomplete']);
+    Route::post('/places/details', [PlacesController::class, 'details']);
 
     Route::get('/conversations', [ConversationController::class, 'index']);
     Route::get('/inbox/unread', [ConversationController::class, 'inboxUnread']);

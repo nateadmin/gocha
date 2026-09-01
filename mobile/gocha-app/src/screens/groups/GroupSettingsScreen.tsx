@@ -7,6 +7,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand';
+import { AddressAutocompleteField } from '../../components/places/AddressAutocompleteField';
+import { isSelectedPlace } from '../../places/addressPlaces';
 import {
   ApiError,
   fetchMyCommunityGroups,
@@ -26,6 +28,11 @@ export function GroupSettingsScreen() {
   const [isPublic, setIsPublic] = useState(false);
   const [showInAroundMe, setShowInAroundMe] = useState(false);
   const [address, setAddress] = useState('');
+  const [placeId, setPlaceId] = useState<string | null>(null);
+  const [city, setCity] = useState<string | null>(null);
+  const [region, setRegion] = useState<string | null>(null);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -43,6 +50,11 @@ export function GroupSettingsScreen() {
     setIsPublic(match.privacy === 'public');
     setShowInAroundMe(match.showInAroundMe);
     setAddress(match.address ?? '');
+    setPlaceId(match.googlePlaceId ?? null);
+    setCity(match.city ?? null);
+    setRegion(match.state ?? null);
+    setLatitude(match.latitude ?? null);
+    setLongitude(match.longitude ?? null);
   }, [route.params.groupId]);
 
   useEffect(() => {
@@ -56,13 +68,18 @@ export function GroupSettingsScreen() {
     }
     if (!value) {
       setAddress('');
+      setPlaceId(null);
+      setCity(null);
+      setRegion(null);
+      setLatitude(null);
+      setLongitude(null);
     }
   }
 
   async function save() {
     if (!group || !name.trim()) return;
-    if (showInAroundMe && !address.trim()) {
-      setError('Enter a street address to show this group in Around Me.');
+    if (showInAroundMe && !isSelectedPlace(address, placeId)) {
+      setError('Select a suggested Google address for Around Me.');
       return;
     }
     setLoading(true);
@@ -75,6 +92,11 @@ export function GroupSettingsScreen() {
         privacy: isPublic ? 'public' : 'private',
         showInAroundMe,
         address: showInAroundMe ? address.trim() : undefined,
+        city: showInAroundMe ? city ?? undefined : undefined,
+        state: showInAroundMe ? region ?? undefined : undefined,
+        googlePlaceId: showInAroundMe ? placeId : undefined,
+        latitude: showInAroundMe ? latitude : undefined,
+        longitude: showInAroundMe ? longitude : undefined,
       });
       setGroup(updated);
       setMessage('Group settings saved.');
@@ -125,12 +147,22 @@ export function GroupSettingsScreen() {
       />
 
       {showInAroundMe ? (
-        <TextInput
+        <AddressAutocompleteField
           value={address}
-          onChangeText={setAddress}
+          placeId={placeId}
           placeholder="Street address"
-          placeholderTextColor={theme.colors.mutedForeground}
-          style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+          onChangeText={(next) => {
+            setAddress(next);
+            setPlaceId(null);
+          }}
+          onSelect={(place) => {
+            setAddress(place.formattedAddress);
+            setPlaceId(place.placeId);
+            setCity(place.city);
+            setRegion(place.state);
+            setLatitude(place.latitude);
+            setLongitude(place.longitude);
+          }}
         />
       ) : null}
 

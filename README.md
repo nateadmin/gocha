@@ -67,6 +67,8 @@ Paste an image into the focused message field (Ctrl/Cmd+V or a screenshot). It a
 
 Each account has a language (Settings). Incoming text in direct chats and group chats is translated to that language by default. The sender still sees the original. Recipients can show the original. Translation is viewer-scoped: one group can have members in different languages and each person sees the thread in their own language.
 
+Street-address fields (Around Me groups, business listings, profile card location, offer location, RSVP where) use Google Places suggestions. The user must pick a suggestion. The Places key stays on the server (`GOOGLE_PLACES_API_KEY`). `GET /api/places/autocomplete?query=` returns `{ predictions }`. `POST /api/places/details` `{ placeId, sessionToken? }` returns `{ place }` with formatted address, city, state, and coordinates. Around Me groups store `google_place_id`, `city`, `state`, `latitude`, and `longitude`.
+
 `POST /api/conversations` with `{ type: "group", name, participantUserIds }` creates a group chat. New group Add people is a typeahead over people you already chat with (`GET /api/search` `contacts`, plus local DM names), not exact-name Discover search. `GET /api/conversations/{id}` returns one thread you belong to so the client can open a group that is not in the list yet. Messages use the same `GET`/`POST /api/conversations/{id}/messages` contract as DMs, including `text`, `originalText`, and `isTranslated`.
 
 Poll answers: Chats list 8 seconds; open thread 4 seconds. No realtime push.
@@ -156,6 +158,7 @@ After DNS + nginx for `gocha.ai`:
 - GET `https://gocha.ai/api/statuses` without a session → 401 `UNAUTHENTICATED`
 - PATCH `https://gocha.ai/api/statuses/1` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/search?q=ab` without a session → 401 `UNAUTHENTICATED`
+- GET `https://gocha.ai/api/places/autocomplete?query=130` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/inbox/unread` without a session → 401 `UNAUTHENTICATED`
 - GET `https://gocha.ai/api/conversations/1` without a session → 401 `UNAUTHENTICATED`
 - POST `https://gocha.ai/api/conversations/1/messages/1/act` without a session → 401 `UNAUTHENTICATED`

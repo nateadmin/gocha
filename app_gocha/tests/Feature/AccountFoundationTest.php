@@ -41,6 +41,7 @@ class AccountFoundationTest extends TestCase
             'category' => 'food',
             'description' => 'Late night slices',
             'address' => '12 Main St',
+            'google_place_id' => 'ChIJtestlisting',
             'website' => 'https://neon-pizza.example',
             'submit' => true,
         ]);
@@ -279,6 +280,11 @@ class AccountFoundationTest extends TestCase
             'privacy' => 'public',
             'show_in_around_me' => true,
             'address' => '123 Ocean Ave',
+            'google_place_id' => 'ChIJocean',
+            'city' => 'Asbury Park',
+            'state' => 'NJ',
+            'latitude' => 40.2204,
+            'longitude' => -74.0121,
         ])->assertCreated();
 
         $this->getJson('/api/groups/discover')

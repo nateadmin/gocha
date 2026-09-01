@@ -24,6 +24,8 @@ export const API_PATHS = {
   avatar: '/api/profile/avatar',
   userSearch: '/api/users/search',
   globalSearch: '/api/search',
+  placesAutocomplete: '/api/places/autocomplete',
+  placesDetails: '/api/places/details',
   businesses: '/api/businesses',
   businessesMine: '/api/businesses/mine',
   businessesImportGoogle: '/api/businesses/import-google',

@@ -16,6 +16,9 @@ class CommunityGroup extends Model
         'address',
         'city',
         'state',
+        'google_place_id',
+        'latitude',
+        'longitude',
         'show_in_around_me',
         'avatar_label',
         'avatar_color',
@@ -25,6 +28,8 @@ class CommunityGroup extends Model
     protected $casts = [
         'member_count' => 'integer',
         'show_in_around_me' => 'boolean',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     public function owner(): BelongsTo
@@ -53,7 +58,9 @@ class CommunityGroup extends Model
         return $this->show_in_around_me
             && $this->isPublic()
             && $this->address
-            && trim($this->address) !== '';
+            && trim($this->address) !== ''
+            && $this->google_place_id
+            && trim((string) $this->google_place_id) !== '';
     }
 
     public function toPayload(): array
@@ -66,6 +73,9 @@ class CommunityGroup extends Model
             'address' => $this->address,
             'city' => $this->city,
             'state' => $this->state,
+            'googlePlaceId' => $this->google_place_id,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
             'showInAroundMe' => $this->show_in_around_me,
             'avatarLabel' => $this->avatar_label,
             'avatarColor' => $this->avatar_color,

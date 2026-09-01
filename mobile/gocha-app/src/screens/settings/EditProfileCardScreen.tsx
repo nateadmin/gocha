@@ -30,6 +30,8 @@ import {
 import { copyText } from '../../utils/copyText';
 import { ConfirmDialog, LoadingShell } from '../../components/app';
 import { BrandInput, CtaButton } from '../../components/brand';
+import { AddressAutocompleteField } from '../../components/places/AddressAutocompleteField';
+import { isSelectedPlace } from '../../places/addressPlaces';
 import { PROFILE_CARD_TYPES } from '../../profileCards/profileCardMeta';
 import { profileCardShareUrl } from '../../profileCards/shareUrl';
 import { openPublicProfileCard } from '../../navigation/rootNavigation';
@@ -64,6 +66,8 @@ export function EditProfileCardScreen() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [pendingPhoto, setPendingPhoto] = useState<{ file: Blob; name: string } | null>(null);
 
+  const [locationPlaceId, setLocationPlaceId] = useState<string | null>(null);
+  const [savedLocation, setSavedLocation] = useState('');
   const [shareQuery, setShareQuery] = useState('');
   const [shareResults, setShareResults] = useState<PublicUserProfile[]>([]);
   const [sharing, setSharing] = useState(false);
@@ -83,6 +87,8 @@ export function EditProfileCardScreen() {
         setHeadline(card.headline ?? '');
         setVisibility(card.visibility);
         setBody(card.body ?? {});
+        setSavedLocation(card.body?.location ?? '');
+        setLocationPlaceId(null);
         setPhotoUrl(card.photoUrl);
       })
       .catch((err) => setError(formatApiError(err, 'Could not load this profile.')))
@@ -124,6 +130,11 @@ export function EditProfileCardScreen() {
   }
 
   async function save() {
+    const location = (body.location ?? '').trim();
+    if (location && location !== savedLocation.trim() && !isSelectedPlace(location, locationPlaceId)) {
+      setError('Select a suggested Google address for location.');
+      return;
+    }
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -265,7 +276,21 @@ export function EditProfileCardScreen() {
           <FieldLabel label="Role" />
           <BrandInput value={body.role ?? ''} onChangeText={(value) => patchBody({ role: value })} />
           <FieldLabel label="Location" />
-          <BrandInput value={body.location ?? ''} onChangeText={(value) => patchBody({ location: value })} />
+          <AddressAutocompleteField
+            value={body.location ?? ''}
+            placeId={locationPlaceId}
+            types="geocode"
+            placeholder="City or address"
+            onChangeText={(value) => {
+              setLocationPlaceId(null);
+              patchBody({ location: value });
+            }}
+            onSelect={(place) => {
+              setLocationPlaceId(place.placeId);
+              setSavedLocation(place.formattedAddress);
+              patchBody({ location: place.formattedAddress });
+            }}
+          />
           <FieldLabel label="Skills" />
           <BrandInput
             value={body.skills ?? ''}
@@ -284,7 +309,21 @@ export function EditProfileCardScreen() {
       {type === 'match' ? (
         <>
           <FieldLabel label="Location" />
-          <BrandInput value={body.location ?? ''} onChangeText={(value) => patchBody({ location: value })} />
+          <AddressAutocompleteField
+            value={body.location ?? ''}
+            placeId={locationPlaceId}
+            types="geocode"
+            placeholder="City or address"
+            onChangeText={(value) => {
+              setLocationPlaceId(null);
+              patchBody({ location: value });
+            }}
+            onSelect={(place) => {
+              setLocationPlaceId(place.placeId);
+              setSavedLocation(place.formattedAddress);
+              patchBody({ location: place.formattedAddress });
+            }}
+          />
           <FieldLabel label="Looking for" />
           <BrandInput value={body.lookingFor ?? ''} onChangeText={(value) => patchBody({ lookingFor: value })} />
           <FieldLabel label="Interests" />

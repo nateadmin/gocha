@@ -12,6 +12,8 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { CtaButton } from '../brand';
+import { AddressAutocompleteField } from '../places/AddressAutocompleteField';
+import { isSelectedPlace } from '../../places/addressPlaces';
 import { pickImage, type PickedMedia } from '../../chat/pickMedia';
 import { SettingsToggleRow } from '../app';
 import { useGochaTheme } from '../../theme';
@@ -42,6 +44,7 @@ export function GroupPostComposer({ kind, onClose, onSubmit }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [locationPlaceId, setLocationPlaceId] = useState<string | null>(null);
   const [question, setQuestion] = useState('');
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
@@ -49,6 +52,7 @@ export function GroupPostComposer({ kind, onClose, onSubmit }: Props) {
   const [multi, setMulti] = useState(false);
   const [when, setWhen] = useState('');
   const [where, setWhere] = useState('');
+  const [wherePlaceId, setWherePlaceId] = useState<string | null>(null);
   const [image, setImage] = useState<PickedMedia | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +83,14 @@ export function GroupPostComposer({ kind, onClose, onSubmit }: Props) {
     }
     if (kind === 'rsvp' && !title.trim()) {
       setError('Title is required.');
+      return;
+    }
+    if (kind === 'offer' && location.trim() && !isSelectedPlace(location, locationPlaceId)) {
+      setError('Select a suggested Google address for location.');
+      return;
+    }
+    if (kind === 'rsvp' && where.trim() && !isSelectedPlace(where, wherePlaceId)) {
+      setError('Select a suggested Google address for where.');
       return;
     }
     setLoading(true);
@@ -133,12 +145,19 @@ export function GroupPostComposer({ kind, onClose, onSubmit }: Props) {
                   placeholderTextColor={theme.colors.mutedForeground}
                   style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
                 />
-                <TextInput
+                <AddressAutocompleteField
                   value={location}
-                  onChangeText={setLocation}
+                  placeId={locationPlaceId}
+                  types="geocode"
                   placeholder="Location"
-                  placeholderTextColor={theme.colors.mutedForeground}
-                  style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+                  onChangeText={(next) => {
+                    setLocation(next);
+                    setLocationPlaceId(null);
+                  }}
+                  onSelect={(place) => {
+                    setLocation(place.formattedAddress);
+                    setLocationPlaceId(place.placeId);
+                  }}
                 />
                 <Pressable onPress={choosePhoto} style={[styles.input, { borderColor: theme.colors.border }]}>
                   <Text style={{ color: theme.colors.primary }}>{image ? image.fileName : 'Photo'}</Text>
@@ -204,12 +223,19 @@ export function GroupPostComposer({ kind, onClose, onSubmit }: Props) {
                   placeholderTextColor={theme.colors.mutedForeground}
                   style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
                 />
-                <TextInput
+                <AddressAutocompleteField
                   value={where}
-                  onChangeText={setWhere}
+                  placeId={wherePlaceId}
+                  types="geocode"
                   placeholder="Where"
-                  placeholderTextColor={theme.colors.mutedForeground}
-                  style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
+                  onChangeText={(next) => {
+                    setWhere(next);
+                    setWherePlaceId(null);
+                  }}
+                  onSelect={(place) => {
+                    setWhere(place.formattedAddress);
+                    setWherePlaceId(place.placeId);
+                  }}
                 />
               </>
             ) : null}
