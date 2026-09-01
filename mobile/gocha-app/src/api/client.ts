@@ -752,6 +752,13 @@ export async function fetchConversations(): Promise<ConversationRecord[]> {
   return payload.conversations;
 }
 
+export async function fetchConversation(conversationId: number): Promise<ConversationRecord> {
+  const payload = await apiRequest<{ conversation: ConversationRecord }>(
+    `${API_PATHS.conversations}/${conversationId}`,
+  );
+  return payload.conversation;
+}
+
 export async function createConversation(participantUserId: number): Promise<ConversationRecord> {
   const payload = await apiRequest<{ conversation: ConversationRecord }>(API_PATHS.conversations, {
     method: 'POST',

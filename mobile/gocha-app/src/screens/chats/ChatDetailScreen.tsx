@@ -14,7 +14,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Avatar, HeaderOverflowMenu, type DropdownMenuItem } from '../../components/app';
+import { Avatar, HeaderOverflowMenu, UniversalLoader, type DropdownMenuItem } from '../../components/app';
 import { ActionSheet, ChatComposer, DurationPickerSheet, MessageBubble } from '../../components/chat';
 import { GroupPostComposer, type GroupPostKind } from '../../components/chat/GroupPostComposer';
 import { StatusRing } from '../../components/status/StatusRing';
@@ -52,6 +52,7 @@ export function ChatDetailScreen() {
   const [disappearPickerOpen, setDisappearPickerOpen] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   const [postKind, setPostKind] = useState<GroupPostKind | null>(null);
+  const [openFailed, setOpenFailed] = useState(false);
 
   useEffect(() => {
     setDraft(chatApi.getChatDraft(chatId));
@@ -67,6 +68,23 @@ export function ChatDetailScreen() {
     chatApi.openChat(chatId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
+
+  useEffect(() => {
+    if (chat) {
+      setOpenFailed(false);
+      return;
+    }
+    let cancelled = false;
+    void chatApi.ensureConversationLoaded(chatId).then((found) => {
+      if (!cancelled && !found) {
+        setOpenFailed(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, chat]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -98,7 +116,46 @@ export function ChatDetailScreen() {
   }, [tabNavigation]);
 
   if (!chat) {
-    return null;
+    return (
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.colors.card,
+              borderBottomColor: theme.colors.border,
+              paddingTop: insets.top + 6,
+            },
+          ]}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+            <Ionicons name="chevron-back" size={26} color={theme.colors.primary} />
+          </Pressable>
+          <Text
+            style={{
+              color: theme.colors.cardForeground,
+              fontFamily: theme.typography.sans,
+              fontSize: 17,
+              fontWeight: '600',
+            }}>
+            {openFailed ? 'Conversation' : 'Opening…'}
+          </Text>
+        </View>
+        <View style={styles.openState}>
+          {openFailed ? (
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.typography.sans,
+                textAlign: 'center',
+              }}>
+              Couldn't open this conversation.
+            </Text>
+          ) : (
+            <UniversalLoader size={0.3} />
+          )}
+        </View>
+      </View>
+    );
   }
 
   const visibleMessages = searchOpen && searchQuery.trim()
@@ -593,5 +650,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     alignSelf: 'flex-start',
+  },
+  openState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
 });

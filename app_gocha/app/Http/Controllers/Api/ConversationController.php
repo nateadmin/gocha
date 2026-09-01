@@ -52,6 +52,21 @@ class ConversationController extends Controller
         return response()->json(['conversations' => $conversations]);
     }
 
+    public function show(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeParticipant($user, $conversation);
+        $conversation->load(['participants', 'participantRows']);
+
+        return response()->json([
+            'conversation' => $this->toConversationPayload(
+                $conversation,
+                $user,
+                $this->statusFlagsFor($user, $conversation),
+            ),
+        ]);
+    }
+
     public function inboxUnread(Request $request): JsonResponse
     {
         $user = $request->user();

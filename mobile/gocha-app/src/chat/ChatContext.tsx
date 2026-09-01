@@ -36,8 +36,10 @@ import {
   sameMessageList,
 } from './messageMapping';
 import {
+  loadConversation,
   loadConversationMessages,
   loadConversations,
+  mergeConversationLists,
   markChatReadOnServer,
   actOnGroupPost,
   openDirectConversation,
@@ -126,6 +128,7 @@ type ChatContextValue = {
   refreshConversations: () => Promise<void>;
   startDirectMessage: (userId: number) => Promise<string>;
   startGroupConversation: (name: string, participantUserIds: number[]) => Promise<string>;
+  ensureConversationLoaded: (chatId: string) => Promise<boolean>;
   ensureMessagesLoaded: (chatId: string) => Promise<void>;
   refreshMessagesForChat: (chatId: string) => Promise<void>;
   conversationsLoading: boolean;
@@ -254,13 +257,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
     try {
       const existing = chatsRef.current.filter((chat) => !isOrderAssistantChat(chat.id));
+      const idsAtFetchStart = new Set(chatsRef.current.map((chat) => chat.id));
       const apiChats = await loadConversations(existing);
-      // Keep local-only chats (e.g. broadcasts) that the server does not know about.
-      const apiIds = new Set(apiChats.map((chat) => chat.id));
-      const localOnly = existing.filter(
-        (chat) => !/^\d+$/.test(chat.id) && !apiIds.has(chat.id),
-      );
-      setChats([orderAssistantChat, ...apiChats, ...localOnly]);
+      setChats((prev) => {
+        const next = mergeConversationLists(
+          orderAssistantChat,
+          apiChats,
+          prev,
+          idsAtFetchStart,
+        );
+        chatsRef.current = next;
+        return next;
+      });
     } catch {
       // Transient failure; keep the current list and let the next poll retry.
     } finally {
@@ -286,36 +294,57 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, refreshConversations, orderAssistantChat, orderAssistantMessages]);
 
+  const insertChat = useCallback(
+    (chat: ChatRecord) => {
+      const prev = chatsRef.current;
+      const assistant = prev.find((item) => isOrderAssistantChat(item.id)) ?? orderAssistantChat;
+      const rest = prev.filter(
+        (item) => !isOrderAssistantChat(item.id) && item.id !== chat.id,
+      );
+      const next = [assistant, chat, ...rest];
+      chatsRef.current = next;
+      setChats(next);
+      setMessages((prevMessages) => ({ ...prevMessages, [chat.id]: prevMessages[chat.id] ?? [] }));
+    },
+    [orderAssistantChat],
+  );
+
   const startDirectMessage = useCallback(
     async (userId: number) => {
       const chat = await openDirectConversation(userId);
-      setChats((prev) => {
-        const assistant = prev.find((item) => isOrderAssistantChat(item.id)) ?? orderAssistantChat;
-        const rest = prev.filter(
-          (item) => !isOrderAssistantChat(item.id) && item.id !== chat.id,
-        );
-        return [assistant, chat, ...rest];
-      });
-      setMessages((prev) => ({ ...prev, [chat.id]: prev[chat.id] ?? [] }));
+      insertChat(chat);
       return chat.id;
     },
-    [orderAssistantChat],
+    [insertChat],
   );
 
   const startGroupConversation = useCallback(
     async (name: string, participantUserIds: number[]) => {
       const chat = await openGroupConversation(name, participantUserIds);
-      setChats((prev) => {
-        const assistant = prev.find((item) => isOrderAssistantChat(item.id)) ?? orderAssistantChat;
-        const rest = prev.filter(
-          (item) => !isOrderAssistantChat(item.id) && item.id !== chat.id,
-        );
-        return [assistant, chat, ...rest];
-      });
-      setMessages((prev) => ({ ...prev, [chat.id]: prev[chat.id] ?? [] }));
+      insertChat(chat);
       return chat.id;
     },
-    [orderAssistantChat],
+    [insertChat],
+  );
+
+  const ensureConversationLoaded = useCallback(
+    async (chatId: string): Promise<boolean> => {
+      if (chatsRef.current.some((chat) => chat.id === chatId)) {
+        return true;
+      }
+      if (isOrderAssistantChat(chatId) || !/^\d+$/.test(chatId)) {
+        return false;
+      }
+      try {
+        const chat = await loadConversation(chatId);
+        insertChat(chat);
+        return true;
+      } catch {
+        await refreshConversations();
+        return chatsRef.current.some((chat) => chat.id === chatId);
+      }
+    },
+    [insertChat, refreshConversations],
   );
 
   const updateChat = useCallback((chatId: string, patch: Partial<ChatRecord>) => {
@@ -1182,6 +1211,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       refreshConversations,
       startDirectMessage,
       startGroupConversation,
+      ensureConversationLoaded,
       ensureMessagesLoaded,
       refreshMessagesForChat,
       conversationsLoading,
@@ -1268,6 +1298,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       refreshConversations,
       startDirectMessage,
       startGroupConversation,
+      ensureConversationLoaded,
       ensureMessagesLoaded,
       refreshMessagesForChat,
       conversationsLoading,

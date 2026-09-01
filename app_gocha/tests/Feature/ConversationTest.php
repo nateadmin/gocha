@@ -259,4 +259,28 @@ class ConversationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('messages.0.status', 'delivered');
     }
+
+    public function test_participant_can_open_a_group_conversation_by_id(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+
+        $conversationId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'type' => 'group',
+            'name' => 'Neighborhood',
+            'participantUserIds' => [$bob->id],
+        ])->json('conversation.id');
+
+        $this->actingAs($bob)->getJson("/api/conversations/{$conversationId}")
+            ->assertOk()
+            ->assertJsonPath('conversation.id', $conversationId)
+            ->assertJsonPath('conversation.type', 'group')
+            ->assertJsonPath('conversation.name', 'Neighborhood')
+            ->assertJsonPath('conversation.isGroup', true)
+            ->assertJsonPath('conversation.groupCount', 2);
+
+        $outsider = User::factory()->create();
+        $this->actingAs($outsider)->getJson("/api/conversations/{$conversationId}")
+            ->assertForbidden();
+    }
 }

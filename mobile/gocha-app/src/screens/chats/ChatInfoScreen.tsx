@@ -71,7 +71,21 @@ export function ChatInfoScreen() {
     }, [otherUserId]),
   );
 
-  if (!chat) return null;
+  if (!chat) {
+    return (
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        contentContainerStyle={styles.content}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.back}>
+          <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />
+          <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans, fontSize: 16 }}>
+            Chat
+          </Text>
+        </Pressable>
+        <Text style={{ color: theme.colors.mutedForeground }}>Couldn't open this conversation.</Text>
+      </ScrollView>
+    );
+  }
 
   async function handleCardAction(card: ProfileCardSummary) {
     if (card.canView) {
@@ -111,7 +125,7 @@ export function ChatInfoScreen() {
           fontSize: 28,
           marginBottom: 16,
         }}>
-        Profile
+        {chat.isGroup ? 'Group' : 'Profile'}
       </Text>
 
       <View style={styles.hero}>
@@ -136,7 +150,11 @@ export function ChatInfoScreen() {
           }}>
           {chat.name}
         </Text>
-        {username ? (
+        {chat.isGroup ? (
+          <Text style={{ color: theme.colors.mutedForeground, marginTop: 4 }}>
+            {chat.groupCount ?? 0} members
+          </Text>
+        ) : username ? (
           <Text style={{ color: theme.colors.mutedForeground, marginTop: 4 }}>@{username}</Text>
         ) : null}
 
@@ -147,12 +165,14 @@ export function ChatInfoScreen() {
             </View>
             <Text style={{ color: theme.colors.mutedForeground, fontSize: 12, marginTop: 6 }}>Message</Text>
           </Pressable>
-          <Pressable onPress={() => navigation.navigate('CallsTab')} style={styles.action}>
-            <View style={[styles.actionCircle, { borderColor: theme.colors.border }]}>
-              <Ionicons name="call-outline" size={22} color={theme.colors.cardForeground} />
-            </View>
-            <Text style={{ color: theme.colors.mutedForeground, fontSize: 12, marginTop: 6 }}>Call</Text>
-          </Pressable>
+          {chat.isGroup ? null : (
+            <Pressable onPress={() => navigation.navigate('CallsTab')} style={styles.action}>
+              <View style={[styles.actionCircle, { borderColor: theme.colors.border }]}>
+                <Ionicons name="call-outline" size={22} color={theme.colors.cardForeground} />
+              </View>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 12, marginTop: 6 }}>Call</Text>
+            </Pressable>
+          )}
         </View>
       </View>
 

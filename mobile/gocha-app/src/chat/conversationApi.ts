@@ -2,6 +2,7 @@ import {
   actOnConversationMessage,
   createConversation,
   createGroupConversation,
+  fetchConversation,
   fetchConversationMessages,
   fetchConversations,
   markConversationRead,
@@ -11,7 +12,10 @@ import {
   type GroupPostInput,
 } from '../api/client';
 import { mapMessageRecord } from './messageMapping';
+import { isOrderAssistantChat } from './orderAssistant';
 import type { ChatRecord } from './types';
+
+const RECENT_LOCAL_MS = 30_000;
 
 function formatDateLabel(iso: string | null | undefined): string {
   if (!iso) return '';
@@ -71,6 +75,37 @@ export async function loadConversations(existing: ChatRecord[]): Promise<ChatRec
   return records.map((record) =>
     mapConversationRecord(record, byId.get(String(record.id))),
   );
+}
+
+export async function loadConversation(chatId: string): Promise<ChatRecord> {
+  const record = await fetchConversation(Number(chatId));
+  return mapConversationRecord(record);
+}
+
+/**
+ * Apply a conversation list fetch without dropping a thread that was created
+ * after the request started. Stale in-flight refreshes were wiping new groups
+ * and leaving ChatDetail with nothing to render.
+ */
+export function mergeConversationLists(
+  assistant: ChatRecord,
+  apiChats: ChatRecord[],
+  current: ChatRecord[],
+  idsAtFetchStart: ReadonlySet<string>,
+  now = Date.now(),
+): ChatRecord[] {
+  const apiIds = new Set(apiChats.map((chat) => chat.id));
+  const keep = current.filter((chat) => {
+    if (isOrderAssistantChat(chat.id) || apiIds.has(chat.id)) {
+      return false;
+    }
+    if (!/^\d+$/.test(chat.id)) {
+      return true;
+    }
+    return !idsAtFetchStart.has(chat.id) || now - chat.lastActivityAt < RECENT_LOCAL_MS;
+  });
+
+  return [assistant, ...apiChats, ...keep];
 }
 
 export async function loadConversationMessages(
