@@ -29,7 +29,7 @@ class SuperAdminAlerter
         $to = (string) config('gocha.alerts.to', 'nate@wefoundd.com');
         $apiKey = config('gocha.resend.api_key');
         $from = config('gocha.resend.from');
-        $host = config('gocha.planned_hostname', 'gocha.ai');
+        $host = config('gocha.planned_hostname', 'app.gocha.ai');
         $environment = app()->environment();
         $time = now()->utc()->toIso8601String();
         $correlationId ??= CorrelationId::current();

@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'planned_hostname' => env('GOCHA_PLANNED_HOSTNAME', 'gocha.ai'),
+    'planned_hostname' => env('GOCHA_PLANNED_HOSTNAME', 'app.gocha.ai'),
 
     'auth' => [
         'closed_membership' => env('GOCHA_CLOSED_MEMBERSHIP', false),

@@ -27,6 +27,6 @@ Read before changing auth, search, account storage, or any debounced API call fr
 
 ## Smoke after auth or search changes
 
-- Sign in on https://gocha.ai/
+- Sign in on https://app.gocha.ai/
 - Type in global search on Chats for several characters; confirm you stay signed in.
 - Open a conversation, search in chat; confirm you stay signed in.

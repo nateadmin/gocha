@@ -4,7 +4,7 @@
 export const API_BASE_URL =
   typeof window !== 'undefined' && window.location?.origin
     ? window.location.origin
-    : 'https://gocha.ai';
+    : 'https://app.gocha.ai';
 
 export const API_PATHS = {
   health: '/api/health',

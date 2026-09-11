@@ -24,6 +24,7 @@ const AppStack = createNativeStackNavigator<AppStackParamList>();
 
 const linking: LinkingOptions<AppStackParamList> = {
   prefixes: [
+    'https://app.gocha.ai',
     'https://gocha.ai',
     'https://www.gocha.ai',
     ...(typeof window !== 'undefined' && window.location?.origin ? [window.location.origin] : []),

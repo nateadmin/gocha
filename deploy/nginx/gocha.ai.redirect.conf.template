@@ -1,0 +1,14 @@
+# Legacy gocha.ai on Contabo — send traffic to the app host.
+
+server {
+    listen 80;
+    listen 443 ssl;
+    server_name gocha.ai www.gocha.ai;
+
+    ssl_certificate /etc/letsencrypt/live/gocha.ai/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/gocha.ai/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    return 301 https://app.gocha.ai$request_uri;
+}

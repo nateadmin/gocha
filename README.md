@@ -9,19 +9,19 @@ Development rules live in the personal-playbook repo.
 - `app_gocha/` — Laravel JSON API shell (health, version, error contract)
 - `mobile/gocha-app/` — React Native app (Chats, Catch Up, Discover, Calls, Settings)
 - `scripts/` — Infisical pull and Contabo deploy helpers
-- `deploy/nginx/gocha.ai.conf.template` — nginx vhost for when DNS is ready
+- `deploy/nginx/app.gocha.ai.conf.template` — nginx vhost for the app host
 - `PLATFORM_MAP.txt` — server and stack map
 
-Planned production hostname: `gocha.ai` (live: nginx + Let’s Encrypt on Contabo).
+Production app hostname: `app.gocha.ai` (nginx + Let’s Encrypt on Contabo). Marketing site: `gocha.ai` (separate host).
 
 ## Live URLs
 
-- API health: https://gocha.ai/api/health
-- API version: https://gocha.ai/api/version
-- Mobile web shell: https://gocha.ai/
-- API meta: https://gocha.ai/api/meta
+- API health: https://app.gocha.ai/api/health
+- API version: https://app.gocha.ai/api/version
+- Mobile web shell: https://app.gocha.ai/
+- API meta: https://app.gocha.ai/api/meta
 
-GitHub Actions publishes a preview build to the `gh-pages` branch only. That is not what serves https://gocha.ai/. The live web shell is static files on Contabo under `/var/www/html/gocha/public`, updated by `scripts/deploy-web-preview-to-contabo.sh` (also run automatically at the end of `scripts/deploy-to-contabo.sh` when `GOCHA_SSH_KEY` is set).
+GitHub Actions publishes a preview build to the `gh-pages` branch only. That is not what serves https://app.gocha.ai/. The live web shell is static files on Contabo under `/var/www/html/gocha/public`, updated by `scripts/deploy-web-preview-to-contabo.sh` (also run automatically at the end of `scripts/deploy-to-contabo.sh` when `GOCHA_SSH_KEY` is set). First-time host setup: `GOCHA_SSH_KEY=/path/to/key ./scripts/setup-app-gocha-ai-host.sh`.
 
 ## Server (Contabo)
 
@@ -133,9 +133,9 @@ Run in order before push:
    (Web-only: `./scripts/deploy-web-preview-to-contabo.sh` with the same env var.)
    Rsync leaves live `storage/app`, logs, cache, sessions, and compiled views in place, then chowns `storage` and `bootstrap/cache` to `www-data` before artisan runs.
 3. On server: confirm `php artisan route:list --path=api` shows health and version.
-4. Confirm the web bundle changed: view source on https://gocha.ai/ and check the `assets/index-*.js` filename is not `index-CbZMhqcY.js` (stale).
+4. Confirm the web bundle changed: view source on https://app.gocha.ai/ and check the `assets/index-*.js` filename is not `index-CbZMhqcY.js` (stale).
 
-Until `gocha.ai` is live, smoke the API on the server with a short-lived PHP built-in server:
+Until `app.gocha.ai` is live, smoke the API on the server with a short-lived PHP built-in server:
 
 ```bash
 cd /var/www/html/gocha && php artisan serve --host=127.0.0.1 --port=9080
@@ -143,27 +143,27 @@ curl -sS http://127.0.0.1:9080/api/health
 curl -sS http://127.0.0.1:9080/api/version
 ```
 
-After DNS + nginx for `gocha.ai`:
+After DNS + nginx for `app.gocha.ai`:
 
-- GET `https://gocha.ai/api/health` → 200 JSON `status: ok`
-- GET `https://gocha.ai/api/version` → 200, `version` equals `origin/main` HEAD after deploy
-- GET `https://gocha.ai/` → 200 mobile web shell (HTML)
-- GET `https://gocha.ai/api/profile-cards` as an authenticated session → 200 JSON `{ cards: [] }` or a card list (401 without a session is expected)
-- GET `https://gocha.ai/api/c/{slug}` → 200 JSON `{ card: ... }` for a real share slug, or 404 JSON `NOT_FOUND` when the slug is unknown
-- GET `https://gocha.ai/c/{slug}` → 200 mobile web shell (HTML) for a share page; Chat on that page requires a signed-in account
-- GET `https://gocha.ai/api/catch-up` as an authenticated session → 200 JSON `{ briefing, generatedAt, attention, conversations }` (401 without a session is expected)
-- POST `https://gocha.ai/api/businesses/import-google` without a session → 401 `UNAUTHENTICATED`
-- GET `https://gocha.ai/api/businesses/mine` without a session → 401 `UNAUTHENTICATED` (must not 404; that route is not a public slug)
-- GET `https://gocha.ai/api/meta` → 200 JSON, `account.phoneSignInEnabled` true after Firebase secrets are injected, `languages` includes `en` and `he`
-- POST `https://gocha.ai/api/profile/language` without a session → 401 `UNAUTHENTICATED`
-- GET `https://gocha.ai/api/statuses` without a session → 401 `UNAUTHENTICATED`
-- PATCH `https://gocha.ai/api/statuses/1` without a session → 401 `UNAUTHENTICATED`
-- GET `https://gocha.ai/api/search?q=ab` without a session → 401 `UNAUTHENTICATED`
-- GET `https://gocha.ai/api/places/autocomplete?query=130` without a session → 401 `UNAUTHENTICATED`
-- GET `https://gocha.ai/api/inbox/unread` without a session → 401 `UNAUTHENTICATED`
-- GET `https://gocha.ai/api/conversations/1` without a session → 401 `UNAUTHENTICATED`
-- POST `https://gocha.ai/api/conversations/1/messages/1/act` without a session → 401 `UNAUTHENTICATED`
-- GET `https://gocha.ai/` login/sign-up → email or phone as primary, the other optional on profile setup
+- GET `https://app.gocha.ai/api/health` → 200 JSON `status: ok`
+- GET `https://app.gocha.ai/api/version` → 200, `version` equals `origin/main` HEAD after deploy
+- GET `https://app.gocha.ai/` → 200 mobile web shell (HTML)
+- GET `https://app.gocha.ai/api/profile-cards` as an authenticated session → 200 JSON `{ cards: [] }` or a card list (401 without a session is expected)
+- GET `https://app.gocha.ai/api/c/{slug}` → 200 JSON `{ card: ... }` for a real share slug, or 404 JSON `NOT_FOUND` when the slug is unknown
+- GET `https://app.gocha.ai/c/{slug}` → 200 mobile web shell (HTML) for a share page; Chat on that page requires a signed-in account
+- GET `https://app.gocha.ai/api/catch-up` as an authenticated session → 200 JSON `{ briefing, generatedAt, attention, conversations }` (401 without a session is expected)
+- POST `https://app.gocha.ai/api/businesses/import-google` without a session → 401 `UNAUTHENTICATED`
+- GET `https://app.gocha.ai/api/businesses/mine` without a session → 401 `UNAUTHENTICATED` (must not 404; that route is not a public slug)
+- GET `https://app.gocha.ai/api/meta` → 200 JSON, `account.phoneSignInEnabled` true after Firebase secrets are injected, `languages` includes `en` and `he`
+- POST `https://app.gocha.ai/api/profile/language` without a session → 401 `UNAUTHENTICATED`
+- GET `https://app.gocha.ai/api/statuses` without a session → 401 `UNAUTHENTICATED`
+- PATCH `https://app.gocha.ai/api/statuses/1` without a session → 401 `UNAUTHENTICATED`
+- GET `https://app.gocha.ai/api/search?q=ab` without a session → 401 `UNAUTHENTICATED`
+- GET `https://app.gocha.ai/api/places/autocomplete?query=130` without a session → 401 `UNAUTHENTICATED`
+- GET `https://app.gocha.ai/api/inbox/unread` without a session → 401 `UNAUTHENTICATED`
+- GET `https://app.gocha.ai/api/conversations/1` without a session → 401 `UNAUTHENTICATED`
+- POST `https://app.gocha.ai/api/conversations/1/messages/1/act` without a session → 401 `UNAUTHENTICATED`
+- GET `https://app.gocha.ai/` login/sign-up → email or phone as primary, the other optional on profile setup
 
 ### Log check
 

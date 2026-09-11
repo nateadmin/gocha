@@ -15,7 +15,8 @@ fi
 
 SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new)
 
-echo "Building web app for https://gocha.ai/ ..."
+APP_HOST="${GOCHA_APP_HOSTNAME:-app.gocha.ai}"
+echo "Building web app for https://${APP_HOST}/ ..."
 (
   cd "$APP_DIR"
   VITE_BASE_PATH=/ npm run build:web
@@ -28,4 +29,4 @@ rsync -az -e "ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=a
   --exclude 'favicon.ico' \
   "$APP_DIR/web/dist/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/"
 
-echo "Live: https://gocha.ai/"
+echo "Live: https://${APP_HOST}/"

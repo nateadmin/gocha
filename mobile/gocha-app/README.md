@@ -32,7 +32,7 @@ npm run web
 
 Open http://localhost:5173. Logo asset: `assets/branding/Logo.jpeg`.
 
-Hosted preview: https://gocha.ai/
+Hosted preview: https://app.gocha.ai/
 
 Android emulator:
 
@@ -68,4 +68,4 @@ npm run ios
 
 ## API config
 
-Planned host: `https://gocha.ai` in `src/config/api.ts`.
+Planned host: `https://app.gocha.ai` in `src/config/api.ts`.

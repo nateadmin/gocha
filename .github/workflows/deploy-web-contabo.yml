@@ -29,7 +29,7 @@ jobs:
         working-directory: mobile/gocha-app
         run: npm ci
 
-      - name: Build static web app for gocha.ai
+      - name: Build static web app for app.gocha.ai
         working-directory: mobile/gocha-app
         env:
           VITE_BASE_PATH: /
@@ -66,12 +66,12 @@ jobs:
             "${GOCHA_DEPLOY_USER}@${GOCHA_DEPLOY_HOST}:${GOCHA_WEB_APP_PATH}/"
           rm -f /tmp/gocha-contabo.pem
 
-      - name: Smoke check gocha.ai shell
+      - name: Smoke check app.gocha.ai shell
         env:
           CONTABO_PRIVATE_SSH_KEY: ${{ secrets.CONTABO_PRIVATE_SSH_KEY }}
         run: |
           if [ -z "$CONTABO_PRIVATE_SSH_KEY" ]; then
             exit 0
           fi
-          curl -fsS https://gocha.ai/ | grep -q '<title>Gocha</title>'
-          curl -fsS https://gocha.ai/api/health | grep -q '"status"'
+          curl -fsS https://app.gocha.ai/ | grep -q '<title>Gocha</title>'
+          curl -fsS https://app.gocha.ai/api/health | grep -q '"status"'

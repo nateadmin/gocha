@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Web and mobile parity
 
-Gocha is one React Native app shipped to iOS, Android, and the web (https://gocha.ai/) from `mobile/gocha-app/`. Web is not a separate product, demo, or degraded shell. Treat every prompt as requiring full parity unless the owner explicitly scopes to one platform.
+Gocha is one React Native app shipped to iOS, Android, and the web (https://app.gocha.ai/) from `mobile/gocha-app/`. Web is not a separate product, demo, or degraded shell. Treat every prompt as requiring full parity unless the owner explicitly scopes to one platform.
 
 ## Default assumption
 
@@ -23,7 +23,7 @@ Gocha is one React Native app shipped to iOS, Android, and the web (https://goch
 ## Verification before push
 
 - Run `npm test` and `npm run build:web` from `mobile/gocha-app/`.
-- Smoke the changed flow on https://gocha.ai/ (hard refresh after deploy), not only native simulators.
+- Smoke the changed flow on https://app.gocha.ai/ (hard refresh after deploy), not only native simulators.
 - If you touch auth, search, chat, or forms, click/type through the real web UI before reporting complete.
 
 ## Definition of done

@@ -7,6 +7,7 @@ REMOTE_HOST="${GOCHA_DEPLOY_HOST:-212.47.68.106}"
 REMOTE_USER="${GOCHA_DEPLOY_USER:-root}"
 REMOTE_PATH="${GOCHA_DEPLOY_PATH:-/var/www/html/gocha}"
 SSH_KEY="${GOCHA_SSH_KEY:-}"
+APP_HOST="${GOCHA_APP_HOSTNAME:-app.gocha.ai}"
 
 if [[ -z "$SSH_KEY" ]]; then
   echo "Set GOCHA_SSH_KEY to the Contabo private key path" >&2
@@ -83,10 +84,11 @@ chown -R www-data:www-data storage bootstrap/cache
 chmod -R ug+rwx storage bootstrap/cache
 REMOTE_PERMS
 
-ssh "${SSH_OPTS[@]}" "$REMOTE_USER@$REMOTE_HOST" bash -s "$REMOTE_PATH" "$COMMIT_SHA" <<'REMOTE'
+ssh "${SSH_OPTS[@]}" "$REMOTE_USER@$REMOTE_HOST" bash -s "$REMOTE_PATH" "$COMMIT_SHA" "$APP_HOST" <<'REMOTE'
 set -euo pipefail
 REMOTE_PATH="$1"
 COMMIT_SHA="$2"
+APP_HOST="$3"
 cd "$REMOTE_PATH"
 export COMPOSER_ALLOW_SUPERUSER=1
 if [[ ! -f .env ]]; then
@@ -97,6 +99,37 @@ if ! grep -q '^APP_KEY=base64:' .env; then
   php artisan key:generate --force
 fi
 grep -q '^APP_BUILD_SHA=' .env && sed -i "s/^APP_BUILD_SHA=.*/APP_BUILD_SHA=$COMMIT_SHA/" .env || echo "APP_BUILD_SHA=$COMMIT_SHA" >> .env
+GOCHA_REMOTE_PATH="$REMOTE_PATH" GOCHA_APP_HOST="$APP_HOST" python3 - <<'PY'
+from pathlib import Path
+import os
+
+remote = os.environ["GOCHA_REMOTE_PATH"]
+app_host = os.environ["GOCHA_APP_HOST"]
+env_path = Path(remote) / ".env"
+updates = {
+    "APP_URL": f"https://{app_host}",
+    "SESSION_DOMAIN": app_host,
+    "GOCHA_PLANNED_HOSTNAME": app_host,
+    "SANCTUM_STATEFUL_DOMAINS": f"{app_host},localhost,localhost:5173,127.0.0.1,127.0.0.1:5173",
+    "CORS_ALLOWED_ORIGINS": f"http://localhost:5173,http://127.0.0.1:5173,https://{app_host}",
+    "SESSION_SECURE_COOKIE": "true",
+}
+lines = env_path.read_text().splitlines()
+found = set()
+out = []
+for line in lines:
+    key = line.split("=", 1)[0] if "=" in line else ""
+    if key in updates:
+        out.append(f"{key}={updates[key]}")
+        found.add(key)
+    else:
+        out.append(line)
+for key, value in updates.items():
+    if key not in found:
+        out.append(f"{key}={value}")
+env_path.write_text("\n".join(out) + "\n")
+print("host_env_keys=" + ",".join(sorted(updates)))
+PY
 if [[ -f /tmp/gocha-inject.env ]]; then
   GOCHA_REMOTE_PATH="$REMOTE_PATH" python3 - <<'PY'
 from pathlib import Path
@@ -152,6 +185,6 @@ echo "Deploy complete: $COMMIT_SHA"
 
 WEB_DEPLOY_SCRIPT="$ROOT/scripts/deploy-web-preview-to-contabo.sh"
 if [[ -x "$WEB_DEPLOY_SCRIPT" ]]; then
-  echo "Publishing mobile web shell to gocha.ai ..."
-  GOCHA_SSH_KEY="$SSH_KEY" bash "$WEB_DEPLOY_SCRIPT"
+  echo "Publishing mobile web shell to ${APP_HOST} ..."
+  GOCHA_SSH_KEY="$SSH_KEY" GOCHA_APP_HOSTNAME="$APP_HOST" bash "$WEB_DEPLOY_SCRIPT"
 fi
