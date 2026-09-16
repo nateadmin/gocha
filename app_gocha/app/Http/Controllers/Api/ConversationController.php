@@ -9,6 +9,7 @@ use App\Models\Message;
 use App\Models\User;
 use App\Services\Chat\ChatTypingService;
 use App\Services\Chat\GroupPostService;
+use App\Services\Chat\MessageDeletionService;
 use App\Services\Locale\MessageTranslationService;
 use App\Services\Locale\TranslationBudget;
 use App\Services\Status\StatusService;
@@ -26,6 +27,7 @@ class ConversationController extends Controller
         private readonly StatusService $statuses,
         private readonly GroupPostService $groupPosts,
         private readonly ChatTypingService $typing,
+        private readonly MessageDeletionService $messageDeletion,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -151,7 +153,7 @@ class ConversationController extends Controller
         $this->markIncomingMessagesDelivered($user, $conversation);
 
         $budget = new TranslationBudget;
-        $messages = $conversation->messages()
+        $messages = $this->visibleMessagesQuery($conversation, $user)
             ->with(['responses.user', 'sender'])
             ->orderBy('created_at')
             ->limit(200)
@@ -220,6 +222,32 @@ class ConversationController extends Controller
         return response()->json([
             'message' => $this->toMessagePayload($message, $user),
         ], 201);
+    }
+
+    public function deleteMessage(Request $request, Conversation $conversation, Message $message): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeParticipant($user, $conversation);
+
+        $validated = $request->validate([
+            'scope' => ['required', 'string', Rule::in(['me', 'everyone'])],
+        ]);
+
+        try {
+            $this->messageDeletion->delete($conversation, $message, $user, $validated['scope']);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'code' => 'FORBIDDEN',
+                'message' => $e->getMessage(),
+            ], 403);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'code' => 'INVALID_REQUEST',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     public function setTyping(Request $request, Conversation $conversation): JsonResponse
@@ -376,6 +404,13 @@ class ConversationController extends Controller
         return response()->json([
             'conversation' => $this->toConversationPayload($conversation, $user),
         ], 201);
+    }
+
+    private function visibleMessagesQuery(Conversation $conversation, User $viewer)
+    {
+        return $conversation->messages()
+            ->whereNull('deleted_at')
+            ->whereDoesntHave('hides', fn ($query) => $query->where('user_id', $viewer->id));
     }
 
     private function authorizeParticipant(User $user, Conversation $conversation): void

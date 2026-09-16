@@ -43,6 +43,7 @@ import {
   mergeConversationLists,
   markChatReadOnServer,
   actOnGroupPost,
+  deleteChatMessage,
   openDirectConversation,
   openGroupConversation,
   postEmojiMessage,
@@ -1242,15 +1243,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const deleteMessage = useCallback(
-    (chatId: string, messageId: string, _forEveryone?: boolean) => {
-      // Remember the deletion so background refreshes do not resurrect it.
+    (chatId: string, messageId: string, forEveryone?: boolean) => {
+      const scope = forEveryone ? 'everyone' : 'me';
       deletedMessageIdsRef.current.add(messageId);
-      setMessages((prev) => ({
-        ...prev,
-        [chatId]: (prev[chatId] ?? []).filter((message) => message.id !== messageId),
-      }));
+      setMessages((prev) => {
+        const remaining = (prev[chatId] ?? []).filter((message) => message.id !== messageId);
+        updateChat(chatId, { preview: previewFromMessages(remaining) });
+        return { ...prev, [chatId]: remaining };
+      });
+
+      if (isOrderAssistantChat(chatId) || !/^\d+$/.test(chatId) || !/^\d+$/.test(messageId)) {
+        return;
+      }
+
+      void deleteChatMessage(chatId, messageId, scope).catch(() => {
+        deletedMessageIdsRef.current.delete(messageId);
+        void refreshMessagesForChat(chatId);
+      });
     },
-    [],
+    [refreshMessagesForChat, updateChat],
   );
 
   const starMessage = useCallback((chatId: string, messageId: string) => {

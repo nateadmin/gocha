@@ -940,6 +940,20 @@ export async function sendGroupPost(
   return payload.message;
 }
 
+export async function deleteConversationMessage(
+  conversationId: number,
+  messageId: string,
+  scope: 'me' | 'everyone',
+): Promise<void> {
+  await apiRequest<{ ok: boolean }>(
+    `${API_PATHS.conversations}/${conversationId}/messages/${messageId}/delete`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ scope }),
+    },
+  );
+}
+
 export async function actOnConversationMessage(
   conversationId: number,
   messageId: string,

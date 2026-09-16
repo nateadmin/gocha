@@ -16,12 +16,14 @@ class Message extends Model
         'metadata',
         'delivered_at',
         'read_at',
+        'deleted_at',
     ];
 
     protected $casts = [
         'metadata' => 'array',
         'delivered_at' => 'datetime',
         'read_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function conversation(): BelongsTo
@@ -37,5 +39,15 @@ class Message extends Model
     public function responses(): HasMany
     {
         return $this->hasMany(MessageResponse::class);
+    }
+
+    public function hides(): HasMany
+    {
+        return $this->hasMany(MessageHide::class);
+    }
+
+    public function isDeletedForEveryone(): bool
+    {
+        return $this->deleted_at !== null;
     }
 }

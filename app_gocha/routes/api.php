@@ -94,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
     Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
     Route::post('/conversations/{conversation}/messages/{message}/act', [ConversationController::class, 'actOnMessage']);
+    Route::post('/conversations/{conversation}/messages/{message}/delete', [ConversationController::class, 'deleteMessage']);
     Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'setTyping'])
         ->middleware('throttle:120,1');
     Route::get('/conversations/{conversation}/typing', [ConversationController::class, 'typing']);

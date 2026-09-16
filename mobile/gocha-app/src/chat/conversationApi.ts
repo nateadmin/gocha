@@ -1,5 +1,6 @@
 import {
   actOnConversationMessage,
+  deleteConversationMessage,
   createConversation,
   createGroupConversation,
   fetchConversation,
@@ -157,6 +158,17 @@ export async function postGroupPost(
 ) {
   const record = await sendGroupPost(Number(chatId), input);
   return mapMessageRecord(record, viewerUserId);
+}
+
+export async function deleteChatMessage(
+  chatId: string,
+  messageId: string,
+  scope: 'me' | 'everyone',
+): Promise<void> {
+  if (!/^\d+$/.test(chatId) || !/^\d+$/.test(messageId)) {
+    return;
+  }
+  await deleteConversationMessage(Number(chatId), messageId, scope);
 }
 
 export async function actOnGroupPost(
