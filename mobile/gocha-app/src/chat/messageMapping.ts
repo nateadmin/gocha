@@ -67,6 +67,9 @@ export function mapMessageRecord(
     status: record.status ?? 'sent',
     senderName: record.senderName ?? undefined,
     senderAvatarLabel: record.senderAvatarLabel ?? undefined,
+    mediaUrl: record.mediaUrl ?? undefined,
+    fileName: record.fileName ?? undefined,
+    mimeType: record.mimeType ?? undefined,
     post: record.post,
   };
 }

@@ -9,6 +9,7 @@ import {
   fetchConversations,
   markConversationRead,
   postConversationTyping,
+  sendConversationImageMessage,
   sendConversationMessage,
   sendGroupPost,
   type ConversationRecord,
@@ -148,6 +149,16 @@ export async function postEmojiMessage(
   viewerUserId?: number | null,
 ) {
   const record = await sendConversationMessage(Number(chatId), emoji, 'emoji');
+  return mapMessageRecord(record, viewerUserId);
+}
+
+export async function postImageMessage(
+  chatId: string,
+  file: Blob,
+  options: { fileName: string; mimeType: string; text?: string },
+  viewerUserId?: number | null,
+) {
+  const record = await sendConversationImageMessage(Number(chatId), file, options);
   return mapMessageRecord(record, viewerUserId);
 }
 

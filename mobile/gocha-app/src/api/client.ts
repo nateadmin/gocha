@@ -794,6 +794,9 @@ export type ConversationMessageRecord = {
   senderAvatarLabel?: string;
   isOutgoing: boolean;
   status?: 'sent' | 'delivered' | 'read';
+  mediaUrl?: string | null;
+  fileName?: string | null;
+  mimeType?: string | null;
   post?: {
     offer?: import('../chat/types').OfferPost;
     poll?: import('../chat/types').PollPost;
@@ -855,6 +858,28 @@ export async function sendConversationMessage(
     {
       method: 'POST',
       body: JSON.stringify({ text, type }),
+    },
+  );
+  return payload.message;
+}
+
+export async function sendConversationImageMessage(
+  conversationId: number,
+  file: Blob,
+  options: { fileName: string; mimeType: string; text?: string },
+): Promise<ConversationMessageRecord> {
+  const form = new FormData();
+  form.append('type', 'image');
+  form.append('image', file, options.fileName);
+  if (options.text?.trim()) {
+    form.append('text', options.text.trim());
+  }
+
+  const payload = await apiRequest<{ message: ConversationMessageRecord }>(
+    `${API_PATHS.conversations}/${conversationId}/messages`,
+    {
+      method: 'POST',
+      body: form,
     },
   );
   return payload.message;

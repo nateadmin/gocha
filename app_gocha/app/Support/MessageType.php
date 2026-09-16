@@ -14,10 +14,12 @@ final class MessageType
 
     public const RSVP = 'rsvp';
 
+    public const IMAGE = 'image';
+
     /** @return list<string> */
     public static function all(): array
     {
-        return [self::TEXT, self::EMOJI, self::OFFER, self::POLL, self::RSVP];
+        return [self::TEXT, self::EMOJI, self::IMAGE, self::OFFER, self::POLL, self::RSVP];
     }
 
     /** @return list<string> */

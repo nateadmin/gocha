@@ -38,6 +38,25 @@ describe('messageMapping', () => {
     expect(outgoing.isOutgoing).toBe(true);
   });
 
+  it('maps image media fields and caption previews', () => {
+    const mapped = mapMessageRecord(
+      {
+        ...baseRecord,
+        type: 'image',
+        text: 'Check this out',
+        mediaUrl: 'https://app.gocha.ai/storage/conversation-media/1/paste.png',
+        fileName: 'paste.png',
+        mimeType: 'image/png',
+      },
+      7,
+    );
+
+    expect(mapped.type).toBe('image');
+    expect(mapped.mediaUrl).toContain('paste.png');
+    expect(mapped.fileName).toBe('paste.png');
+    expect(listPreviewForMessage(mapped)).toBe('Check this out');
+  });
+
   it('maps offer posts and list previews', () => {
     const mapped = mapMessageRecord(
       {

@@ -59,6 +59,7 @@ import {
   openGroupConversation,
   postEmojiMessage,
   postGroupPost,
+  postImageMessage,
   postTextMessage,
   signalChatTyping,
 } from './conversationApi';
@@ -1297,8 +1298,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       media?: { fileName?: string; mediaUrl?: string; mimeType?: string; text?: string },
     ) => {
       if (type !== 'image' && type !== 'video' && type !== 'file') return;
-      appendMessage(chatId, {
-        id: `m-${Date.now()}`,
+
+      const optimistic: ChatMessage = {
+        id: `pending-${Date.now()}`,
         type,
         text: media?.text,
         fileName: media?.fileName,
@@ -1308,9 +1310,31 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sentAtMs: Date.now(),
         isOutgoing: true,
         status: 'sent',
+      };
+
+      if (type === 'image' && media?.mediaUrl && /^\d+$/.test(chatId)) {
+        deliverMessage(chatId, optimistic, async () => {
+          const blob = await fetch(media.mediaUrl!).then((response) => response.blob());
+          return postImageMessage(
+            chatId,
+            blob,
+            {
+              fileName: media.fileName ?? 'image.jpg',
+              mimeType: media.mimeType ?? blob.type ?? 'image/jpeg',
+              text: media.text,
+            },
+            user?.id,
+          );
+        });
+        return;
+      }
+
+      appendMessage(chatId, {
+        ...optimistic,
+        id: `m-${Date.now()}`,
       });
     },
-    [appendMessage],
+    [appendMessage, deliverMessage, user?.id],
   );
 
   const deleteMessage = useCallback(

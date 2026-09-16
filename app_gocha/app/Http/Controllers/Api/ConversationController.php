@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Chat\ChatMediaMessageService;
 use App\Services\Chat\ChatTypingService;
 use App\Services\Chat\GroupPostService;
 use App\Services\Chat\MessageDeletionService;
@@ -18,6 +19,7 @@ use App\Support\MessageType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ConversationController extends Controller
@@ -28,6 +30,7 @@ class ConversationController extends Controller
         private readonly GroupPostService $groupPosts,
         private readonly ChatTypingService $typing,
         private readonly MessageDeletionService $messageDeletion,
+        private readonly ChatMediaMessageService $mediaMessages,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -172,6 +175,10 @@ class ConversationController extends Controller
         $type = (string) $request->input('type', MessageType::TEXT);
         if (MessageType::isInteractive($type)) {
             return $this->storeGroupPost($request, $conversation);
+        }
+
+        if ($type === MessageType::IMAGE || $request->hasFile('image')) {
+            return $this->storeImageMessage($request, $conversation);
         }
 
         $validated = $request->validate([
@@ -319,6 +326,29 @@ class ConversationController extends Controller
         return response()->json([
             'message' => $this->toMessagePayload($updated, $user),
         ]);
+    }
+
+    private function storeImageMessage(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeParticipant($user, $conversation);
+
+        $validated = $request->validate([
+            'type' => ['sometimes', 'string', Rule::in([MessageType::IMAGE])],
+            'text' => ['sometimes', 'nullable', 'string', 'max:4000'],
+            'image' => ['required', 'file', 'image', 'max:8192'],
+        ]);
+
+        $message = $this->mediaMessages->createImage(
+            $conversation,
+            $user,
+            $request->file('image'),
+            isset($validated['text']) ? (string) $validated['text'] : null,
+        );
+
+        return response()->json([
+            'message' => $this->toMessagePayload($message, $user),
+        ], 201);
     }
 
     private function storeGroupPost(Request $request, Conversation $conversation): JsonResponse
@@ -520,6 +550,24 @@ class ConversationController extends Controller
             'isOutgoing' => $senderUserId === (int) $viewer->id,
             'status' => $this->receiptStatus($message),
             'post' => $this->groupPosts->payload($message, $viewer),
+            ...$this->mediaPayload($message),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function mediaPayload(Message $message): array
+    {
+        if ($message->type !== MessageType::IMAGE) {
+            return [];
+        }
+
+        $metadata = is_array($message->metadata) ? $message->metadata : [];
+        $mediaPath = is_string($metadata['mediaPath'] ?? null) ? $metadata['mediaPath'] : null;
+
+        return [
+            'mediaUrl' => $mediaPath ? Storage::disk('public')->url($mediaPath) : null,
+            'fileName' => is_string($metadata['fileName'] ?? null) ? $metadata['fileName'] : null,
+            'mimeType' => is_string($metadata['mimeType'] ?? null) ? $metadata['mimeType'] : null,
         ];
     }
 
