@@ -34,6 +34,7 @@ type Props = {
   replyLabel?: string;
   onCancelReply?: () => void;
   onDraftBlur?: () => void;
+  onTypingActivity?: (active: boolean) => void;
 };
 
 export function ChatComposer({
@@ -50,6 +51,7 @@ export function ChatComposer({
   replyLabel,
   onCancelReply,
   onDraftBlur,
+  onTypingActivity,
 }: Props) {
   const { theme } = useGochaTheme();
   const { t } = useLanguage();
@@ -109,6 +111,7 @@ export function ChatComposer({
     if (!trimmed) {
       return;
     }
+    onTypingActivity?.(false);
     onSend?.(trimmed);
   }
 
@@ -256,10 +259,14 @@ export function ChatComposer({
           <View style={styles.inputWrap}>
             <TextInput
               value={value}
-              onChangeText={onChangeText}
+              onChangeText={(text) => {
+                onChangeText(text);
+                onTypingActivity?.(text.trim().length > 0);
+              }}
               onFocus={() => setFocused(true)}
               onBlur={() => {
                 setFocused(false);
+                onTypingActivity?.(false);
                 onDraftBlur?.();
               }}
               placeholder={t('chat.placeholder')}

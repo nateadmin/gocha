@@ -37,6 +37,9 @@ export type StringKey =
   | 'chat.showOriginal'
   | 'chat.showTranslation'
   | 'chat.placeholder'
+  | 'chat.typingOne'
+  | 'chat.typingTwo'
+  | 'chat.typingMany'
   | 'auth.tagline'
   | 'auth.signInNote'
   | 'auth.signUp'
@@ -108,6 +111,9 @@ const en: Dictionary = {
   'chat.showOriginal': 'Show original',
   'chat.showTranslation': 'Show translation',
   'chat.placeholder': 'Message',
+  'chat.typingOne': '{name} is typing',
+  'chat.typingTwo': '{name1} and {name2} are typing',
+  'chat.typingMany': 'Several people are typing',
   'auth.tagline': 'Connect. Catch up. Discover.',
   'auth.signInNote': 'Sign in with email or phone.',
   'auth.signUp': 'Sign up',

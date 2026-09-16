@@ -36,6 +36,7 @@ import {
   sameMessageList,
 } from './messageMapping';
 import {
+  loadChatTyping,
   loadConversation,
   loadConversationMessages,
   loadConversations,
@@ -47,10 +48,11 @@ import {
   postEmojiMessage,
   postGroupPost,
   postTextMessage,
+  signalChatTyping,
 } from './conversationApi';
 import type { GroupPostInput } from '../api/client';
 import { sendGochaAiMessage } from './gochaAiApi';
-import { isOrderAssistantChat } from './orderAssistant';
+import { isOrderAssistantChat, ORDER_ASSISTANT_DEFAULT_NAME } from './orderAssistant';
 import { useAuth } from '../context/AuthContext';
 import type {
   ChatFilterId,
@@ -132,6 +134,10 @@ type ChatContextValue = {
   ensureConversationLoaded: (chatId: string) => Promise<boolean>;
   ensureMessagesLoaded: (chatId: string) => Promise<void>;
   refreshMessagesForChat: (chatId: string) => Promise<void>;
+  refreshTypingForChat: (chatId: string) => Promise<void>;
+  signalComposerTyping: (chatId: string, active: boolean) => void;
+  isChatTyping: (chatId: string) => boolean;
+  typingLabelNames: (chatId: string) => string[];
   conversationsLoading: boolean;
   createBroadcast: (name: string) => string;
   sendTextMessage: (chatId: string, text: string, replyToId?: string) => void;
@@ -228,6 +234,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [activeFilter, setActiveFilter] = useState<ChatFilterId | string>('all');
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
+  const [remoteTyping, setRemoteTyping] = useState<Record<string, { userId: number; name: string }[]>>(
+    {},
+  );
+  const [assistantTyping, setAssistantTyping] = useState<Record<string, boolean>>({});
+  const typingDebounceRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const lastTypingSentRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     writeStoredChatPreferences(preferences);
@@ -440,6 +452,91 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
     },
     [applyServerMessages, user?.id],
+  );
+
+  const refreshTypingForChat = useCallback(async (chatId: string) => {
+    if (isOrderAssistantChat(chatId) || !/^\d+$/.test(chatId)) {
+      return;
+    }
+
+    try {
+      const typing = await loadChatTyping(chatId);
+      setRemoteTyping((prev) => ({ ...prev, [chatId]: typing }));
+    } catch {
+      // Transient failure; the next poll retries.
+    }
+  }, []);
+
+  const clearComposerTypingTimers = useCallback((chatId: string) => {
+    const debounce = typingDebounceRef.current.get(chatId);
+    if (debounce) {
+      clearTimeout(debounce);
+      typingDebounceRef.current.delete(chatId);
+    }
+  }, []);
+
+  const signalComposerTyping = useCallback(
+    (chatId: string, active: boolean) => {
+      if (isOrderAssistantChat(chatId) || !/^\d+$/.test(chatId)) {
+        return;
+      }
+
+      if (!active) {
+        clearComposerTypingTimers(chatId);
+        lastTypingSentRef.current.delete(chatId);
+        void signalChatTyping(chatId, false).catch(() => undefined);
+        return;
+      }
+
+      const now = Date.now();
+      const lastSent = lastTypingSentRef.current.get(chatId) ?? 0;
+      if (now - lastSent < 2500) {
+        return;
+      }
+
+      clearComposerTypingTimers(chatId);
+      typingDebounceRef.current.set(
+        chatId,
+        setTimeout(() => {
+          typingDebounceRef.current.delete(chatId);
+          lastTypingSentRef.current.set(chatId, Date.now());
+          void signalChatTyping(chatId, true).catch(() => undefined);
+        }, 300),
+      );
+    },
+    [clearComposerTypingTimers],
+  );
+
+  const setAssistantTypingForChat = useCallback((chatId: string, typing: boolean) => {
+    setAssistantTyping((prev) => {
+      if (!typing) {
+        if (!prev[chatId]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[chatId];
+        return next;
+      }
+
+      return { ...prev, [chatId]: true };
+    });
+  }, []);
+
+  const isChatTyping = useCallback(
+    (chatId: string) =>
+      Boolean(assistantTyping[chatId]) || (remoteTyping[chatId]?.length ?? 0) > 0,
+    [assistantTyping, remoteTyping],
+  );
+
+  const typingLabelNames = useCallback(
+    (chatId: string) => {
+      if (assistantTyping[chatId]) {
+        return [ORDER_ASSISTANT_DEFAULT_NAME];
+      }
+
+      return (remoteTyping[chatId] ?? []).map((entry) => entry.name);
+    },
+    [assistantTyping, remoteTyping],
   );
 
   const getChat = useCallback(
@@ -938,6 +1035,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         });
 
         const priorMessages = messagesRef.current[chatId] ?? [];
+        setAssistantTypingForChat(chatId, true);
         void sendGochaAiMessage(trimmed, priorMessages)
           .then((reply) => {
             appendMessage(chatId, {
@@ -958,6 +1056,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               sentAtMs: Date.now(),
               isOutgoing: false,
             });
+          })
+          .finally(() => {
+            setAssistantTypingForChat(chatId, false);
           });
         return;
       }
@@ -976,6 +1077,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      signalComposerTyping(chatId, false);
+
       deliverMessage(
         chatId,
         {
@@ -991,7 +1094,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         () => postTextMessage(chatId, trimmed, user?.id),
       );
     },
-    [appendMessage, deliverMessage, user?.id],
+    [appendMessage, deliverMessage, setAssistantTypingForChat, signalComposerTyping, user?.id],
   );
 
   const sendEmojiMessage = useCallback(
@@ -1253,6 +1356,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       ensureConversationLoaded,
       ensureMessagesLoaded,
       refreshMessagesForChat,
+      refreshTypingForChat,
+      signalComposerTyping,
+      isChatTyping,
+      typingLabelNames,
       conversationsLoading,
       createBroadcast,
       sendTextMessage,
@@ -1340,6 +1447,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       ensureConversationLoaded,
       ensureMessagesLoaded,
       refreshMessagesForChat,
+      refreshTypingForChat,
+      signalComposerTyping,
+      isChatTyping,
+      typingLabelNames,
       conversationsLoading,
       createBroadcast,
       sendTextMessage,

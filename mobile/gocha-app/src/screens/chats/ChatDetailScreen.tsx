@@ -15,13 +15,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar, HeaderOverflowMenu, UniversalLoader, type DropdownMenuItem } from '../../components/app';
-import { ActionSheet, ChatComposer, DurationPickerSheet, MessageBubble } from '../../components/chat';
+import {
+  ActionSheet,
+  ChatComposer,
+  DurationPickerSheet,
+  MessageBubble,
+  TypingIndicator,
+} from '../../components/chat';
 import { GroupPostComposer, type GroupPostKind } from '../../components/chat/GroupPostComposer';
 import { StatusRing } from '../../components/status/StatusRing';
 import { openStatusViewer } from '../../navigation/rootNavigation';
 import { statusRingTone } from '../../status/statusLogic';
 import type { ActionSheetItem } from '../../components/chat/ActionSheet';
 import { useChat } from '../../chat/ChatContext';
+import { formatTypingLabel } from '../../chat/typingLabel';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { ORDER_ASSISTANT_SUGGESTIONS } from '../../chat/orderAssistant';
 import type { ChatMessage } from '../../chat/types';
 import { copyText } from '../../utils/copyText';
@@ -34,6 +42,7 @@ export function ChatDetailScreen() {
     navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
   const route = useRoute<RouteProp<ChatsStackParamList, 'ChatDetail'>>();
   const { theme } = useGochaTheme();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const chatApi = useChat();
   const chatId = route.params.chatId;
@@ -90,6 +99,15 @@ export function ChatDetailScreen() {
     const interval = setInterval(() => {
       void chatApi.refreshMessagesForChat(chatId);
     }, 4000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]);
+
+  useEffect(() => {
+    void chatApi.refreshTypingForChat(chatId);
+    const interval = setInterval(() => {
+      void chatApi.refreshTypingForChat(chatId);
+    }, 2000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
@@ -163,6 +181,16 @@ export function ChatDetailScreen() {
         (message.text ?? '').toLowerCase().includes(searchQuery.trim().toLowerCase()),
       )
     : messages;
+  const showTypingIndicator = !searchOpen && chatApi.isChatTyping(chatId);
+  const typingLabel = showTypingIndicator
+    ? formatTypingLabel(chatApi.typingLabelNames(chatId), t)
+    : '';
+
+  useEffect(() => {
+    if (showTypingIndicator && !searchOpen) {
+      listRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [searchOpen, showTypingIndicator]);
 
   function handleSend(text?: string) {
     const message = (text ?? draft).trim();
@@ -424,6 +452,9 @@ export function ChatDetailScreen() {
             listRef.current?.scrollToEnd({ animated: false });
           }
         }}
+        ListFooterComponent={
+          showTypingIndicator ? <TypingIndicator label={typingLabel} /> : null
+        }
         renderItem={({ item }) => {
           const replySource = item.replyToId
             ? messages.find((message) => message.id === item.replyToId)
@@ -502,6 +533,7 @@ export function ChatDetailScreen() {
         value={draft}
         onChangeText={setDraft}
         onSend={handleSend}
+        onTypingActivity={(active) => chatApi.signalComposerTyping(chatId, active)}
         onDraftBlur={() => chatApi.setChatDraft(chatId, draftRef.current)}
         onSendEmoji={(emoji) => chatApi.sendEmojiMessage(chatId, emoji)}
         onSendSticker={(key) => chatApi.sendStickerMessage(chatId, key)}

@@ -1,6 +1,7 @@
 export { ChatListItem } from './ChatListItem';
 export { SwipeableChatListItem } from './SwipeableChatListItem';
 export { MessageBubble } from './MessageBubble';
+export { TypingIndicator } from './TypingIndicator';
 export { GroupPostComposer } from './GroupPostComposer';
 export { OfferCard, PollCard, RsvpCard } from './GroupPostCards';
 export { ChatComposer } from './ChatComposer';

@@ -4,11 +4,14 @@ import {
   createGroupConversation,
   fetchConversation,
   fetchConversationMessages,
+  fetchConversationTyping,
   fetchConversations,
   markConversationRead,
+  postConversationTyping,
   sendConversationMessage,
   sendGroupPost,
   type ConversationRecord,
+  type ConversationTypingUser,
   type GroupPostInput,
 } from '../api/client';
 import { mapMessageRecord } from './messageMapping';
@@ -169,4 +172,18 @@ export async function actOnGroupPost(
 
 export async function markChatReadOnServer(chatId: string): Promise<void> {
   await markConversationRead(Number(chatId));
+}
+
+export async function signalChatTyping(chatId: string, typing: boolean): Promise<void> {
+  if (!/^\d+$/.test(chatId)) {
+    return;
+  }
+  await postConversationTyping(Number(chatId), typing);
+}
+
+export async function loadChatTyping(chatId: string): Promise<ConversationTypingUser[]> {
+  if (!/^\d+$/.test(chatId)) {
+    return [];
+  }
+  return fetchConversationTyping(Number(chatId));
 }

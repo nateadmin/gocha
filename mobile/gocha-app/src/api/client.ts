@@ -860,6 +860,30 @@ export async function sendConversationMessage(
   return payload.message;
 }
 
+export type ConversationTypingUser = {
+  userId: number;
+  name: string;
+};
+
+export async function postConversationTyping(
+  conversationId: number,
+  typing: boolean,
+): Promise<void> {
+  await apiRequest<{ ok: boolean }>(API_PATHS.conversationTyping(conversationId), {
+    method: 'POST',
+    body: JSON.stringify({ typing }),
+  });
+}
+
+export async function fetchConversationTyping(
+  conversationId: number,
+): Promise<ConversationTypingUser[]> {
+  const payload = await apiRequest<{ typing: ConversationTypingUser[] }>(
+    API_PATHS.conversationTyping(conversationId),
+  );
+  return payload.typing;
+}
+
 export type GroupPostInput = {
   type: 'offer' | 'poll' | 'rsvp';
   title?: string;

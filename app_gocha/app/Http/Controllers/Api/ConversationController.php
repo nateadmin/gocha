@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Chat\ChatTypingService;
 use App\Services\Chat\GroupPostService;
 use App\Services\Locale\MessageTranslationService;
 use App\Services\Locale\TranslationBudget;
@@ -24,6 +25,7 @@ class ConversationController extends Controller
         private readonly MessageTranslationService $translations,
         private readonly StatusService $statuses,
         private readonly GroupPostService $groupPosts,
+        private readonly ChatTypingService $typing,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -218,6 +220,30 @@ class ConversationController extends Controller
         return response()->json([
             'message' => $this->toMessagePayload($message, $user),
         ], 201);
+    }
+
+    public function setTyping(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeParticipant($user, $conversation);
+
+        $validated = $request->validate([
+            'typing' => ['required', 'boolean'],
+        ]);
+
+        $this->typing->setTyping($conversation, $user, (bool) $validated['typing']);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function typing(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeParticipant($user, $conversation);
+
+        return response()->json([
+            'typing' => $this->typing->typingUsers($conversation, $user),
+        ]);
     }
 
     public function markRead(Request $request, Conversation $conversation): JsonResponse
