@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-09-16T13:53:26.528Z",
+  "routes": [
+    {
+      "name": "01-chats",
+      "path": "/ChatsTab/ChatsList"
+    },
+    {
+      "name": "02-catch-up",
+      "path": "/CatchUpTab"
+    },
+    {
+      "name": "03-discover",
+      "path": "/DiscoverTab"
+    },
+    {
+      "name": "04-settings",
+      "path": "/SettingsTab"
+    }
+  ]
+}

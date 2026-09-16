@@ -1,4 +1,11 @@
 {
   "name": "GochaApp",
-  "displayName": "Gocha"
+  "displayName": "Gocha",
+  "version": "1.0.0",
+  "android": {
+    "package": "com.gochaapp"
+  },
+  "ios": {
+    "bundleIdentifier": "com.gochaapp"
+  }
 }

@@ -1,0 +1,8 @@
+Welcome to Gocha 1.0.
+
+- Messaging with personal, group, and business chats
+- Gocha AI assistant in your inbox
+- AI Catch Up briefings
+- Discover groups and businesses
+- 24-hour statuses
+- Profile cards and multi-account support

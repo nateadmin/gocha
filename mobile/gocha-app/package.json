@@ -1,6 +1,6 @@
 {
   "name": "GochaApp",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -11,6 +11,9 @@
     "web:host": "vite --host 0.0.0.0",
     "build:web": "vite build && node ./web/flatten-dist.cjs",
     "preview:web": "vite preview",
+    "generate:store-assets": "./scripts/generate-store-assets.sh",
+    "android:bundle": "./scripts/build-android-release.sh",
+    "capture:store-screenshots": "node ./scripts/capture-store-screenshots.mjs",
     "test": "jest"
   },
   "dependencies": {

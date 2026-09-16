@@ -83,7 +83,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
     }
     signingConfigs {
         debug {
@@ -92,15 +92,27 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            def keystorePath = System.getenv("GOCHA_ANDROID_KEYSTORE")
+            def keystorePassword = System.getenv("GOCHA_ANDROID_KEYSTORE_PASSWORD")
+            def keyAlias = System.getenv("GOCHA_ANDROID_KEY_ALIAS") ?: "gocha-upload"
+            def keyPassword = System.getenv("GOCHA_ANDROID_KEY_PASSWORD") ?: keystorePassword
+
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias keyAlias
+                keyPassword keyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            def releaseSigning = signingConfigs.release
+            signingConfig releaseSigning.storeFile != null ? releaseSigning : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }

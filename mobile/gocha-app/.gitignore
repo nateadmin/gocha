@@ -28,6 +28,9 @@ build/
 .idea
 .gradle
 local.properties
+keystore.properties
+gocha-upload.keystore
+*.jks
 *.iml
 *.hprof
 .cxx/

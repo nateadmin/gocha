@@ -34,8 +34,14 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Gocha uses the camera so you can take photos for chat messages and status updates.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Gocha uses the microphone so you can record voice messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Gocha uses your photo library so you can attach images and videos in chats and statuses.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>Gocha uses your location to suggest nearby places when you add a business address.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

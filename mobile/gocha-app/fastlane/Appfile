@@ -1,0 +1,10 @@
+# Android
+package_name("com.gochaapp")
+
+# iOS — set after creating the App Store Connect app record
+# app_identifier("com.gochaapp")
+# apple_id("YOUR_APPLE_ID_EMAIL")
+# team_id("YOUR_APPLE_TEAM_ID")
+
+# Itc team id for App Store Connect API uploads (optional)
+# itc_team_id("YOUR_ASC_TEAM_ID")

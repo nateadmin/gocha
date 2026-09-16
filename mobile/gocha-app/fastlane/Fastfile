@@ -1,0 +1,51 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build a release Android App Bundle"
+  lane :bundle do
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "android"
+    )
+  end
+
+  desc "Upload metadata and AAB to Google Play (internal track)"
+  lane :upload_internal do
+    upload_to_play_store(
+      track: "internal",
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      metadata_path: "fastlane/metadata",
+      skip_upload_images: false,
+      skip_upload_screenshots: false,
+      json_key: ENV["GOCHA_PLAY_SERVICE_ACCOUNT_JSON"]
+    )
+  end
+end
+
+platform :ios do
+  desc "Build an App Store IPA (requires macOS + signing)"
+  lane :build do
+    build_app(
+      workspace: "ios/GochaApp.xcworkspace",
+      scheme: "GochaApp",
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: {
+          "com.gochaapp" => ENV.fetch("GOCHA_IOS_APPSTORE_PROFILE")
+        }
+      }
+    )
+  end
+
+  desc "Upload metadata and build to App Store Connect"
+  lane :release do
+    deliver(
+      metadata_path: "store/apple-app-store/metadata",
+      screenshots_path: "store/apple-app-store/screenshots",
+      submit_for_review: false,
+      automatic_release: false,
+      skip_binary_upload: true
+    )
+  end
+end

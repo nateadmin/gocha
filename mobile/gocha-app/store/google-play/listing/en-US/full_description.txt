@@ -1,0 +1,24 @@
+Gocha is your mobile-first super app for messaging, AI-powered catch-up, and local discovery.
+
+CHAT WITH PEOPLE AND BUSINESSES
+Message friends, groups, and businesses in one inbox. Pin important threads, filter unread chats, and stay organized with lists and labels.
+
+GOCHA AI
+Your built-in assistant helps you plan, write, and get things done without leaving the app.
+
+CATCH UP
+AI briefings summarize what matters across your conversations so you can reply faster.
+
+DISCOVER
+Find nearby groups and local businesses. Explore menus, offers, and community posts.
+
+STATUSES
+Share text, photo, and video updates that disappear after 24 hours.
+
+PROFILE CARDS
+Create professional, match, and custom profile cards you control.
+
+ACCOUNT AND PRIVACY
+Sign in with email or phone. Switch accounts, manage your language, and control how you appear to others.
+
+Gocha runs on https://app.gocha.ai with the same experience on web and mobile.
