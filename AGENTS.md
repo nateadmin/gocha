@@ -47,4 +47,4 @@ Pull, test, commit, push, deploy with `scripts/deploy-to-contabo.sh`, then run p
 
 ## Branding
 
-Neon Cyber theme in `mobile/gocha-app/src/theme/`. Primary `#1B00D8`, dark default. Logo: `mobile/gocha-app/assets/branding/logo.jpg`.
+Neon Cyber theme in `mobile/gocha-app/src/theme/`. Primary `#1B00D8`, dark default. Logo: `mobile/gocha-app/assets/branding/Logo.jpeg`. Store release kit: `mobile/gocha-app/store/README.md`.

@@ -68,4 +68,17 @@ npm run ios
 
 ## API config
 
-Planned host: `https://app.gocha.ai` in `src/config/api.ts`.
+Production host: `https://app.gocha.ai` in `src/config/api.ts`.
+
+## App Store and Google Play
+
+Store listing copy, graphics, screenshots, privacy notes, and release scripts live in `store/`. Start with `store/README.md`.
+
+```bash
+./scripts/generate-store-assets.sh   # icons + Play graphics from Logo.jpeg
+npm run build:web
+npm run capture:store-screenshots    # optional; refresh screenshots
+./scripts/build-android-release.sh   # signed AAB (needs upload keystore)
+```
+
+iOS archives require macOS/Xcode. See `store/README.md` and `ios/ExportOptions.plist`.
