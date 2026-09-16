@@ -76,9 +76,9 @@ export function previewForMessage(message: ChatMessage): string {
     case 'voice':
       return `Voice message (${message.durationSec ?? 0}s)`;
     case 'video':
-      return 'Video';
+      return message.text?.trim() ? message.text.trim() : 'Video';
     case 'image':
-      return 'Photo';
+      return message.text?.trim() ? message.text.trim() : 'Photo';
     case 'file':
       return message.fileName ?? 'File';
     case 'sticker':

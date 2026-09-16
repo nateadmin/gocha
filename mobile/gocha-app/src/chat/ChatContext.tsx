@@ -162,7 +162,7 @@ type ChatContextValue = {
   sendMediaMessage: (
     chatId: string,
     type: 'image' | 'video' | 'file',
-    media?: { fileName?: string; mediaUrl?: string; mimeType?: string },
+    media?: { fileName?: string; mediaUrl?: string; mimeType?: string; text?: string },
   ) => void;
   sendGroupPost: (chatId: string, input: GroupPostInput) => Promise<void>;
   actOnMessage: (
@@ -1294,12 +1294,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     (
       chatId: string,
       type: MessageType,
-      media?: { fileName?: string; mediaUrl?: string; mimeType?: string },
+      media?: { fileName?: string; mediaUrl?: string; mimeType?: string; text?: string },
     ) => {
       if (type !== 'image' && type !== 'video' && type !== 'file') return;
       appendMessage(chatId, {
         id: `m-${Date.now()}`,
         type,
+        text: media?.text,
         fileName: media?.fileName,
         mediaUrl: media?.mediaUrl,
         mimeType: media?.mimeType,

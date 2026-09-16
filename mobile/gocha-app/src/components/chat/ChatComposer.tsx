@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Image,
+  Text,
   View,
   TextInput,
   Pressable,
@@ -20,16 +22,25 @@ import { useGochaTheme } from '../../theme';
 
 type Panel = 'none' | 'sticker' | 'voice';
 
+export type ComposerAttachmentKind = 'image' | 'video' | 'file';
+
+export type ComposerAttachment = {
+  kind: ComposerAttachmentKind;
+  media: PickedMedia;
+};
+
+export type ComposerSendPayload = {
+  text: string;
+  attachment?: ComposerAttachment;
+};
+
 type Props = {
   value: string;
   onChangeText: (text: string) => void;
-  onSend?: (text: string) => void;
+  onSend?: (payload: ComposerSendPayload) => void;
   onSendEmoji?: (emoji: string) => void;
   onSendSticker?: (key: string) => void;
   onSendVoice?: (voice: RecordedVoice) => void;
-  onAttachImage?: (media: PickedMedia) => void;
-  onAttachVideo?: (media: PickedMedia) => void;
-  onAttachFile?: (media: PickedMedia) => void;
   onOpenGroupPosts?: () => void;
   replyLabel?: string;
   onCancelReply?: () => void;
@@ -44,9 +55,6 @@ export function ChatComposer({
   onSendEmoji,
   onSendSticker,
   onSendVoice,
-  onAttachImage,
-  onAttachVideo,
-  onAttachFile,
   onOpenGroupPosts,
   replyLabel,
   onCancelReply,
@@ -58,11 +66,16 @@ export function ChatComposer({
   const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState(false);
   const [panel, setPanel] = useState<Panel>('none');
+  const [pendingAttachment, setPendingAttachment] = useState<ComposerAttachment | null>(null);
   const lastPasteAt = useRef(0);
+
+  const stageAttachment = useCallback((kind: ComposerAttachmentKind, media: PickedMedia) => {
+    setPendingAttachment({ kind, media });
+  }, []);
 
   const attachPastedImages = useCallback(
     (files: File[]) => {
-      if (!onAttachImage || files.length === 0) {
+      if (files.length === 0) {
         return false;
       }
       const now = Date.now();
@@ -70,12 +83,11 @@ export function ChatComposer({
         return true;
       }
       lastPasteAt.current = now;
-      files.forEach((file) => {
-        onAttachImage(pickedMediaFromImageFile(file));
-      });
+      const file = files[files.length - 1];
+      stageAttachment('image', pickedMediaFromImageFile(file));
       return true;
     },
-    [onAttachImage],
+    [stageAttachment],
   );
 
   useEffect(() => {
@@ -108,12 +120,19 @@ export function ChatComposer({
 
   function submitMessage() {
     const trimmed = value.trim();
-    if (!trimmed) {
+    if (!trimmed && !pendingAttachment) {
       return;
     }
     onTypingActivity?.(false);
-    onSend?.(trimmed);
+    onSend?.({
+      text: trimmed,
+      attachment: pendingAttachment ?? undefined,
+    });
+    onChangeText('');
+    setPendingAttachment(null);
   }
+
+  const canSend = Boolean(value.trim() || pendingAttachment);
 
   const webSendButtonStyle =
     Platform.OS === 'web'
@@ -136,7 +155,7 @@ export function ChatComposer({
     setPanel('none');
     const media = await pickCameraPhoto();
     if (media) {
-      onAttachImage?.(media);
+      stageAttachment('image', media);
     }
   }
 
@@ -148,16 +167,16 @@ export function ChatComposer({
     }
 
     if (media.mimeType.startsWith('image/')) {
-      onAttachImage?.(media);
+      stageAttachment('image', media);
       return;
     }
 
     if (media.mimeType.startsWith('video/')) {
-      onAttachVideo?.(media);
+      stageAttachment('video', media);
       return;
     }
 
-    onAttachFile?.(media);
+    stageAttachment('file', media);
   }
 
   if (panel === 'voice') {
@@ -212,6 +231,71 @@ export function ChatComposer({
             setPanel('none');
           }}
         />
+      ) : null}
+
+      {pendingAttachment ? (
+        <View
+          style={[
+            styles.attachmentBar,
+            {
+              backgroundColor: theme.colors.muted,
+              borderTopColor: theme.colors.border,
+            },
+          ]}>
+          {pendingAttachment.kind === 'image' ? (
+            <Image
+              source={{ uri: pendingAttachment.media.uri }}
+              style={styles.attachmentThumb}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={[
+                styles.attachmentThumb,
+                styles.attachmentIconWrap,
+                { backgroundColor: theme.colors.card },
+              ]}>
+              <Ionicons
+                name={pendingAttachment.kind === 'video' ? 'videocam-outline' : 'document-outline'}
+                size={22}
+                color={theme.colors.primary}
+              />
+            </View>
+          )}
+          <View style={styles.attachmentMeta}>
+            <Text
+              numberOfLines={1}
+              style={{
+                color: theme.colors.cardForeground,
+                fontFamily: theme.typography.sans,
+                fontSize: 14,
+                fontWeight: '600',
+              }}>
+              {pendingAttachment.kind === 'image'
+                ? 'Photo'
+                : pendingAttachment.kind === 'video'
+                  ? 'Video'
+                  : 'File'}
+            </Text>
+            <Text
+              numberOfLines={1}
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.typography.sans,
+                fontSize: 12,
+                marginTop: 2,
+              }}>
+              {pendingAttachment.media.fileName}
+            </Text>
+          </View>
+          <Pressable
+            hitSlop={8}
+            accessibilityLabel="Remove attachment"
+            onPress={() => setPendingAttachment(null)}
+            style={[styles.outsideAction, webActionStyle]}>
+            <Ionicons name="close-circle" size={22} color={theme.colors.mutedForeground} />
+          </Pressable>
+        </View>
       ) : null}
 
       <View
@@ -319,7 +403,7 @@ export function ChatComposer({
           </Pressable>
         </View>
 
-        {value.trim() ? (
+        {canSend ? (
           Platform.OS === 'web' ? (
             <button
               type="button"
@@ -408,6 +492,28 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   replyTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  attachmentBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    width: '100%',
+  },
+  attachmentThumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+  },
+  attachmentIconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentMeta: {
     flex: 1,
     minWidth: 0,
   },

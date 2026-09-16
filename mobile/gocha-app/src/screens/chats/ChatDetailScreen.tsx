@@ -19,6 +19,7 @@ import {
   ActionSheet,
   ChatComposer,
   DurationPickerSheet,
+  type ComposerSendPayload,
   MessageBubble,
   TypingIndicator,
 } from '../../components/chat';
@@ -196,8 +197,24 @@ export function ChatDetailScreen() {
     }
   }, [searchOpen, showTypingIndicator]);
 
-  function handleSend(text?: string) {
-    const message = (text ?? draft).trim();
+  function handleSend(payload: string | ComposerSendPayload) {
+    const normalized =
+      typeof payload === 'string' ? { text: payload } : payload;
+    const message = (normalized.text ?? draft).trim();
+
+    if (normalized.attachment) {
+      chatApi.sendMediaMessage(chatId, normalized.attachment.kind, {
+        fileName: normalized.attachment.media.fileName,
+        mediaUrl: normalized.attachment.media.uri,
+        mimeType: normalized.attachment.media.mimeType,
+        text: message || undefined,
+      });
+      chatApi.clearChatDraft(chatId);
+      setDraft('');
+      setReplyTo(null);
+      return;
+    }
+
     if (!message) return;
     chatApi.sendTextMessage(chatId, message, replyTo?.id);
     chatApi.clearChatDraft(chatId);
@@ -546,27 +563,6 @@ export function ChatDetailScreen() {
         onSendEmoji={(emoji) => chatApi.sendEmojiMessage(chatId, emoji)}
         onSendSticker={(key) => chatApi.sendStickerMessage(chatId, key)}
         onSendVoice={(voice) => chatApi.sendVoiceMessage(chatId, voice)}
-        onAttachImage={(media) =>
-          chatApi.sendMediaMessage(chatId, 'image', {
-            fileName: media.fileName,
-            mediaUrl: media.uri,
-            mimeType: media.mimeType,
-          })
-        }
-        onAttachVideo={(media) =>
-          chatApi.sendMediaMessage(chatId, 'video', {
-            fileName: media.fileName,
-            mediaUrl: media.uri,
-            mimeType: media.mimeType,
-          })
-        }
-        onAttachFile={(media) =>
-          chatApi.sendMediaMessage(chatId, 'file', {
-            fileName: media.fileName,
-            mediaUrl: media.uri,
-            mimeType: media.mimeType,
-          })
-        }
         onOpenGroupPosts={chat.isGroup ? () => setPostMenuOpen(true) : undefined}
         replyLabel={replyTo?.text ?? replyTo?.stickerKey}
         onCancelReply={() => setReplyTo(null)}

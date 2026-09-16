@@ -4,7 +4,12 @@ export { MessageBubble } from './MessageBubble';
 export { TypingIndicator } from './TypingIndicator';
 export { GroupPostComposer } from './GroupPostComposer';
 export { OfferCard, PollCard, RsvpCard } from './GroupPostCards';
-export { ChatComposer } from './ChatComposer';
+export {
+  ChatComposer,
+  type ComposerAttachment,
+  type ComposerAttachmentKind,
+  type ComposerSendPayload,
+} from './ChatComposer';
 export { ActionSheet } from './ActionSheet';
 export { ChatFilterBar } from './ChatFilterBar';
 export { GlobalSearchResults } from './GlobalSearchResults';

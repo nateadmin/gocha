@@ -75,15 +75,41 @@ export function MessageBubble({ message, replyPreview, onLongPress, showSender, 
             <Text style={{ color: theme.colors.primaryForeground, fontSize: 13 }}>Video</Text>
           </View>
         );
-      case 'image':
+      case 'image': {
+        const caption = message.text?.trim();
         if (message.mediaUrl) {
           return (
-            <Image
-              accessibilityLabel={message.fileName ?? 'Photo'}
-              source={{ uri: message.mediaUrl }}
-              style={styles.mediaImage}
-              resizeMode="cover"
-            />
+            <View style={styles.mediaCard}>
+              <Image
+                accessibilityLabel={message.fileName ?? 'Photo'}
+                source={{ uri: message.mediaUrl }}
+                style={[styles.mediaImage, caption ? styles.mediaImageWithCaption : null]}
+                resizeMode="cover"
+              />
+              {caption ? (
+                <View
+                  style={[
+                    styles.mediaCaption,
+                    {
+                      backgroundColor: outgoing
+                        ? theme.colors.primary
+                        : theme.colors.muted,
+                    },
+                  ]}>
+                  <Text
+                    style={{
+                      color: outgoing
+                        ? theme.colors.primaryForeground
+                        : theme.colors.cardForeground,
+                      fontFamily: theme.typography.sans,
+                      fontSize: 15,
+                      lineHeight: 21,
+                    }}>
+                    {caption}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           );
         }
         return (
@@ -92,6 +118,7 @@ export function MessageBubble({ message, replyPreview, onLongPress, showSender, 
             <Text style={{ color: theme.colors.primaryForeground, fontSize: 13 }}>Photo</Text>
           </View>
         );
+      }
       case 'file':
         return (
           <View style={styles.fileRow}>
@@ -309,12 +336,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B00D8',
     borderRadius: 12,
   },
+  mediaCard: {
+    overflow: 'hidden',
+    borderRadius: 12,
+    maxWidth: '100%',
+  },
   mediaImage: {
     width: 220,
     maxWidth: '100%',
     height: 220,
     borderRadius: 12,
     backgroundColor: '#1B00D8',
+  },
+  mediaImageWithCaption: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  mediaCaption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   fileRow: {
     flexDirection: 'row',
