@@ -209,6 +209,15 @@ export function SettingsScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable
+          onPress={() => navigation.navigate('DisappearingMessagesSettings')}
+          style={styles.linkRow}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Disappearing messages
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <Pressable onPress={() => navigation.navigate('HiddenChats')} style={styles.linkRow}>
           <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
             Hidden chats

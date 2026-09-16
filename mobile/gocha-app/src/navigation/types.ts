@@ -58,4 +58,5 @@ export type SettingsStackParamList = {
   EditProfileCard: { cardId?: number; type?: ProfileCardType } | undefined;
   ProfileCardRequests: undefined;
   StatusSettings: undefined;
+  DisappearingMessagesSettings: undefined;
 };

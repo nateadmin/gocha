@@ -10,6 +10,12 @@ import {
 } from 'react';
 
 import {
+  readStoredDisappearingOverrides,
+  setStoredDisappearingOverride,
+  writeStoredDisappearingOverrides,
+  withDisappearingOverrides,
+} from './chatDisappearingStore';
+import {
   readStoredChatLabels,
   readStoredChatLists,
   readStoredChatPreferences,
@@ -17,6 +23,11 @@ import {
   writeStoredChatLists,
   writeStoredChatPreferences,
 } from './chatPreferencesStore';
+import {
+  applyDisappearingToMessage,
+  effectiveDisappearingTimerForChat,
+  filterExpiredMessages,
+} from './disappearingMessages';
 import {
   readStoredChatDrafts,
   removeStoredChatDraft,
@@ -167,7 +178,9 @@ type ChatContextValue = {
   deleteMessage: (chatId: string, messageId: string, forEveryone?: boolean) => void;
   starMessage: (chatId: string, messageId: string) => void;
   unstarMessage: (chatId: string, messageId: string) => void;
-  setDisappearingTimer: (chatId: string, seconds: number | null) => void;
+  setDefaultDisappearingTimer: (seconds: number | null) => void;
+  setDisappearingTimer: (chatId: string, seconds: number | null | 'inherit') => void;
+  getEffectiveDisappearingTimer: (chatId: string) => number | null;
   toggleSecretChat: (chatId: string) => void;
   emojiGrid: string[];
   stickerEmoji: Record<string, string>;
@@ -223,7 +236,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [lists, setLists] = useState<ChatList[]>(() => readStoredChatLists());
   const [labels, setLabels] = useState<ChatLabel[]>(() => readStoredChatLabels());
   const [preferences, setPreferences] = useState<ChatPreferences>(() => readStoredChatPreferences());
+  const [disappearingOverrides, setDisappearingOverrides] = useState(() =>
+    readStoredDisappearingOverrides(),
+  );
   const [drafts, setDrafts] = useState<Record<string, ChatDraft>>(() => readStoredChatDrafts());
+  const [expiryTick, setExpiryTick] = useState(() => Date.now());
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const loadedMessageChatsRef = useRef<Set<string>>(new Set());
   const messageLoadPromisesRef = useRef<Map<string, Promise<void>>>(new Map());
@@ -245,6 +262,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     writeStoredChatPreferences(preferences);
   }, [preferences]);
+
+  useEffect(() => {
+    writeStoredDisappearingOverrides(disappearingOverrides);
+  }, [disappearingOverrides]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setExpiryTick(Date.now());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     writeStoredChatLists(lists);
@@ -540,18 +568,55 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [assistantTyping, remoteTyping],
   );
 
+  const resolvedChats = useMemo(
+    () => withDisappearingOverrides(chats, disappearingOverrides),
+    [chats, disappearingOverrides],
+  );
+
   const getChat = useCallback(
-    (chatId: string) => chats.find((chat) => chat.id === chatId),
-    [chats],
+    (chatId: string) => resolvedChats.find((chat) => chat.id === chatId),
+    [resolvedChats],
+  );
+
+  const getEffectiveDisappearingTimer = useCallback(
+    (chatId: string) =>
+      effectiveDisappearingTimerForChat(
+        getChat(chatId),
+        preferences.defaultDisappearingTimerSec,
+      ),
+    [getChat, preferences.defaultDisappearingTimerSec],
+  );
+
+  const decorateOutgoingMessage = useCallback(
+    (chatId: string, message: ChatMessage): ChatMessage => {
+      const timerSec = getEffectiveDisappearingTimer(chatId);
+      return applyDisappearingToMessage(message, timerSec);
+    },
+    [getEffectiveDisappearingTimer],
   );
 
   const messagesFor = useCallback(
-    (chatId: string) => messages[chatId] ?? [],
-    [messages],
+    (chatId: string) => filterExpiredMessages(messages[chatId] ?? [], expiryTick),
+    [expiryTick, messages],
   );
 
+  useEffect(() => {
+    setMessages((prev) => {
+      let changed = false;
+      const next: Record<string, ChatMessage[]> = {};
+      for (const [chatId, records] of Object.entries(prev)) {
+        const filtered = filterExpiredMessages(records, expiryTick);
+        next[chatId] = filtered;
+        if (filtered.length !== records.length) {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [expiryTick]);
+
   const sortedChats = useMemo(() => {
-    return [...chats].sort((a, b) => {
+    return [...resolvedChats].sort((a, b) => {
       if (isOrderAssistantChat(a.id)) return -1;
       if (isOrderAssistantChat(b.id)) return 1;
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -566,7 +631,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       return b.lastActivityAt - a.lastActivityAt;
     });
-  }, [chats, drafts]);
+  }, [drafts, resolvedChats]);
 
   const filteredChats = useMemo(() => {
     let pool = sortedChats.filter((chat) => !chat.hidden && !chat.archived && !chat.blocked);
@@ -805,6 +870,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setPreferences((prev) => ({ ...prev, chatLockPin: pin }));
   }, []);
 
+  const setDefaultDisappearingTimer = useCallback((seconds: number | null) => {
+    setPreferences((prev) => ({ ...prev, defaultDisappearingTimerSec: seconds }));
+  }, []);
+
   const verifyHiddenPin = useCallback(
     (pin: string) => Boolean(preferences.hiddenChatsPin && preferences.hiddenChatsPin === pin),
     [preferences.hiddenChatsPin],
@@ -960,18 +1029,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const appendMessage = useCallback(
     (chatId: string, message: ChatMessage) => {
+      const storedMessage = message.isOutgoing ? decorateOutgoingMessage(chatId, message) : message;
       setMessages((prev) => ({
         ...prev,
-        [chatId]: [...(prev[chatId] ?? []), message],
+        [chatId]: [...(prev[chatId] ?? []), storedMessage],
       }));
       updateChat(chatId, {
-        preview: listPreviewForMessage(message),
+        preview: listPreviewForMessage(storedMessage),
         dateLabel: activityDateLabel(),
         lastActivityAt: Date.now(),
-        ...(message.isOutgoing ? { unreadCount: 0 } : {}),
+        ...(storedMessage.isOutgoing ? { unreadCount: 0 } : {}),
       });
     },
-    [updateChat],
+    [decorateOutgoingMessage, updateChat],
   );
 
   /**
@@ -1282,12 +1352,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const setDisappearingTimer = useCallback(
-    (chatId: string, seconds: number | null) => {
-      updateChat(chatId, { disappearingTimerSec: seconds });
-    },
-    [updateChat],
-  );
+  const setDisappearingTimer = useCallback((chatId: string, seconds: number | null | 'inherit') => {
+    setDisappearingOverrides((prev) => setStoredDisappearingOverride(prev, chatId, seconds));
+  }, []);
 
   const toggleSecretChat = useCallback(
     (chatId: string) => {
@@ -1387,7 +1454,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       deleteMessage,
       starMessage,
       unstarMessage,
+      setDefaultDisappearingTimer,
       setDisappearingTimer,
+      getEffectiveDisappearingTimer,
       toggleSecretChat,
       emojiGrid: EMOJI_GRID,
       stickerEmoji: STICKER_EMOJI,
@@ -1478,7 +1547,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       deleteMessage,
       starMessage,
       unstarMessage,
+      setDefaultDisappearingTimer,
       setDisappearingTimer,
+      getEffectiveDisappearingTimer,
       toggleSecretChat,
     ],
   );

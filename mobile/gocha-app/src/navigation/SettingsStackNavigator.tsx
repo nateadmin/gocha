@@ -18,6 +18,7 @@ import { ProfileCardsScreen } from '../screens/settings/ProfileCardsScreen';
 import { AddProfileCardScreen } from '../screens/settings/AddProfileCardScreen';
 import { EditProfileCardScreen } from '../screens/settings/EditProfileCardScreen';
 import { ProfileCardRequestsScreen } from '../screens/settings/ProfileCardRequestsScreen';
+import { DisappearingMessagesSettingsScreen } from '../screens/settings/DisappearingMessagesSettingsScreen';
 import { StatusSettingsScreen } from '../screens/settings/StatusSettingsScreen';
 import type { SettingsStackParamList } from './types';
 
@@ -45,6 +46,10 @@ export function SettingsStackNavigator() {
       <Stack.Screen name="EditProfileCard" component={EditProfileCardScreen} />
       <Stack.Screen name="ProfileCardRequests" component={ProfileCardRequestsScreen} />
       <Stack.Screen name="StatusSettings" component={StatusSettingsScreen} />
+      <Stack.Screen
+        name="DisappearingMessagesSettings"
+        component={DisappearingMessagesSettingsScreen}
+      />
     </Stack.Navigator>
   );
 }

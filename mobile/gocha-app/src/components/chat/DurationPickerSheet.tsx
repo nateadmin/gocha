@@ -21,13 +21,17 @@ const DEFAULT_PRESETS: DurationPreset[] = [
 
 type CustomUnit = 'seconds' | 'minutes' | 'hours' | 'days';
 
+export type DurationSelection = number | null | 'inherit';
+
 type Props = {
   visible: boolean;
   title: string;
   presets?: DurationPreset[];
   showOff?: boolean;
   offLabel?: string;
-  onSelect: (seconds: number | null) => void;
+  showInherit?: boolean;
+  inheritLabel?: string;
+  onSelect: (selection: DurationSelection) => void;
   onClose: () => void;
 };
 
@@ -37,6 +41,8 @@ export function DurationPickerSheet({
   presets = DEFAULT_PRESETS,
   showOff = false,
   offLabel = 'Off',
+  showInherit = false,
+  inheritLabel = 'Use account default',
   onSelect,
   onClose,
 }: Props) {
@@ -90,6 +96,23 @@ export function DurationPickerSheet({
           </Text>
 
           <ScrollView style={styles.presetList}>
+            {showInherit ? (
+              <Pressable
+                onPress={() => {
+                  onSelect('inherit');
+                  onClose();
+                }}
+                style={[styles.row, { borderBottomColor: theme.colors.border }]}>
+                <Text
+                  style={{
+                    color: theme.colors.cardForeground,
+                    fontFamily: theme.typography.sans,
+                    fontSize: 16,
+                  }}>
+                  {inheritLabel}
+                </Text>
+              </Pressable>
+            ) : null}
             {showOff ? (
               <Pressable
                 onPress={() => {

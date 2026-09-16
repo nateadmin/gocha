@@ -16,6 +16,7 @@ export const DEFAULT_CHAT_PREFERENCES: ChatPreferences = {
   hiddenChatsPin: null,
   chatLockPin: null,
   showArchived: true,
+  defaultDisappearingTimerSec: null,
 };
 
 export function readStoredChatPreferences(): ChatPreferences {

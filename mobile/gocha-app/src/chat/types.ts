@@ -80,6 +80,7 @@ export type ChatMessage = {
   durationSec?: number;
   sentAt: string;
   sentAtMs?: number;
+  expiresAtMs?: number;
   isOutgoing: boolean;
   status?: MessageStatus;
   replyToId?: string;
@@ -120,7 +121,8 @@ export type ChatRecord = {
   isSecret: boolean;
   listIds: string[];
   labelIds: string[];
-  disappearingTimerSec?: number | null;
+  /** undefined = inherit account default; null = off; number = custom seconds */
+  disappearingOverride?: number | null;
   otherUserId?: number;
   hasStatus?: boolean;
   statusUnseen?: boolean;
@@ -155,6 +157,8 @@ export type ChatPreferences = {
   hiddenChatsPin: string | null;
   chatLockPin: string | null;
   showArchived: boolean;
+  /** null = off; number = default timer for new chats */
+  defaultDisappearingTimerSec: number | null;
 };
 
 export type ComposerMode = 'text' | 'voice' | 'sticker' | 'emoji';

@@ -18,7 +18,9 @@ import { StatusRing } from '../../components/status/StatusRing';
 import { openStatusViewer } from '../../navigation/rootNavigation';
 import { statusRingTone } from '../../status/statusLogic';
 import { ProfileCardTile } from '../../components/profileCards/ProfileCardTile';
+import { DurationPickerSheet } from '../../components/chat/DurationPickerSheet';
 import { useChat } from '../../chat/ChatContext';
+import { disappearingSettingSummary } from '../../chat/disappearingMessages';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 import { useGochaTheme } from '../../theme';
 
@@ -39,6 +41,7 @@ export function ChatInfoScreen() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [hasStatus, setHasStatus] = useState(false);
   const [statusUnseen, setStatusUnseen] = useState(false);
+  const [disappearPickerOpen, setDisappearPickerOpen] = useState(false);
 
   const otherUserId = chat?.otherUserId;
 
@@ -176,6 +179,57 @@ export function ChatInfoScreen() {
         </View>
       </View>
 
+      <Text style={[styles.section, { color: theme.colors.mutedForeground, marginTop: 8 }]}>
+        CHAT SETTINGS
+      </Text>
+      <View
+        style={[
+          styles.settingsCard,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <Pressable onPress={() => setDisappearPickerOpen(true)} style={styles.settingsRow}>
+          <View style={styles.settingsIcon}>
+            <Ionicons name="timer-outline" size={20} color={theme.colors.cardForeground} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+              Disappearing messages
+            </Text>
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.typography.sans,
+                fontSize: 13,
+                marginTop: 4,
+              }}>
+              {disappearingSettingSummary(
+                chat.disappearingOverride,
+                chatApi.preferences.defaultDisappearingTimerSec,
+              )}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+      </View>
+
+      <DurationPickerSheet
+        visible={disappearPickerOpen}
+        title="Disappearing messages"
+        showInherit
+        inheritLabel={disappearingSettingSummary(
+          undefined,
+          chatApi.preferences.defaultDisappearingTimerSec,
+        )}
+        showOff
+        offLabel="Turn off for this chat"
+        onClose={() => setDisappearPickerOpen(false)}
+        onSelect={(selection) => chatApi.setDisappearingTimer(chat.id, selection)}
+      />
+
       {otherUserId ? (
         <>
           <Text style={[styles.section, { color: theme.colors.mutedForeground }]}>AVAILABLE PROFILES</Text>
@@ -220,5 +274,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.6,
     marginBottom: 12,
+  },
+  settingsCard: {
+    borderWidth: 1,
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  settingsIcon: {
+    width: 28,
+    alignItems: 'center',
   },
 });

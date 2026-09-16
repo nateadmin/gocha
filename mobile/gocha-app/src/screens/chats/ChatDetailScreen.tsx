@@ -28,6 +28,10 @@ import { openStatusViewer } from '../../navigation/rootNavigation';
 import { statusRingTone } from '../../status/statusLogic';
 import type { ActionSheetItem } from '../../components/chat/ActionSheet';
 import { useChat } from '../../chat/ChatContext';
+import {
+  disappearingSettingSummary,
+  formatDurationLabelShort,
+} from '../../chat/disappearingMessages';
 import { formatTypingLabel } from '../../chat/typingLabel';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { ORDER_ASSISTANT_SUGGESTIONS } from '../../chat/orderAssistant';
@@ -274,9 +278,13 @@ export function ChatDetailScreen() {
         },
     {
       id: 'disappear',
-      label: chat.disappearingTimerSec
-        ? `Disappearing: ${formatDurationLabel(chat.disappearingTimerSec)}`
-        : 'Disappearing messages',
+      label: (() => {
+        const effective = chatApi.getEffectiveDisappearingTimer(chat.id);
+        if (effective) {
+          return `Disappearing: ${formatDurationLabelShort(effective)}`;
+        }
+        return `Disappearing: ${disappearingSettingSummary(chat.disappearingOverride, chatApi.preferences.defaultDisappearingTimerSec)}`;
+      })(),
       icon: 'timer-outline',
       onPress: () => setDisappearPickerOpen(true),
     },
@@ -622,26 +630,18 @@ export function ChatDetailScreen() {
       <DurationPickerSheet
         visible={disappearPickerOpen}
         title="Disappearing messages"
+        showInherit
+        inheritLabel={disappearingSettingSummary(
+          undefined,
+          chatApi.preferences.defaultDisappearingTimerSec,
+        )}
         showOff
-        offLabel="Turn off disappearing messages"
+        offLabel="Turn off for this chat"
         onClose={() => setDisappearPickerOpen(false)}
-        onSelect={(seconds) => chatApi.setDisappearingTimer(chat.id, seconds)}
+        onSelect={(selection) => chatApi.setDisappearingTimer(chat.id, selection)}
       />
     </View>
   );
-}
-
-function formatDurationLabel(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds}s`;
-  }
-  if (seconds < 3600) {
-    return `${Math.round(seconds / 60)} min`;
-  }
-  if (seconds < 86400) {
-    return `${Math.round(seconds / 3600)} hr`;
-  }
-  return `${Math.round(seconds / 86400)} day`;
 }
 
 const styles = StyleSheet.create({
