@@ -1,12 +1,12 @@
-export const ORDER_ASSISTANT_CHAT_ID = 'book-chat-order';
+export const ORDER_ASSISTANT_CHAT_ID = 'gocha-ai';
 
-export const ORDER_ASSISTANT_DEFAULT_NAME = 'Book, Chat & Order';
+export const ORDER_ASSISTANT_DEFAULT_NAME = 'Gocha AI';
 
 export const ORDER_ASSISTANT_SUGGESTIONS = [
-  'Order me lunch 🥗',
-  'Get my usual coffee ☕',
-  'Groceries for dinner tonight 🛒',
-  'I need a ride to the airport 🚕',
+  'What can you help me with?',
+  'Plan my week',
+  'Write a friendly reply',
+  'Find something fun nearby',
 ];
 
 export function isOrderAssistantChat(chatId: string): boolean {

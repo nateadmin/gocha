@@ -49,6 +49,7 @@ import {
   postTextMessage,
 } from './conversationApi';
 import type { GroupPostInput } from '../api/client';
+import { sendGochaAiMessage } from './gochaAiApi';
 import { isOrderAssistantChat } from './orderAssistant';
 import { useAuth } from '../context/AuthContext';
 import type {
@@ -923,7 +924,45 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const trimmed = text.trim();
       if (!trimmed) return;
 
-      if (isOrderAssistantChat(chatId) || !/^\d+$/.test(chatId)) {
+      if (isOrderAssistantChat(chatId)) {
+        const optimisticId = `m-${Date.now()}`;
+        appendMessage(chatId, {
+          id: optimisticId,
+          type: 'text',
+          text: trimmed,
+          sentAt: formatTimeLabel(),
+          sentAtMs: Date.now(),
+          isOutgoing: true,
+          status: 'sent',
+          replyToId,
+        });
+
+        const priorMessages = messagesRef.current[chatId] ?? [];
+        void sendGochaAiMessage(trimmed, priorMessages)
+          .then((reply) => {
+            appendMessage(chatId, {
+              id: `ai-${Date.now()}`,
+              type: 'text',
+              text: reply,
+              sentAt: formatTimeLabel(),
+              sentAtMs: Date.now(),
+              isOutgoing: false,
+            });
+          })
+          .catch(() => {
+            appendMessage(chatId, {
+              id: `ai-err-${Date.now()}`,
+              type: 'text',
+              text: 'Sorry, I could not respond right now. Please try again.',
+              sentAt: formatTimeLabel(),
+              sentAtMs: Date.now(),
+              isOutgoing: false,
+            });
+          });
+        return;
+      }
+
+      if (!/^\d+$/.test(chatId)) {
         appendMessage(chatId, {
           id: `m-${Date.now()}`,
           type: 'text',

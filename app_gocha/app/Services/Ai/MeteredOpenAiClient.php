@@ -22,6 +22,33 @@ class MeteredOpenAiClient
      */
     public function chatJson(array $messages, string $correlationId, string $step, ?int $maxTokens = null): array
     {
+        $content = $this->chatCompletion($messages, $correlationId, $step, $maxTokens, true);
+        $decoded = json_decode($content, true);
+        if (! is_array($decoded)) {
+            throw new RuntimeException('OpenAI returned non-JSON content.');
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * @param  array<int, array{role: string, content: string}>  $messages
+     */
+    public function chatText(array $messages, string $correlationId, string $step, ?int $maxTokens = null): string
+    {
+        return $this->chatCompletion($messages, $correlationId, $step, $maxTokens, false);
+    }
+
+    /**
+     * @param  array<int, array{role: string, content: string}>  $messages
+     */
+    private function chatCompletion(
+        array $messages,
+        string $correlationId,
+        string $step,
+        ?int $maxTokens,
+        bool $jsonMode,
+    ): string {
         if (Cache::get('openai:circuit')) {
             throw new OpenAiCircuitOpenException('OpenAI circuit breaker is open.');
         }
@@ -56,13 +83,18 @@ class MeteredOpenAiClient
             throw new RuntimeException('OpenAI base URL is not allowlisted.');
         }
 
-        $response = $this->postWithRetry($url, $apiKey, [
+        $body = [
             'model' => $model,
             'messages' => $messages,
-            'response_format' => ['type' => 'json_object'],
-            'temperature' => 0.2,
+            'temperature' => 0.4,
             'max_tokens' => $maxTokens ?? (int) config('gocha.openai.max_tokens', 400),
-        ], $correlationId, $step);
+        ];
+        if ($jsonMode) {
+            $body['response_format'] = ['type' => 'json_object'];
+            $body['temperature'] = 0.2;
+        }
+
+        $response = $this->postWithRetry($url, $apiKey, $body, $correlationId, $step);
 
         Cache::increment($hourKey);
         $newCount = (int) Cache::get($hourKey, 0);
@@ -85,11 +117,6 @@ class MeteredOpenAiClient
             throw new RuntimeException('OpenAI returned an empty completion.');
         }
 
-        $decoded = json_decode($content, true);
-        if (! is_array($decoded)) {
-            throw new RuntimeException('OpenAI returned non-JSON content.');
-        }
-
         Log::info('gocha.openai.call', [
             'correlation_id' => $correlationId,
             'step' => $step,
@@ -97,7 +124,7 @@ class MeteredOpenAiClient
             'hour_count' => $newCount,
         ]);
 
-        return $decoded;
+        return trim($content);
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\AdminVerificationController;
 use App\Http\Controllers\Api\AuthOtpController;
 use App\Http\Controllers\Api\BusinessListingController;
 use App\Http\Controllers\Api\CatchUpController;
+use App\Http\Controllers\Api\GochaAiController;
 use App\Http\Controllers\Api\CommunityGroupController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\GlobalSearchController;
@@ -104,6 +105,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/statuses/{statusItem}', [StatusController::class, 'update']);
     Route::delete('/statuses/{statusItem}', [StatusController::class, 'destroy']);
     Route::get('/catch-up', [CatchUpController::class, 'show']);
+    Route::post('/gocha-ai/chat', [GochaAiController::class, 'chat'])
+        ->middleware('throttle:30,1');
 
     Route::get('/profile-cards', [ProfileCardController::class, 'index']);
     Route::post('/profile-cards', [ProfileCardController::class, 'store']);

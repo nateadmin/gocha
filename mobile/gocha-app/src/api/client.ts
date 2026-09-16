@@ -967,6 +967,26 @@ export async function fetchCatchUp(): Promise<CatchUpPayload> {
   return apiRequest<CatchUpPayload>(API_PATHS.catchUp);
 }
 
+export type GochaAiHistoryItem = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+export type GochaAiChatResponse = {
+  reply: string;
+  correlationId?: string;
+};
+
+export async function postGochaAiChat(
+  message: string,
+  history: GochaAiHistoryItem[] = [],
+): Promise<GochaAiChatResponse> {
+  return apiRequest<GochaAiChatResponse>(API_PATHS.gochaAiChat, {
+    method: 'POST',
+    body: JSON.stringify({ message, history }),
+  });
+}
+
 export type ProfileCardType = 'professional' | 'match' | 'custom';
 export type ProfileCardVisibility = 'public' | 'request' | 'private';
 export type ProfileCardAccessStatus = 'pending' | 'approved' | 'declined';

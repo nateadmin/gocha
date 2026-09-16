@@ -44,6 +44,7 @@ export const API_PATHS = {
   inboxUnread: '/api/inbox/unread',
   statuses: '/api/statuses',
   catchUp: '/api/catch-up',
+  gochaAiChat: '/api/gocha-ai/chat',
   profileCards: '/api/profile-cards',
   publicProfileCard: (slug: string) => `/api/c/${encodeURIComponent(slug)}`,
   userProfileCards: (userId: number) => `/api/users/${userId}/profile-cards`,

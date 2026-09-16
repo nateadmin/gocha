@@ -49,9 +49,9 @@ export function createOrderAssistantChat(): ChatRecord {
   return {
     id: ORDER_ASSISTANT_CHAT_ID,
     name: ORDER_ASSISTANT_DEFAULT_NAME,
-    avatarLabel: 'BC',
+    avatarLabel: 'GA',
     avatarColor: '#5b42f3',
-    preview: 'Tell me what you need. I will find the best option.',
+    preview: 'Ask me anything. I am here to help.',
     dateLabel: 'Today',
     lastActivityAt: Date.now() + 1000,
     unreadCount: 0,
@@ -78,7 +78,7 @@ export function createOrderAssistantMessages(): ChatMessage[] {
       id: 'welcome',
       type: 'text',
       text:
-        'Hi. I am your Gocha assistant. Tell me what you need and I will find the best local option, prepare your request, and help you book or order.',
+        'Hi. I am Gocha AI. Ask me questions, get help planning, writing, or finding local options.',
       sentAt: 'Now',
       isOutgoing: false,
     },

@@ -374,7 +374,7 @@ export function ChatDetailScreen() {
               : chat.isSecret
                 ? 'Secret chat'
                 : chat.isOrderAssistant
-                  ? 'Book, chat, and order'
+                  ? 'AI assistant'
                   : 'Tap for contact info'}
           </Text>
         </Pressable>

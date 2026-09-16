@@ -46,6 +46,11 @@ return [
         'hourly_budget' => 80,
     ],
 
+    'gocha_ai' => [
+        'max_history' => 20,
+        'max_tokens' => 600,
+    ],
+
     'catch_up' => [
         'schedule_minutes' => 5,
         'max_run_seconds' => 240,
