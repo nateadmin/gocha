@@ -26,7 +26,11 @@ export default defineConfig({
     alias: {
       'react-native': rnWebRoot,
       'expo-font': path.resolve(projectRoot, 'web/stubs/expo-font.ts'),
-      '@expo/vector-icons/Ionicons': path.resolve(projectRoot, 'web/Ionicons.tsx'),
+      // Metro applies the same alias so web and native share one icon component.
+      '@expo/vector-icons/Ionicons': path.resolve(
+        projectRoot,
+        'src/components/Ionicons.tsx',
+      ),
       [path.resolve(projectRoot, 'src/theme/fonts.ts')]: path.resolve(
         projectRoot,
         'src/theme/fonts.web.ts',

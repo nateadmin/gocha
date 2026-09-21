@@ -16,6 +16,9 @@ app_gocha/bootstrap/cache/*.php
 .idea/
 .vscode/
 
+# Local task tracking
+/todo.md
+
 # Keys
 *.pem
 .ssh/
