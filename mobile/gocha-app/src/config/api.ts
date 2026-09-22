@@ -13,6 +13,7 @@ export const API_PATHS = {
   csrfCookie: '/sanctum/csrf-cookie',
   otpRequest: '/api/auth/otp/request',
   otpVerify: '/api/auth/otp/verify',
+  reviewLogin: '/api/auth/review/login',
   logout: '/api/auth/logout',
   authSwitch: '/api/auth/switch',
   deviceToken: '/api/auth/device-token',

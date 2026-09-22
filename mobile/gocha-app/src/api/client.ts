@@ -193,6 +193,7 @@ export type FirebasePublicConfig = {
 export type AppMeta = {
   auth: {
     phoneSignInEnabled: boolean;
+    reviewLoginEnabled?: boolean;
     firebase: FirebasePublicConfig | null;
   };
   account: {
@@ -235,6 +236,18 @@ export async function requestOtp(
       mode,
     }),
   });
+}
+
+export async function loginWithReviewPassword(
+  email: string,
+  password: string,
+): Promise<OtpVerifyResult> {
+  const payload = await apiRequest<OtpVerifyResult>(API_PATHS.reviewLogin, {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+  resetCsrfPrimed();
+  return payload;
 }
 
 export async function verifyOtp(

@@ -4,6 +4,8 @@ use App\Services\Auth\FirebasePhoneAuthService;
 use App\Http\Controllers\Api\Admin\AdminBusinessListingController;
 use App\Http\Controllers\Api\Admin\AdminVerificationController;
 use App\Http\Controllers\Api\AuthOtpController;
+use App\Http\Controllers\Api\AuthReviewLoginController;
+use App\Services\Auth\ReviewLoginService;
 use App\Http\Controllers\Api\BusinessListingController;
 use App\Http\Controllers\Api\CatchUpController;
 use App\Http\Controllers\Api\GochaAiController;
@@ -24,7 +26,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/health', [HealthController::class, 'show']);
 Route::get('/version', [VersionController::class, 'show']);
 
-Route::get('/meta', function (FirebasePhoneAuthService $firebasePhone) {
+Route::get('/meta', function (FirebasePhoneAuthService $firebasePhone, ReviewLoginService $reviewLogin) {
     $phoneEnabled = $firebasePhone->isConfigured();
 
     return response()->json([
@@ -36,9 +38,11 @@ Route::get('/meta', function (FirebasePhoneAuthService $firebasePhone) {
         'auth' => [
             'otpRequest' => url('/api/auth/otp/request'),
             'otpVerify' => url('/api/auth/otp/verify'),
+            'reviewLogin' => url('/api/auth/review/login'),
             'me' => url('/api/me'),
             'channels' => ['email', 'phone'],
             'phoneSignInEnabled' => $phoneEnabled,
+            'reviewLoginEnabled' => $reviewLogin->isEnabled(),
             'firebase' => $phoneEnabled ? $firebasePhone->publicConfig() : null,
         ],
         'account' => [
@@ -69,6 +73,9 @@ Route::prefix('auth/otp')
     Route::post('/verify', [AuthOtpController::class, 'verify'])
         ->middleware('throttle:otp-verify');
 });
+
+Route::post('/auth/review/login', [AuthReviewLoginController::class, 'login'])
+    ->middleware('throttle:review-login');
 
 Route::post('/auth/switch', [AuthOtpController::class, 'switchSession'])
     ->middleware('throttle:30,1');

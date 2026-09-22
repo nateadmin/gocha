@@ -21,13 +21,15 @@ type Props = {
 
 export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const { theme } = useGochaTheme();
-  const { requestAuthCode } = useAuth();
+  const { requestAuthCode, signInWithReviewPassword } = useAuth();
   const [channel, setChannel] = useState<AccountChannel>('email');
   const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
   const [phoneEnabled, setPhoneEnabled] = useState(true);
+  const [reviewLoginEnabled, setReviewLoginEnabled] = useState(false);
 
   const isSignUp = mode === 'signup';
   const blocked = retryAfterSeconds > 0;
@@ -36,9 +38,11 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
     void fetchAppMeta()
       .then((meta) => {
         setPhoneEnabled(meta.account.phoneSignInEnabled || meta.auth.phoneSignInEnabled);
+        setReviewLoginEnabled(Boolean(meta.auth.reviewLoginEnabled));
       })
       .catch(() => {
         setPhoneEnabled(true);
+        setReviewLoginEnabled(false);
       });
   }, []);
 
@@ -72,6 +76,16 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
     setLoading(true);
     setError(null);
     try {
+      if (
+        !isSignUp &&
+        channel === 'email' &&
+        reviewLoginEnabled &&
+        password.trim()
+      ) {
+        await signInWithReviewPassword(normalized, password.trim());
+        return;
+      }
+
       const payload = await requestAuthCode(normalized, mode, { channel });
       if (channel === 'phone') {
         const meta = await fetchAppMeta();
@@ -174,6 +188,22 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
             style={styles.input}
           />
 
+          {!isSignUp && channel === 'email' && reviewLoginEnabled ? (
+            <BrandInput
+              autoCapitalize="none"
+              autoComplete="password"
+              secureTextEntry
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              onSubmitEditing={() => {
+                void handleContinue();
+              }}
+              returnKeyType="go"
+              style={styles.input}
+            />
+          ) : null}
+
           {error ? (
             <BrandText style={{ color: theme.colors.destructive, marginBottom: 8 }}>
               {error}
@@ -187,7 +217,13 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
           ) : null}
 
           <CtaButton
-            label={isSignUp ? 'Send verification code' : 'Send sign-in code'}
+            label={
+              !isSignUp && channel === 'email' && reviewLoginEnabled && password.trim()
+                ? 'Sign in with password'
+                : isSignUp
+                  ? 'Send verification code'
+                  : 'Send sign-in code'
+            }
             loading={loading}
             disabled={blocked}
             onPress={handleContinue}

@@ -48,7 +48,7 @@ describe('messageMapping', () => {
         fileName: 'paste.png',
         mimeType: 'image/png',
       },
-      7,
+      9,
     );
 
     expect(mapped.type).toBe('image');

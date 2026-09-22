@@ -15,6 +15,7 @@ import {
   fetchCurrentUser,
   getActiveDeviceToken,
   issueDeviceToken,
+  loginWithReviewPassword,
   logout as apiLogout,
   requestOtp,
   updateLanguage as apiUpdateLanguage,
@@ -48,6 +49,7 @@ type AuthContextValue = {
     mode: OtpAuthMode,
     options?: { channel?: 'email' | 'phone' },
   ) => Promise<{ resendAvailableInSeconds: number }>;
+  signInWithReviewPassword: (email: string, password: string) => Promise<void>;
   finishOnboarding: (input: {
     displayName: string;
     username?: string;
@@ -203,6 +205,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const signInWithReviewPassword = useCallback(
+    async (email: string, password: string) => {
+      const payload = await loginWithReviewPassword(email, password);
+      if (!payload.account || !payload.deviceToken) {
+        throw new Error('Could not finish sign-in.');
+      }
+      registerAccount({
+        userId: payload.account.id,
+        label: payload.account.label,
+        displayName: payload.account.displayName,
+        avatarUrl: payload.account.avatarUrl,
+        deviceToken: payload.deviceToken,
+        primaryLoginChannel: payload.account.primaryLoginChannel,
+      });
+      setUser(payload.user);
+      setError(null);
+      syncUserToStoredAccount(payload.user);
+    },
+    [registerAccount, syncUserToStoredAccount],
+  );
+
   const verifyWithOtp = useCallback(
     async (
       identifier: string,
@@ -325,6 +348,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh: () => refresh({ background: false }),
       verifyWithOtp,
       requestAuthCode,
+      signInWithReviewPassword,
       finishOnboarding,
       updateProfile,
       uploadProfileAvatar,
@@ -339,6 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       verifyWithOtp,
       requestAuthCode,
+      signInWithReviewPassword,
       finishOnboarding,
       updateProfile,
       uploadProfileAvatar,

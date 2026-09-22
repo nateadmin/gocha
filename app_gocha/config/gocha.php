@@ -17,6 +17,12 @@ return [
         'sms_per_phone_per_day' => 8,
     ],
 
+    'review_login' => [
+        'email' => env('GOCHA_REVIEW_LOGIN_EMAIL'),
+        'password' => env('GOCHA_REVIEW_LOGIN_PASSWORD'),
+        'name' => env('GOCHA_REVIEW_LOGIN_NAME', 'Google Review'),
+    ],
+
     'firebase' => [
         'web_api_key' => env('FIREBASE_WEB_API_KEY'),
         'project_id' => env('FIREBASE_PROJECT_ID'),
