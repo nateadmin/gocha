@@ -52,6 +52,10 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     open: false,
+    proxy: {
+      '/api': 'http://127.0.0.1:8000',
+      '/sanctum': 'http://127.0.0.1:8000',
+    },
   },
   optimizeDeps: {
     include: ['react-native-web', '@expo/vector-icons', 'firebase/app', 'firebase/auth'],
