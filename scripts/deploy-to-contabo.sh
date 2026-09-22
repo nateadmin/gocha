@@ -21,7 +21,7 @@ RSYNC_SSH="ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=acce
 echo "Deploying $COMMIT_SHA to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH"
 
 INJECT_ENV_FILE=""
-if [[ -x "$ROOT/scripts/infisical-pull.sh" ]] && command -v infisical >/dev/null 2>&1; then
+if [[ -x "$ROOT/scripts/infisical-pull.sh" ]] && { command -v infisical >/dev/null 2>&1 || command -v npx >/dev/null 2>&1; }; then
   # shellcheck disable=SC1091
   source "$ROOT/scripts/infisical-pull.sh"
   INJECT_ENV_FILE="$(mktemp)"
@@ -54,13 +54,13 @@ if [[ -x "$ROOT/scripts/infisical-pull.sh" ]] && command -v infisical >/dev/null
     printf 'FIREBASE_APP_ID=%s\n' "$FIREBASE_APP_ID" >> "$INJECT_ENV_FILE"
   fi
   if [[ -n "${GOCHA_REVIEW_LOGIN_EMAIL:-}" ]]; then
-    printf 'GOCHA_REVIEW_LOGIN_EMAIL=%s\n' "$GOCHA_REVIEW_LOGIN_EMAIL" >> "$INJECT_ENV_FILE"
+    printf 'GOCHA_REVIEW_LOGIN_EMAIL=%q\n' "$GOCHA_REVIEW_LOGIN_EMAIL" >> "$INJECT_ENV_FILE"
   fi
   if [[ -n "${GOCHA_REVIEW_LOGIN_PASSWORD:-}" ]]; then
-    printf 'GOCHA_REVIEW_LOGIN_PASSWORD=%s\n' "$GOCHA_REVIEW_LOGIN_PASSWORD" >> "$INJECT_ENV_FILE"
+    printf 'GOCHA_REVIEW_LOGIN_PASSWORD=%q\n' "$GOCHA_REVIEW_LOGIN_PASSWORD" >> "$INJECT_ENV_FILE"
   fi
   if [[ -n "${GOCHA_REVIEW_LOGIN_NAME:-}" ]]; then
-    printf 'GOCHA_REVIEW_LOGIN_NAME=%s\n' "$GOCHA_REVIEW_LOGIN_NAME" >> "$INJECT_ENV_FILE"
+    printf 'GOCHA_REVIEW_LOGIN_NAME=%q\n' "$GOCHA_REVIEW_LOGIN_NAME" >> "$INJECT_ENV_FILE"
   fi
   unset OPENAI_VALUE
   if [[ -s "$INJECT_ENV_FILE" ]]; then

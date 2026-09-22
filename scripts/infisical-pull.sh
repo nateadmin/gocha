@@ -9,10 +9,22 @@ SECRET_PATH="${INFISICAL_SECRET_PATH:-/}"
 MAX_ATTEMPTS="${INFISICAL_PULL_MAX_ATTEMPTS:-3}"
 RETRY_SECONDS="${INFISICAL_PULL_RETRY_SECONDS:-30}"
 
-if ! command -v infisical >/dev/null 2>&1; then
-  echo "infisical CLI is required" >&2
-  exit 1
-fi
+resolve_infisical_cmd() {
+  if command -v infisical >/dev/null 2>&1; then
+    printf '%s' 'infisical'
+    return 0
+  fi
+
+  if command -v npx >/dev/null 2>&1; then
+    printf '%s' 'npx --yes @infisical/cli@0.41.89'
+    return 0
+  fi
+
+  echo "infisical CLI or npx is required" >&2
+  return 1
+}
+
+INFISICAL_CMD="$(resolve_infisical_cmd)"
 
 # Cloud shells sometimes inject a placeholder INFISICAL_TOKEN that breaks export.
 if [[ "${INFISICAL_TOKEN:-}" == *"You can use this access token"* ]]; then
@@ -20,8 +32,9 @@ if [[ "${INFISICAL_TOKEN:-}" == *"You can use this access token"* ]]; then
 fi
 
 if [[ -z "${INFISICAL_TOKEN:-}" && -n "${INFISICAL_CLIENT_ID:-}" && -n "${INFISICAL_CLIENT_SECRET:-}" ]]; then
+  # shellcheck disable=SC2086
   INFISICAL_TOKEN="$(
-    infisical login \
+    $INFISICAL_CMD login \
       --method=universal-auth \
       --client-id="$INFISICAL_CLIENT_ID" \
       --client-secret="$INFISICAL_CLIENT_SECRET" \
@@ -33,7 +46,8 @@ fi
 
 attempt=1
 while [[ "$attempt" -le "$MAX_ATTEMPTS" ]]; do
-  if infisical export \
+  # shellcheck disable=SC2086
+  if $INFISICAL_CMD export \
     --domain="$INFISICAL_HOST" \
     --projectId="$PROJECT_ID" \
     --env="$ENVIRONMENT" \
