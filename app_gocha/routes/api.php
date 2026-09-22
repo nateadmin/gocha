@@ -43,6 +43,7 @@ Route::get('/meta', function (FirebasePhoneAuthService $firebasePhone, ReviewLog
             'channels' => ['email', 'phone'],
             'phoneSignInEnabled' => $phoneEnabled,
             'reviewLoginEnabled' => $reviewLogin->isEnabled(),
+            'reviewLoginEmail' => $reviewLogin->isEnabled() ? $reviewLogin->configuredEmail() : null,
             'firebase' => $phoneEnabled ? $firebasePhone->publicConfig() : null,
         ],
         'account' => [
@@ -79,6 +80,8 @@ Route::post('/auth/review/login', [AuthReviewLoginController::class, 'login'])
 
 Route::post('/auth/switch', [AuthOtpController::class, 'switchSession'])
     ->middleware('throttle:30,1');
+
+Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
@@ -132,7 +135,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile-cards/{profileCard}/grant', [ProfileCardController::class, 'grant']);
     Route::get('/users/{user}/profile-cards', [ProfileCardController::class, 'listedForUser']);
 
-    Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
     Route::post('/auth/device-token', [AuthOtpController::class, 'issueDeviceToken']);
 
     Route::post('/businesses/import-google', [BusinessListingController::class, 'importGoogle']);

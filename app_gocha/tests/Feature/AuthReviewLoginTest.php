@@ -75,6 +75,7 @@ class AuthReviewLoginTest extends TestCase
     {
         $this->getJson('/api/meta')
             ->assertOk()
-            ->assertJsonPath('auth.reviewLoginEnabled', true);
+            ->assertJsonPath('auth.reviewLoginEnabled', true)
+            ->assertJsonPath('auth.reviewLoginEmail', 'google-review@gocha.ai');
     }
 }

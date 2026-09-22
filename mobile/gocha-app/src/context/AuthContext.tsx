@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { clearAllStoredAccounts, readStoredAccounts } from '../accounts/accountStore';
 import {
   ApiError,
   completeOnboarding,
@@ -18,6 +19,9 @@ import {
   loginWithReviewPassword,
   logout as apiLogout,
   requestOtp,
+  resetAppMetaCache,
+  resetCsrfPrimed,
+  setActiveDeviceToken,
   updateLanguage as apiUpdateLanguage,
   updateProfile as apiUpdateProfile,
   uploadAvatar,
@@ -125,6 +129,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const hadToken = getActiveDeviceToken();
+      const storedAccounts = readStoredAccounts();
+      if (storedAccounts.length === 0) {
+        try {
+          await apiLogout();
+        } catch {
+          // No active session to clear.
+        }
+        setActiveDeviceToken(null);
+        resetCsrfPrimed();
+      }
+
       const nextUser = await fetchCurrentUser();
 
       if (nextUser) {
@@ -312,8 +327,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const signingOutUserId = user.id;
+    const signingOutAccount = accounts.find((entry) => entry.userId === signingOutUserId);
     const remaining = accounts.filter((entry) => entry.userId !== signingOutUserId);
     const hasOtherAccounts = remaining.length > 0;
+
+    if (signingOutAccount?.deviceToken) {
+      setActiveDeviceToken(signingOutAccount.deviceToken);
+    }
 
     try {
       await apiLogout({ deviceOnly: hasOtherAccounts });
@@ -335,6 +355,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return 'switched';
     }
 
+    clearAllStoredAccounts();
+    setActiveDeviceToken(null);
+    resetCsrfPrimed();
+    resetAppMetaCache();
     setUser(null);
     return 'auth';
   }, [accounts, removeAccount, refresh, switchAccount, user]);

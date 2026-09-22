@@ -53,6 +53,15 @@ if [[ -x "$ROOT/scripts/infisical-pull.sh" ]] && command -v infisical >/dev/null
   if [[ -n "${FIREBASE_APP_ID:-}" ]]; then
     printf 'FIREBASE_APP_ID=%s\n' "$FIREBASE_APP_ID" >> "$INJECT_ENV_FILE"
   fi
+  if [[ -n "${GOCHA_REVIEW_LOGIN_EMAIL:-}" ]]; then
+    printf 'GOCHA_REVIEW_LOGIN_EMAIL=%s\n' "$GOCHA_REVIEW_LOGIN_EMAIL" >> "$INJECT_ENV_FILE"
+  fi
+  if [[ -n "${GOCHA_REVIEW_LOGIN_PASSWORD:-}" ]]; then
+    printf 'GOCHA_REVIEW_LOGIN_PASSWORD=%s\n' "$GOCHA_REVIEW_LOGIN_PASSWORD" >> "$INJECT_ENV_FILE"
+  fi
+  if [[ -n "${GOCHA_REVIEW_LOGIN_NAME:-}" ]]; then
+    printf 'GOCHA_REVIEW_LOGIN_NAME=%s\n' "$GOCHA_REVIEW_LOGIN_NAME" >> "$INJECT_ENV_FILE"
+  fi
   unset OPENAI_VALUE
   if [[ -s "$INJECT_ENV_FILE" ]]; then
     scp -q -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
@@ -142,7 +151,17 @@ for raw in incoming.read_text().splitlines():
     if not raw.strip() or "=" not in raw:
         continue
     key, value = raw.split("=", 1)
-    if key in {"OPENAI_API_KEY", "GOOGLE_PLACES_API_KEY", "FIREBASE_WEB_API_KEY", "FIREBASE_PROJECT_ID", "FIREBASE_AUTH_DOMAIN", "FIREBASE_APP_ID"}:
+    if key in {
+        "OPENAI_API_KEY",
+        "GOOGLE_PLACES_API_KEY",
+        "FIREBASE_WEB_API_KEY",
+        "FIREBASE_PROJECT_ID",
+        "FIREBASE_AUTH_DOMAIN",
+        "FIREBASE_APP_ID",
+        "GOCHA_REVIEW_LOGIN_EMAIL",
+        "GOCHA_REVIEW_LOGIN_PASSWORD",
+        "GOCHA_REVIEW_LOGIN_NAME",
+    }:
         updates[key] = value.strip()
 lines = env_path.read_text().splitlines()
 found = set()

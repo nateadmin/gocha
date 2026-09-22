@@ -12,6 +12,8 @@ import { ScreenContainer } from '../../components/app/ScreenContainer';
 import { useAuth } from '../../context/AuthContext';
 import { useGochaTheme } from '../../theme';
 
+const DEFAULT_REVIEW_LOGIN_EMAIL = 'google-review@gocha.ai';
+
 type Props = {
   mode: OtpAuthMode;
   onCodeSent: (identifier: string, channel: AccountChannel) => void;
@@ -30,19 +32,31 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
   const [phoneEnabled, setPhoneEnabled] = useState(true);
   const [reviewLoginEnabled, setReviewLoginEnabled] = useState(false);
+  const [reviewLoginEmail, setReviewLoginEmail] = useState<string | null>(null);
 
   const isSignUp = mode === 'signup';
   const blocked = retryAfterSeconds > 0;
+  const normalizedIdentifier = normalizeIdentifier(channel, identifier);
+  const configuredReviewEmail = (
+    reviewLoginEmail ?? DEFAULT_REVIEW_LOGIN_EMAIL
+  ).toLowerCase();
+  const showPasswordField =
+    !isSignUp &&
+    channel === 'email' &&
+    (reviewLoginEnabled || normalizedIdentifier === configuredReviewEmail);
+  const usesPasswordSignIn = showPasswordField && password.trim().length > 0;
 
   useEffect(() => {
     void fetchAppMeta()
       .then((meta) => {
         setPhoneEnabled(meta.account.phoneSignInEnabled || meta.auth.phoneSignInEnabled);
         setReviewLoginEnabled(Boolean(meta.auth.reviewLoginEnabled));
+        setReviewLoginEmail(meta.auth.reviewLoginEmail ?? null);
       })
       .catch(() => {
         setPhoneEnabled(true);
         setReviewLoginEnabled(false);
+        setReviewLoginEmail(null);
       });
   }, []);
 
@@ -59,7 +73,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   }, [retryAfterSeconds]);
 
   async function handleContinue() {
-    const normalized = normalizeIdentifier(channel, identifier);
+    const normalized = normalizedIdentifier;
     if (!normalized) {
       setError(channel === 'email' ? 'Enter your email.' : 'Enter your phone number.');
       return;
@@ -76,12 +90,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
     setLoading(true);
     setError(null);
     try {
-      if (
-        !isSignUp &&
-        channel === 'email' &&
-        reviewLoginEnabled &&
-        password.trim()
-      ) {
+      if (usesPasswordSignIn) {
         await signInWithReviewPassword(normalized, password.trim());
         return;
       }
@@ -124,7 +133,9 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
           <BrandText muted style={styles.subtitle}>
             {isSignUp
               ? 'Use email or phone. The other is optional later.'
-              : 'Use the email or phone on your Gocha account.'}
+              : showPasswordField
+                ? 'Enter your email and password, or leave password blank to use a sign-in code.'
+                : 'Use the email or phone on your Gocha account.'}
           </BrandText>
 
           <View style={styles.channelRow}>
@@ -188,7 +199,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
             style={styles.input}
           />
 
-          {!isSignUp && channel === 'email' && reviewLoginEnabled ? (
+          {showPasswordField ? (
             <BrandInput
               autoCapitalize="none"
               autoComplete="password"
@@ -218,7 +229,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
 
           <CtaButton
             label={
-              !isSignUp && channel === 'email' && reviewLoginEnabled && password.trim()
+              usesPasswordSignIn
                 ? 'Sign in with password'
                 : isSignUp
                   ? 'Send verification code'

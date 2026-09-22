@@ -61,6 +61,14 @@ export function writeActiveAccountId(userId: number | null): void {
   localStorage.setItem(ACTIVE_KEY, String(userId));
 }
 
+export function clearAllStoredAccounts(): void {
+  if (!canUseStorage()) {
+    return;
+  }
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(ACTIVE_KEY);
+}
+
 export function updateStoredAccountProfile(
   userId: number,
   profile: Pick<StoredAccount, 'displayName' | 'avatarUrl' | 'label'>,

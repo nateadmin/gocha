@@ -71,6 +71,10 @@ export function resetCsrfPrimed(): void {
   csrfPrimed = false;
 }
 
+export function resetAppMetaCache(): void {
+  appMetaPromise = null;
+}
+
 export function setActiveDeviceToken(token: string | null): void {
   activeDeviceToken = token;
 }
@@ -194,6 +198,7 @@ export type AppMeta = {
   auth: {
     phoneSignInEnabled: boolean;
     reviewLoginEnabled?: boolean;
+    reviewLoginEmail?: string | null;
     firebase: FirebasePublicConfig | null;
   };
   account: {
