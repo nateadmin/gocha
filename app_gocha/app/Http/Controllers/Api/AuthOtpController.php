@@ -13,6 +13,7 @@ use App\Support\AppLanguage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -100,7 +101,7 @@ class AuthOtpController extends Controller
             ]);
         }
 
-        Auth::login($user, remember: true);
+        Auth::login($user);
 
         if ($request->hasSession()) {
             $request->session()->regenerate();
@@ -135,7 +136,7 @@ class AuthOtpController extends Controller
             ], 401);
         }
 
-        Auth::guard('web')->login($user, remember: true);
+        Auth::guard('web')->login($user);
 
         if ($request->hasSession()) {
             $request->session()->regenerate();
@@ -180,6 +181,15 @@ class AuthOtpController extends Controller
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
             }
+
+            $path = config('session.path', '/');
+            $domain = config('session.domain');
+            $sessionCookie = config('session.cookie');
+            $recaller = Auth::guard('web')->getRecallerName();
+
+            Cookie::queue(Cookie::forget($sessionCookie, $path, $domain));
+            Cookie::queue(Cookie::forget($recaller, $path, $domain));
+            Cookie::queue(Cookie::forget('XSRF-TOKEN', $path, $domain));
         }
 
         return response()->json([

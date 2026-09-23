@@ -275,6 +275,7 @@ export async function loginWithReviewPassword(
   email: string,
   password: string,
 ): Promise<OtpVerifyResult> {
+  await primeCsrfCookie();
   const payload = await apiRequest<OtpVerifyResult>(API_PATHS.reviewLogin, {
     method: 'POST',
     body: JSON.stringify({ email, password }),
@@ -295,6 +296,7 @@ export async function verifyOtp(
   },
 ): Promise<OtpVerifyResult> {
   const channel = options?.channel ?? 'email';
+  await primeCsrfCookie();
   return apiRequest(API_PATHS.otpVerify, {
     method: 'POST',
     body: JSON.stringify({
@@ -325,11 +327,14 @@ export async function switchSession(deviceToken: string): Promise<OtpVerifyResul
 
 export async function logout(options?: { deviceOnly?: boolean }): Promise<void> {
   await primeCsrfCookie();
-  await apiRequest(API_PATHS.logout, {
-    method: 'POST',
-    body: JSON.stringify({ device_only: options?.deviceOnly ?? false }),
-  });
-  await primeCsrfCookie();
+  try {
+    await apiRequest(API_PATHS.logout, {
+      method: 'POST',
+      body: JSON.stringify({ device_only: options?.deviceOnly ?? false }),
+    });
+  } finally {
+    resetCsrfPrimed();
+  }
 }
 
 export async function issueDeviceToken(): Promise<{ deviceToken: string; account: AccountSwitcherEntry }> {

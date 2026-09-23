@@ -38,7 +38,7 @@ class AuthReviewLoginController extends Controller
             ], 401);
         }
 
-        Auth::login($user, remember: true);
+        Auth::login($user);
 
         if ($request->hasSession()) {
             $request->session()->regenerate();

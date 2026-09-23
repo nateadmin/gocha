@@ -84,6 +84,21 @@ describe('AuthProvider refresh', () => {
   });
 
   test('preserves the signed-in user when refresh hits a transient server error', async () => {
+    localStorage.setItem(
+      'gocha.accounts.v1',
+      JSON.stringify([
+        {
+          userId: 1,
+          label: 'nate@example.com',
+          displayName: 'Nate',
+          avatarUrl: null,
+          deviceToken: 'device-token',
+          primaryLoginChannel: 'email',
+        },
+      ]),
+    );
+    localStorage.setItem('gocha.accounts.active.v1', '1');
+
     fetchCurrentUserMock
       .mockResolvedValueOnce(mockUser)
       .mockRejectedValueOnce(new ApiError({ code: 'INTERNAL', message: 'Server error.' }, 500));

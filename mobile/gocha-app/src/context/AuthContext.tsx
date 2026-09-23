@@ -30,6 +30,7 @@ import {
   type AuthUser,
   type OtpAuthMode,
 } from '../api/client';
+import { isWebClient } from '../utils/isWebClient';
 import { useAccounts } from './AccountsContext';
 
 type AuthContextValue = {
@@ -134,12 +135,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedAccounts = readStoredAccounts();
       if (storedAccounts.length === 0) {
         try {
+          await primeCsrfCookie();
           await apiLogout();
         } catch {
           // No active session to clear.
         }
         setActiveDeviceToken(null);
         resetCsrfPrimed();
+
+        const orphanUser = await fetchCurrentUser();
+        if (orphanUser) {
+          try {
+            await primeCsrfCookie();
+            await apiLogout();
+          } catch {
+            // Best effort to clear a lingering server session.
+          }
+          resetCsrfPrimed();
+        }
+
+        setUser(null);
+        setError(null);
+        return;
       }
 
       const nextUser = await fetchCurrentUser();
@@ -366,13 +383,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearAllStoredAccounts();
       setActiveDeviceToken(null);
       resetAppMetaCache();
+      resetCsrfPrimed();
       setUser(null);
       removeAccount(signingOutUserId);
 
-      const lingeringUser = await fetchCurrentUser();
-      if (lingeringUser) {
-        await apiLogout();
-        setUser(null);
+      if (isWebClient()) {
+        window.location.replace('/');
+        return 'auth';
       }
 
       return 'auth';
