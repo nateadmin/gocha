@@ -174,9 +174,7 @@ class AuthOtpController extends Controller
         $deviceOnly = $request->boolean('device_only');
 
         if (! $deviceOnly) {
-            if (Auth::guard('web')->check()) {
-                Auth::guard('web')->logout();
-            }
+            Auth::guard('web')->logout();
 
             if ($request->hasSession()) {
                 $request->session()->invalidate();

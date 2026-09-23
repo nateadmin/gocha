@@ -18,6 +18,7 @@ import {
   issueDeviceToken,
   loginWithReviewPassword,
   logout as apiLogout,
+  primeCsrfCookie,
   requestOtp,
   resetAppMetaCache,
   resetCsrfPrimed,
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasBootstrapped = useRef(false);
+  const signingOutRef = useRef(false);
   const userRef = useRef<AuthUser | null>(null);
   const activeAccountIdRef = useRef(activeAccountId);
   const adoptActiveAccountRef = useRef(adoptActiveAccount);
@@ -200,6 +202,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!hasBootstrapped.current) {
       hasBootstrapped.current = true;
       void refreshRef.current({ background: false });
+      return;
+    }
+
+    if (signingOutRef.current) {
       return;
     }
 
@@ -326,41 +332,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return 'auth';
     }
 
-    const signingOutUserId = user.id;
-    const signingOutAccount = accounts.find((entry) => entry.userId === signingOutUserId);
-    const remaining = accounts.filter((entry) => entry.userId !== signingOutUserId);
-    const hasOtherAccounts = remaining.length > 0;
-
-    if (signingOutAccount?.deviceToken) {
-      setActiveDeviceToken(signingOutAccount.deviceToken);
-    }
+    signingOutRef.current = true;
 
     try {
-      await apiLogout({ deviceOnly: hasOtherAccounts });
-    } catch {
-      // Continue removing the local account even if token revocation fails.
-    }
+      const signingOutUserId = user.id;
+      const signingOutAccount = accounts.find((entry) => entry.userId === signingOutUserId);
+      const remaining = accounts.filter((entry) => entry.userId !== signingOutUserId);
+      const hasOtherAccounts = remaining.length > 0;
 
-    removeAccount(signingOutUserId);
-
-    if (hasOtherAccounts) {
-      // The session still belongs to the signed-out user; switch it to the
-      // next account before refreshing, or the wrong identity lingers.
-      const switched = await switchAccount(remaining[0].userId);
-      if (!switched) {
-        setUser(null);
-        return 'auth';
+      if (signingOutAccount?.deviceToken) {
+        setActiveDeviceToken(signingOutAccount.deviceToken);
       }
-      await refresh({ background: false });
-      return 'switched';
-    }
 
-    clearAllStoredAccounts();
-    setActiveDeviceToken(null);
-    resetCsrfPrimed();
-    resetAppMetaCache();
-    setUser(null);
-    return 'auth';
+      try {
+        await apiLogout({ deviceOnly: hasOtherAccounts });
+      } catch {
+        // Retry once with a fresh CSRF cookie before clearing local state.
+        await primeCsrfCookie();
+        await apiLogout({ deviceOnly: hasOtherAccounts });
+      }
+
+      if (hasOtherAccounts) {
+        removeAccount(signingOutUserId);
+        const switched = await switchAccount(remaining[0].userId);
+        if (!switched) {
+          setUser(null);
+          return 'auth';
+        }
+        await refresh({ background: false });
+        return 'switched';
+      }
+
+      clearAllStoredAccounts();
+      setActiveDeviceToken(null);
+      resetAppMetaCache();
+      setUser(null);
+      removeAccount(signingOutUserId);
+
+      const lingeringUser = await fetchCurrentUser();
+      if (lingeringUser) {
+        await apiLogout();
+        setUser(null);
+      }
+
+      return 'auth';
+    } finally {
+      signingOutRef.current = false;
+    }
   }, [accounts, removeAccount, refresh, switchAccount, user]);
 
   const value = useMemo(

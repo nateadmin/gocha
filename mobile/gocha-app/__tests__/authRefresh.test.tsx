@@ -8,6 +8,7 @@ jest.mock('../src/api/client', () => ({
   getActiveDeviceToken: jest.fn(() => 'device-token'),
   issueDeviceToken: jest.fn(),
   logout: jest.fn().mockResolvedValue(undefined),
+  primeCsrfCookie: jest.fn().mockResolvedValue(undefined),
 }));
 
 import React, { useEffect } from 'react';

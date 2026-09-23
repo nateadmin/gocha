@@ -105,6 +105,18 @@ async function ensureCsrfCookie(): Promise<void> {
   csrfPrimed = true;
 }
 
+export async function primeCsrfCookie(): Promise<void> {
+  resetCsrfPrimed();
+  await ensureCsrfCookie();
+}
+
+function isCsrfMismatch(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 419 || error.body.code === 'CSRF_MISMATCH')
+  );
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => ({}));
 
@@ -125,7 +137,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
-export async function apiRequest<T>(
+async function apiRequestOnce<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
@@ -159,6 +171,22 @@ export async function apiRequest<T>(
   });
 
   return parseResponse<T>(response);
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  try {
+    return await apiRequestOnce<T>(path, options);
+  } catch (error) {
+    const method = (options.method ?? 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD' && isCsrfMismatch(error)) {
+      await primeCsrfCookie();
+      return await apiRequestOnce<T>(path, options);
+    }
+    throw error;
+  }
 }
 
 function isAuthFailure(error: unknown): boolean {
@@ -296,11 +324,12 @@ export async function switchSession(deviceToken: string): Promise<OtpVerifyResul
 }
 
 export async function logout(options?: { deviceOnly?: boolean }): Promise<void> {
+  await primeCsrfCookie();
   await apiRequest(API_PATHS.logout, {
     method: 'POST',
     body: JSON.stringify({ device_only: options?.deviceOnly ?? false }),
   });
-  resetCsrfPrimed();
+  await primeCsrfCookie();
 }
 
 export async function issueDeviceToken(): Promise<{ deviceToken: string; account: AccountSwitcherEntry }> {
