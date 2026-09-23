@@ -88,14 +88,42 @@ function readCookie(name: string): string | null {
     return null;
   }
 
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
+  const matches = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`, 'g'));
+  if (!matches || matches.length === 0) {
+    return null;
+  }
+  const last = matches[matches.length - 1];
+  const value = last.split('=').slice(1).join('=');
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function expireBrowserCookie(name: string): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return;
+  }
+
+  const host = window.location.hostname;
+  const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
+  const variants = [
+    `${name}=; expires=${expires}; path=/`,
+    `${name}=; expires=${expires}; path=/; domain=${host}`,
+    `${name}=; expires=${expires}; path=/; domain=.${host}`,
+  ];
+  for (const cookie of variants) {
+    document.cookie = cookie;
+  }
 }
 
 async function ensureCsrfCookie(): Promise<void> {
   if (csrfPrimed) {
     return;
   }
+
+  expireBrowserCookie('XSRF-TOKEN');
 
   await fetch(`${API_BASE_URL}${API_PATHS.csrfCookie}`, {
     method: 'GET',
@@ -265,6 +293,7 @@ export async function clearSession(): Promise<void> {
       credentials: 'include',
     });
   } finally {
+    expireBrowserCookie('XSRF-TOKEN');
     resetCsrfPrimed();
   }
 }

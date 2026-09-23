@@ -201,13 +201,23 @@ class AuthOtpController extends Controller
         }
 
         $path = config('session.path', '/');
-        $domain = config('session.domain');
-        $sessionCookie = config('session.cookie');
-        $recaller = Auth::guard('web')->getRecallerName();
+        $names = array_filter([
+            config('session.cookie'),
+            Auth::guard('web')->getRecallerName(),
+            'XSRF-TOKEN',
+        ]);
+        $domains = array_unique([
+            null,
+            config('session.domain'),
+            'app.gocha.ai',
+            '.app.gocha.ai',
+        ], SORT_REGULAR);
 
-        Cookie::queue(Cookie::forget($sessionCookie, $path, $domain));
-        Cookie::queue(Cookie::forget($recaller, $path, $domain));
-        Cookie::queue(Cookie::forget('XSRF-TOKEN', $path, $domain));
+        foreach ($names as $name) {
+            foreach ($domains as $domain) {
+                Cookie::queue(Cookie::forget((string) $name, $path, $domain));
+            }
+        }
     }
 
     /**

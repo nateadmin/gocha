@@ -117,7 +117,7 @@ app_host = os.environ["GOCHA_APP_HOST"]
 env_path = Path(remote) / ".env"
 updates = {
     "APP_URL": f"https://{app_host}",
-    "SESSION_DOMAIN": app_host,
+    "SESSION_DOMAIN": "",
     "GOCHA_PLANNED_HOSTNAME": app_host,
     "SANCTUM_STATEFUL_DOMAINS": f"{app_host},localhost,localhost:5173,127.0.0.1,127.0.0.1:5173",
     "CORS_ALLOWED_ORIGINS": f"http://localhost:5173,http://127.0.0.1:5173,https://{app_host}",
