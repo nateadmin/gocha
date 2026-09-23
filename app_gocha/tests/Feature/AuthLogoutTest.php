@@ -31,6 +31,26 @@ class AuthLogoutTest extends TestCase
         $this->getJson('/api/me')->assertUnauthorized();
     }
 
+    public function test_clear_session_endpoint_clears_web_session(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->getJson('/api/me')->assertOk();
+
+        $this
+            ->withHeaders([
+                'Origin' => 'http://localhost',
+                'Referer' => 'http://localhost',
+            ])
+            ->getJson('/api/auth/clear-session')
+            ->assertOk()
+            ->assertJsonPath('message', 'Session cleared.');
+
+        $this->app['auth']->forgetGuards();
+
+        $this->getJson('/api/me')->assertUnauthorized();
+    }
+
     public function test_logout_works_without_prior_guard_check(): void
     {
         $user = User::factory()->create();

@@ -7,6 +7,7 @@ jest.mock('../src/api/client', () => ({
   fetchCurrentUser: jest.fn(),
   getActiveDeviceToken: jest.fn(() => null),
   logout: jest.fn().mockResolvedValue(undefined),
+  clearSession: jest.fn().mockResolvedValue(undefined),
   primeCsrfCookie: jest.fn().mockResolvedValue(undefined),
 }));
 

@@ -168,33 +168,46 @@ class AuthOtpController extends Controller
         ]);
     }
 
+    public function clearSession(Request $request): JsonResponse
+    {
+        $this->deviceTokens->revokeCurrent($request->bearerToken());
+        $this->invalidateWebSession($request);
+
+        return response()->json([
+            'message' => 'Session cleared.',
+        ]);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $this->deviceTokens->revokeCurrent($request->bearerToken());
 
-        $deviceOnly = $request->boolean('device_only');
-
-        if (! $deviceOnly) {
-            Auth::guard('web')->logout();
-
-            if ($request->hasSession()) {
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-            }
-
-            $path = config('session.path', '/');
-            $domain = config('session.domain');
-            $sessionCookie = config('session.cookie');
-            $recaller = Auth::guard('web')->getRecallerName();
-
-            Cookie::queue(Cookie::forget($sessionCookie, $path, $domain));
-            Cookie::queue(Cookie::forget($recaller, $path, $domain));
-            Cookie::queue(Cookie::forget('XSRF-TOKEN', $path, $domain));
+        if (! $request->boolean('device_only')) {
+            $this->invalidateWebSession($request);
         }
 
         return response()->json([
             'message' => 'Signed out.',
         ]);
+    }
+
+    private function invalidateWebSession(Request $request): void
+    {
+        Auth::guard('web')->logout();
+
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        $path = config('session.path', '/');
+        $domain = config('session.domain');
+        $sessionCookie = config('session.cookie');
+        $recaller = Auth::guard('web')->getRecallerName();
+
+        Cookie::queue(Cookie::forget($sessionCookie, $path, $domain));
+        Cookie::queue(Cookie::forget($recaller, $path, $domain));
+        Cookie::queue(Cookie::forget('XSRF-TOKEN', $path, $domain));
     }
 
     /**

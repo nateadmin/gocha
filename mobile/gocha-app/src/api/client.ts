@@ -181,7 +181,13 @@ export async function apiRequest<T>(
     return await apiRequestOnce<T>(path, options);
   } catch (error) {
     const method = (options.method ?? 'GET').toUpperCase();
-    if (method !== 'GET' && method !== 'HEAD' && isCsrfMismatch(error)) {
+    if (
+      method !== 'GET' &&
+      method !== 'HEAD' &&
+      isCsrfMismatch(error) &&
+      path.includes('/auth/')
+    ) {
+      await clearSession();
       await primeCsrfCookie();
       return await apiRequestOnce<T>(path, options);
     }
@@ -252,6 +258,17 @@ export async function fetchAppMeta(): Promise<AppMeta> {
   return appMetaPromise;
 }
 
+export async function clearSession(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}${API_PATHS.clearSession}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  } finally {
+    resetCsrfPrimed();
+  }
+}
+
 export async function requestOtp(
   identifier: string,
   mode: OtpAuthMode,
@@ -261,6 +278,7 @@ export async function requestOtp(
   resendAvailableInSeconds: number;
 }> {
   const channel = options?.channel ?? 'email';
+  await primeCsrfCookie();
   return apiRequest(API_PATHS.otpRequest, {
     method: 'POST',
     body: JSON.stringify({

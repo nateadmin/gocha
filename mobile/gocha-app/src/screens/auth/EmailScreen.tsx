@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View, StyleSheet } from 'react-native';
 
-import { ApiError, fetchAppMeta, type AccountChannel, type OtpAuthMode } from '../../api/client';
+import {
+  ApiError,
+  fetchAppMeta,
+  primeCsrfCookie,
+  type AccountChannel,
+  type OtpAuthMode,
+} from '../../api/client';
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import { sendPhoneSms } from '../../auth/phoneFirebase';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
@@ -43,8 +49,13 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const showPasswordField =
     !isSignUp &&
     channel === 'email' &&
-    (reviewLoginEnabled || normalizedIdentifier === configuredReviewEmail);
+    normalizedIdentifier === configuredReviewEmail &&
+    (reviewLoginEnabled || configuredReviewEmail === DEFAULT_REVIEW_LOGIN_EMAIL);
   const usesPasswordSignIn = showPasswordField && password.trim().length > 0;
+
+  useEffect(() => {
+    void primeCsrfCookie();
+  }, []);
 
   useEffect(() => {
     void fetchAppMeta()

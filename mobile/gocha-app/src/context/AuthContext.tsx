@@ -16,6 +16,7 @@ import {
   fetchCurrentUser,
   getActiveDeviceToken,
   issueDeviceToken,
+  clearSession,
   loginWithReviewPassword,
   logout as apiLogout,
   primeCsrfCookie,
@@ -134,24 +135,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const hadToken = getActiveDeviceToken();
       const storedAccounts = readStoredAccounts();
       if (storedAccounts.length === 0) {
-        try {
-          await primeCsrfCookie();
-          await apiLogout();
-        } catch {
-          // No active session to clear.
-        }
+        await clearSession();
         setActiveDeviceToken(null);
-        resetCsrfPrimed();
+        await primeCsrfCookie();
 
         const orphanUser = await fetchCurrentUser();
         if (orphanUser) {
-          try {
-            await primeCsrfCookie();
-            await apiLogout();
-          } catch {
-            // Best effort to clear a lingering server session.
-          }
-          resetCsrfPrimed();
+          await clearSession();
+          await primeCsrfCookie();
         }
 
         setUser(null);
@@ -350,6 +341,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     signingOutRef.current = true;
+    let reloadAfterSignOut = false;
 
     try {
       const signingOutUserId = user.id;
@@ -364,9 +356,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await apiLogout({ deviceOnly: hasOtherAccounts });
       } catch {
-        // Retry once with a fresh CSRF cookie before clearing local state.
-        await primeCsrfCookie();
-        await apiLogout({ deviceOnly: hasOtherAccounts });
+        await clearSession();
       }
 
       if (hasOtherAccounts) {
@@ -386,15 +376,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetCsrfPrimed();
       setUser(null);
       removeAccount(signingOutUserId);
-
-      if (isWebClient()) {
-        window.location.replace('/');
-        return 'auth';
-      }
+      reloadAfterSignOut = isWebClient();
 
       return 'auth';
     } finally {
       signingOutRef.current = false;
+      if (reloadAfterSignOut) {
+        window.location.replace('/');
+      }
     }
   }, [accounts, removeAccount, refresh, switchAccount, user]);
 

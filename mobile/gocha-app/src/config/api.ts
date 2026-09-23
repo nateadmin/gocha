@@ -15,6 +15,7 @@ export const API_PATHS = {
   otpVerify: '/api/auth/otp/verify',
   reviewLogin: '/api/auth/review/login',
   logout: '/api/auth/logout',
+  clearSession: '/api/auth/clear-session',
   authSwitch: '/api/auth/switch',
   deviceToken: '/api/auth/device-token',
   me: '/api/me',

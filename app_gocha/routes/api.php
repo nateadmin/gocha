@@ -81,6 +81,7 @@ Route::post('/auth/review/login', [AuthReviewLoginController::class, 'login'])
 Route::post('/auth/switch', [AuthOtpController::class, 'switchSession'])
     ->middleware('throttle:30,1');
 
+Route::get('/auth/clear-session', [AuthOtpController::class, 'clearSession']);
 Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
 
 Route::middleware('auth:sanctum')->group(function () {
