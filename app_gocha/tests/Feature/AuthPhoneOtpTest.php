@@ -121,7 +121,7 @@ class AuthPhoneOtpTest extends TestCase
             ->assertJsonPath('code', 'PHONE_NOT_FOUND');
     }
 
-    public function test_phone_signin_rejects_unverified_number(): void
+    public function test_phone_signin_allows_unverified_number_already_on_an_account(): void
     {
         User::factory()->create([
             'email' => 'has-phone@example.com',
@@ -133,9 +133,22 @@ class AuthPhoneOtpTest extends TestCase
             'channel' => AccountChannel::PHONE,
             'identifier' => '+15551112222',
             'mode' => 'signin',
-        ])
-            ->assertStatus(422)
-            ->assertJsonPath('code', 'PHONE_NOT_FOUND');
+        ])->assertOk();
+    }
+
+    public function test_phone_signin_matches_us_number_missing_country_code(): void
+    {
+        User::factory()->create([
+            'email' => 'utah@example.com',
+            'phone' => '+8018109524',
+            'phone_verified_at' => null,
+        ]);
+
+        $this->postJson('/api/auth/otp/request', [
+            'channel' => AccountChannel::PHONE,
+            'identifier' => '+18018109524',
+            'mode' => 'signin',
+        ])->assertOk();
     }
 
     public function test_phone_user_can_link_email_and_keep_phone_primary(): void

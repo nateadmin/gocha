@@ -156,7 +156,7 @@ class OtpAuthService
 
             $user = $this->createUserForChannel($channel, $identifier, $localeHints);
         } else {
-            $user = $this->findUserByChannel($channel, $identifier, verifiedOnly: true);
+            $user = $this->findUserByChannel($channel, $identifier, verifiedOnly: $channel === AccountChannel::EMAIL);
             if (! $user) {
                 throw new OtpVerificationException(
                     $channel === AccountChannel::EMAIL ? 'EMAIL_NOT_FOUND' : 'PHONE_NOT_FOUND',
@@ -172,7 +172,11 @@ class OtpAuthService
         }
 
         if ($channel === AccountChannel::PHONE) {
-            $user->forceFill(['phone_verified_at' => now()])->save();
+            $updates = ['phone_verified_at' => now()];
+            if ($user->phone !== $identifier) {
+                $updates['phone'] = $identifier;
+            }
+            $user->forceFill($updates)->save();
         }
 
         if (! $user->avatar_path) {
@@ -188,7 +192,8 @@ class OtpAuthService
         $closed = (bool) config('gocha.auth.closed_membership', false);
 
         if ($mode === 'signin') {
-            if ($this->findUserByChannel($channel, $identifier, verifiedOnly: true) === null) {
+            $mustBeVerified = $channel === AccountChannel::EMAIL;
+            if ($this->findUserByChannel($channel, $identifier, verifiedOnly: $mustBeVerified) === null) {
                 throw new OtpRequestException(
                     $channel === AccountChannel::EMAIL ? 'EMAIL_NOT_FOUND' : 'PHONE_NOT_FOUND',
                     $channel === AccountChannel::EMAIL
@@ -289,7 +294,7 @@ class OtpAuthService
             return $query->first();
         }
 
-        $query->where('phone', $identifier);
+        $query->whereIn('phone', $this->identifiers->phoneLookupCandidates($identifier));
         if ($verifiedOnly) {
             $query->whereNotNull('phone_verified_at');
         }

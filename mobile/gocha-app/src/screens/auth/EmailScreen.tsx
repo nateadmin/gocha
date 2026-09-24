@@ -31,7 +31,8 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const { theme } = useGochaTheme();
   const { requestAuthCode, signInWithReviewPassword } = useAuth();
   const [channel, setChannel] = useState<AccountChannel>('email');
-  const [identifier, setIdentifier] = useState('');
+  const [emailValue, setEmailValue] = useState('');
+  const [phoneValue, setPhoneValue] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +43,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
 
   const isSignUp = mode === 'signup';
   const blocked = retryAfterSeconds > 0;
+  const identifier = channel === 'email' ? emailValue : phoneValue;
   const normalizedIdentifier = normalizeIdentifier(channel, identifier);
   const configuredReviewEmail = (
     reviewLoginEmail ?? DEFAULT_REVIEW_LOGIN_EMAIL
@@ -197,12 +199,13 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
           </View>
 
           <BrandInput
+            key={channel === 'email' ? 'email-identifier' : 'phone-identifier'}
             autoCapitalize="none"
             autoComplete={channel === 'email' ? 'email' : 'tel'}
             keyboardType={channel === 'email' ? 'email-address' : 'phone-pad'}
             placeholder={channel === 'email' ? 'Email' : 'Phone with country code'}
             value={identifier}
-            onChangeText={setIdentifier}
+            onChangeText={channel === 'email' ? setEmailValue : setPhoneValue}
             onSubmitEditing={() => {
               void handleContinue();
             }}

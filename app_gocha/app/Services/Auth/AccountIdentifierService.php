@@ -38,6 +38,25 @@ class AccountIdentifierService
         return '+'.$digits;
     }
 
+    /**
+     * @return list<string>
+     */
+    public function phoneLookupCandidates(string $normalized): array
+    {
+        $digits = ltrim($normalized, '+');
+        $candidates = ['+'.$digits];
+
+        if (strlen($digits) === 10) {
+            $candidates[] = '+1'.$digits;
+        }
+
+        if (strlen($digits) === 11 && str_starts_with($digits, '1')) {
+            $candidates[] = '+'.substr($digits, 1);
+        }
+
+        return array_values(array_unique($candidates));
+    }
+
     public function channelFromLegacyEmail(?string $email): array
     {
         return [
