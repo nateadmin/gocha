@@ -6,6 +6,7 @@ use App\Exceptions\OtpVerificationException;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\AccountIdentifierService;
+use App\Services\Auth\AccountLinkService;
 use App\Services\Auth\DeviceTokenService;
 use App\Services\Auth\OtpAuthService;
 use App\Support\AccountChannel;
@@ -23,6 +24,7 @@ class AuthOtpController extends Controller
         private readonly OtpAuthService $otpAuth,
         private readonly DeviceTokenService $deviceTokens,
         private readonly AccountIdentifierService $identifiers,
+        private readonly AccountLinkService $accountLinks,
     ) {}
 
     public function request(Request $request): JsonResponse
@@ -117,39 +119,80 @@ class AuthOtpController extends Controller
     }
 
     /**
-     * Exchanges a stored device token for a web session login. This is how
-     * account switching changes the server-side identity: on stateful (web)
-     * requests the session cookie takes precedence over bearer tokens, so the
-     * session itself must be re-logged-in as the target account.
+     * Switches the authenticated session to another linked account, or to the
+     * owner of a stored device token. Device-token switches also persist a
+     * two-way account link so the pair is available on every device.
      */
     public function switchSession(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'deviceToken' => ['required', 'string', 'max:512'],
+            'deviceToken' => ['sometimes', 'nullable', 'string', 'max:512'],
+            'userId' => ['sometimes', 'nullable', 'integer'],
         ]);
 
-        $user = $this->deviceTokens->resolveUser($validated['deviceToken']);
-        if (! $user) {
-            return response()->json([
-                'code' => 'INVALID_DEVICE_TOKEN',
-                'message' => 'This account needs to sign in again.',
-            ], 401);
+        $actor = $request->user();
+        if (! $actor) {
+            $actor = $this->deviceTokens->resolveUser($request->bearerToken());
         }
 
-        Auth::guard('web')->login($user);
+        $target = null;
+        $presentedDeviceToken = $validated['deviceToken'] ?? null;
+        $requestedUserId = isset($validated['userId']) ? (int) $validated['userId'] : null;
+
+        if ($requestedUserId && $actor && ($requestedUserId === $actor->id || $this->accountLinks->areLinked($actor->id, $requestedUserId))) {
+            $target = User::query()->find($requestedUserId);
+            if (! $target) {
+                return response()->json([
+                    'code' => 'ACCOUNT_NOT_FOUND',
+                    'message' => 'That account no longer exists.',
+                ], 404);
+            }
+        } elseif (is_string($presentedDeviceToken) && $presentedDeviceToken !== '') {
+            $target = $this->deviceTokens->resolveUser($presentedDeviceToken);
+            if (! $target) {
+                return response()->json([
+                    'code' => 'INVALID_DEVICE_TOKEN',
+                    'message' => 'This account needs to sign in again.',
+                ], 401);
+            }
+
+            if ($actor && $actor->id !== $target->id) {
+                $this->accountLinks->link($actor, $target);
+            }
+        } elseif ($requestedUserId) {
+            if (! $actor) {
+                return response()->json([
+                    'code' => 'UNAUTHENTICATED',
+                    'message' => 'Sign in required.',
+                ], 401);
+            }
+
+            return response()->json([
+                'code' => 'ACCOUNT_NOT_LINKED',
+                'message' => 'Those accounts are not linked.',
+            ], 403);
+        } else {
+            throw ValidationException::withMessages([
+                'userId' => ['Provide a linked user id or a device token.'],
+            ]);
+        }
+
+        Auth::guard('web')->login($target);
 
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
 
-        // Rotate the device token so the presented credential is single-use.
-        $this->deviceTokens->revokeCurrent($validated['deviceToken']);
-        $deviceToken = $this->deviceTokens->issue($user);
+        if (is_string($presentedDeviceToken) && $presentedDeviceToken !== '') {
+            $this->deviceTokens->revokeCurrent($presentedDeviceToken);
+        }
+
+        $deviceToken = $this->deviceTokens->issue($target);
 
         return response()->json([
-            'user' => $user->load('activeBusinessListing')->toAuthPayload(),
+            'user' => $target->load('activeBusinessListing')->toAuthPayload(),
             'deviceToken' => $deviceToken->plainTextToken,
-            'account' => $user->toAccountSwitcherPayload(),
+            'account' => $target->toAccountSwitcherPayload(),
         ]);
     }
 

@@ -9,6 +9,8 @@ jest.mock('../src/api/client', () => ({
   logout: jest.fn().mockResolvedValue(undefined),
   clearSession: jest.fn().mockResolvedValue(undefined),
   primeCsrfCookie: jest.fn().mockResolvedValue(undefined),
+  fetchLinkedAccounts: jest.fn().mockResolvedValue([]),
+  linkAccount: jest.fn().mockResolvedValue([]),
 }));
 
 import React, { useEffect } from 'react';

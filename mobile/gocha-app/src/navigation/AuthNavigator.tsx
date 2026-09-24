@@ -19,7 +19,7 @@ export function AuthNavigator() {
   useEffect(() => {
     if (isAddingAccount) {
       setStep('email');
-      setMode('signup');
+      setMode('signin');
       return;
     }
     if (consumeStartSignIn()) {

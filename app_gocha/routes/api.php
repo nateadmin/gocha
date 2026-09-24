@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Auth\FirebasePhoneAuthService;
+use App\Http\Controllers\Api\AccountLinkController;
 use App\Http\Controllers\Api\Admin\AdminBusinessListingController;
 use App\Http\Controllers\Api\Admin\AdminVerificationController;
 use App\Http\Controllers\Api\AuthOtpController;
@@ -85,6 +86,10 @@ Route::get('/auth/clear-session', [AuthOtpController::class, 'clearSession']);
 Route::post('/auth/logout', [AuthOtpController::class, 'logout']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/accounts/linked', [AccountLinkController::class, 'index']);
+    Route::post('/accounts/link', [AccountLinkController::class, 'store']);
+    Route::post('/accounts/unlink', [AccountLinkController::class, 'destroy']);
+
     Route::get('/me', [ProfileController::class, 'me']);
     Route::post('/profile/onboarding', [ProfileController::class, 'completeOnboarding']);
     Route::post('/profile/update', [ProfileController::class, 'updateProfile']);

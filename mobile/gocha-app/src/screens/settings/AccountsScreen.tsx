@@ -13,7 +13,7 @@ import { useGochaTheme } from '../../theme';
 export function AccountsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const { theme } = useGochaTheme();
-  const { accounts, activeAccountId, switchAccount, removeAccount, beginAddAccount } = useAccounts();
+  const { accounts, activeAccountId, switchAccount, unlinkAccount, beginAddAccount } = useAccounts();
   const { refresh } = useAuth();
 
   return (
@@ -35,10 +35,10 @@ export function AccountsScreen() {
         Accounts
       </Text>
       <Text style={{ color: theme.colors.mutedForeground, marginBottom: 16, fontFamily: theme.typography.sans }}>
-        Switch between accounts like Telegram. Add another without signing everyone out.
+        Linked accounts follow you on every device. Unlink once and both sides lose the connection.
       </Text>
 
-      <SectionLabel>ON THIS DEVICE</SectionLabel>
+      <SectionLabel>LINKED ACCOUNTS</SectionLabel>
       <View
         style={[
           styles.card,
@@ -71,19 +71,23 @@ export function AccountsScreen() {
               </View>
               {active ? (
                 <Ionicons name="checkmark-circle" size={22} color={theme.colors.primary} />
-              ) : null}
-              <Pressable
-                onPress={() => removeAccount(account.userId)}
-                hitSlop={12}
-                style={{ marginLeft: 12 }}>
-                <Ionicons name="close-circle-outline" size={22} color={theme.colors.mutedForeground} />
-              </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    void unlinkAccount(account.userId);
+                  }}
+                  hitSlop={12}
+                  style={{ marginLeft: 12 }}
+                  accessibilityLabel="Unlink account">
+                  <Ionicons name="close-circle-outline" size={22} color={theme.colors.mutedForeground} />
+                </Pressable>
+              )}
             </Pressable>
           );
         })}
       </View>
 
-      <CtaButton label="Add account" onPress={beginAddAccount} />
+      <CtaButton label="Link another account" onPress={beginAddAccount} />
     </ScrollView>
   );
 }

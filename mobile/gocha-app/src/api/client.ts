@@ -359,17 +359,40 @@ export async function verifyOtp(
 }
 
 /**
- * Exchanges a stored device token for a web session login so the server-side
- * identity actually changes when switching accounts. Returns a rotated device
- * token that must replace the presented one.
+ * Switches the server session to a linked account (by user id) or to the
+ * owner of a stored device token.
  */
-export async function switchSession(deviceToken: string): Promise<OtpVerifyResult> {
+export async function switchSession(input: {
+  deviceToken?: string;
+  userId?: number;
+}): Promise<OtpVerifyResult> {
   const payload = await apiRequest<OtpVerifyResult>(API_PATHS.authSwitch, {
     method: 'POST',
-    body: JSON.stringify({ deviceToken }),
+    body: JSON.stringify(input),
   });
   resetCsrfPrimed();
   return payload;
+}
+
+export async function fetchLinkedAccounts(): Promise<AccountSwitcherEntry[]> {
+  const payload = await apiRequest<{ accounts: AccountSwitcherEntry[] }>(API_PATHS.linkedAccounts);
+  return payload.accounts ?? [];
+}
+
+export async function linkAccount(counterpartDeviceToken: string): Promise<AccountSwitcherEntry[]> {
+  const payload = await apiRequest<{ accounts: AccountSwitcherEntry[] }>(API_PATHS.linkAccount, {
+    method: 'POST',
+    body: JSON.stringify({ counterpartDeviceToken }),
+  });
+  return payload.accounts ?? [];
+}
+
+export async function unlinkAccount(userId: number): Promise<AccountSwitcherEntry[]> {
+  const payload = await apiRequest<{ accounts: AccountSwitcherEntry[] }>(API_PATHS.unlinkAccount, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+  return payload.accounts ?? [];
 }
 
 export async function logout(options?: { deviceOnly?: boolean }): Promise<void> {

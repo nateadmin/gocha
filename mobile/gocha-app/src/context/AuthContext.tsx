@@ -99,6 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     registerAccount,
     switchAccount,
     syncAccountProfile,
+    persistAccountLink,
+    hydrateLinkedAccounts,
+    isAddingAccount,
   } = useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -173,6 +176,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Session cookie auth may still work for stateful API requests.
           }
         }
+        await hydrateLinkedAccounts({
+          userId: nextUser.id,
+          label: nextUser.email ?? nextUser.phone ?? 'This device',
+          displayName: nextUser.displayName,
+          avatarUrl: nextUser.avatarUrl,
+          deviceToken: getActiveDeviceToken() ?? '',
+          primaryLoginChannel: nextUser.primaryLoginChannel,
+        });
         return;
       }
 
@@ -201,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, [patchAccountDeviceToken, syncUserToStoredAccount]);
+  }, [patchAccountDeviceToken, syncUserToStoredAccount, hydrateLinkedAccounts]);
 
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
@@ -234,12 +245,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const signInWithReviewPassword = useCallback(
-    async (email: string, password: string) => {
-      const payload = await loginWithReviewPassword(email, password);
-      if (!payload.account || !payload.deviceToken) {
-        throw new Error('Could not finish sign-in.');
-      }
+  const finishAccountSignIn = useCallback(
+    async (payload: {
+      user: AuthUser;
+      account: { id: number; label: string; displayName: string; avatarUrl: string | null; primaryLoginChannel: string };
+      deviceToken: string;
+    }) => {
+      const counterpartToken = isAddingAccount
+        ? accounts.find((entry) => entry.userId !== payload.account.id)?.deviceToken
+        : null;
+
       registerAccount({
         userId: payload.account.id,
         label: payload.account.label,
@@ -251,8 +266,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(payload.user);
       setError(null);
       syncUserToStoredAccount(payload.user);
+
+      if (counterpartToken) {
+        try {
+          await persistAccountLink(counterpartToken);
+        } catch {
+          // Local switcher still works; hydrate will retry from the server.
+        }
+      }
+
+      await hydrateLinkedAccounts({
+        userId: payload.account.id,
+        label: payload.account.label,
+        displayName: payload.account.displayName,
+        avatarUrl: payload.account.avatarUrl,
+        deviceToken: payload.deviceToken,
+        primaryLoginChannel: payload.account.primaryLoginChannel,
+      });
     },
-    [registerAccount, syncUserToStoredAccount],
+    [
+      accounts,
+      hydrateLinkedAccounts,
+      isAddingAccount,
+      persistAccountLink,
+      registerAccount,
+      syncUserToStoredAccount,
+    ],
+  );
+
+  const signInWithReviewPassword = useCallback(
+    async (email: string, password: string) => {
+      const payload = await loginWithReviewPassword(email, password);
+      if (!payload.account || !payload.deviceToken) {
+        throw new Error('Could not finish sign-in.');
+      }
+      await finishAccountSignIn({
+        user: payload.user,
+        account: payload.account,
+        deviceToken: payload.deviceToken,
+      });
+    },
+    [finishAccountSignIn],
   );
 
   const verifyWithOtp = useCallback(
@@ -277,19 +331,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!payload.account || !payload.deviceToken) {
         throw new Error('Could not finish sign-in.');
       }
-      registerAccount({
-        userId: payload.account.id,
-        label: payload.account.label,
-        displayName: payload.account.displayName,
-        avatarUrl: payload.account.avatarUrl,
+      await finishAccountSignIn({
+        user: payload.user,
+        account: payload.account,
         deviceToken: payload.deviceToken,
-        primaryLoginChannel: payload.account.primaryLoginChannel,
       });
-      setUser(payload.user);
-      setError(null);
-      syncUserToStoredAccount(payload.user);
     },
-    [registerAccount, syncUserToStoredAccount],
+    [finishAccountSignIn, syncUserToStoredAccount],
   );
 
   const finishOnboarding = useCallback(
@@ -360,7 +408,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (hasOtherAccounts) {
-        removeAccount(signingOutUserId);
         const switched = await switchAccount(remaining[0].userId);
         if (!switched) {
           setUser(null);
