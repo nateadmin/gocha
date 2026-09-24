@@ -93,16 +93,19 @@ android {
             keyPassword 'android'
         }
         release {
-            def keystorePath = System.getenv("GOCHA_ANDROID_KEYSTORE")
-            def keystorePassword = System.getenv("GOCHA_ANDROID_KEYSTORE_PASSWORD")
-            def keyAlias = System.getenv("GOCHA_ANDROID_KEY_ALIAS") ?: "gocha-upload"
-            def keyPassword = System.getenv("GOCHA_ANDROID_KEY_PASSWORD") ?: keystorePassword
+            // Names must differ from the signingConfig properties below: a local
+            // called `keyAlias` shadows the setter, so `keyAlias keyAlias` is
+            // parsed as calling the String and the release build dies.
+            def releaseStorePath = System.getenv("GOCHA_ANDROID_KEYSTORE")
+            def releaseStorePassword = System.getenv("GOCHA_ANDROID_KEYSTORE_PASSWORD")
+            def releaseKeyAlias = System.getenv("GOCHA_ANDROID_KEY_ALIAS") ?: "gocha-upload"
+            def releaseKeyPassword = System.getenv("GOCHA_ANDROID_KEY_PASSWORD") ?: releaseStorePassword
 
-            if (keystorePath) {
-                storeFile file(keystorePath)
-                storePassword keystorePassword
-                keyAlias keyAlias
-                keyPassword keyPassword
+            if (releaseStorePath) {
+                storeFile = file(releaseStorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
