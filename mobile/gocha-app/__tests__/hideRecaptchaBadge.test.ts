@@ -19,9 +19,13 @@ const fakeDocument = {
 
 (globalThis as { document?: typeof fakeDocument }).document = fakeDocument;
 
-import { hideRecaptchaBadge } from '../src/auth/phoneFirebase';
+import {
+  hideRecaptchaBadge,
+  matchFirebaseCode,
+  recaptchaBadgeCss,
+} from '../src/auth/phoneFirebase';
 
-test('hideRecaptchaBadge injects CSS that hides the Google badge', () => {
+test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
   created.length = 0;
 
   hideRecaptchaBadge();
@@ -29,6 +33,13 @@ test('hideRecaptchaBadge injects CSS that hides the Google badge', () => {
 
   expect(created).toHaveLength(1);
   expect(created[0].id).toBe('gocha-hide-recaptcha');
+  expect(created[0].textContent).toBe(recaptchaBadgeCss());
   expect(created[0].textContent).toContain('.grecaptcha-badge');
-  expect(created[0].textContent).toContain('visibility:hidden');
+  expect(created[0].textContent).not.toContain('#gocha-recaptcha');
+  expect(created[0].textContent).not.toContain('-9999px');
+});
+
+test('captcha failures tell the user to complete the visible check', () => {
+  expect(matchFirebaseCode('auth/captcha-check-failed')).toContain('robot');
+  expect(matchFirebaseCode('auth/invalid-app-credential')).toContain('robot');
 });

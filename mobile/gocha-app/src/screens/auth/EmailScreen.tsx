@@ -11,6 +11,7 @@ import {
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import { sendPhoneSms } from '../../auth/phoneFirebase';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
+import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
@@ -228,6 +229,8 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
               style={styles.input}
             />
           ) : null}
+
+          {channel === 'phone' ? <RecaptchaSlot /> : null}
 
           {error ? (
             <BrandText style={{ color: theme.colors.destructive, marginBottom: 8 }}>

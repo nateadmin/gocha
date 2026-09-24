@@ -19,6 +19,7 @@ import { normalizeIdentifier } from '../../auth/accountChannel';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
+import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { useAuth } from '../../context/AuthContext';
@@ -271,6 +272,7 @@ export function ProfileSettingsScreen() {
                 autoComplete="one-time-code"
               />
             ) : null}
+            {user?.emailVerified && !user?.phoneVerified ? <RecaptchaSlot /> : null}
             <CtaButton
               label={linkSent ? 'Verify contact' : 'Send verification code'}
               loading={linkLoading}

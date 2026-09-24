@@ -15,6 +15,7 @@ import { normalizeIdentifier } from '../../auth/accountChannel';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
+import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
@@ -282,6 +283,8 @@ export function OnboardingScreen() {
           <BrandText muted>
             When off, global search will not return your profile by name or email.
           </BrandText>
+
+          {optionalChannel === 'phone' ? <RecaptchaSlot /> : null}
 
           {error ? (
             <BrandText style={{ color: theme.colors.destructive }}>{error}</BrandText>

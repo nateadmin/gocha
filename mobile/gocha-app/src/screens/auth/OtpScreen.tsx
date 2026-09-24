@@ -11,6 +11,7 @@ import {
 import { ApiError, fetchAppMeta, type AccountChannel, type OtpAuthMode } from '../../api/client';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
+import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
@@ -68,7 +69,11 @@ export function OtpScreen({ email, channel = 'email', mode, onBack }: Props) {
       });
     } catch (err) {
       setSubmitError(
-        err instanceof ApiError ? err.message : 'Could not verify the code.',
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Could not verify the code.',
       );
     } finally {
       setLoading(false);
@@ -106,7 +111,11 @@ export function OtpScreen({ email, channel = 'email', mode, onBack }: Props) {
       setCooldown(payload.resendAvailableInSeconds || 60);
     } catch (err) {
       setSubmitError(
-        err instanceof ApiError ? err.message : 'Could not resend the code.',
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Could not resend the code.',
       );
       if (err instanceof ApiError && err.body.code === 'RATE_LIMITED' && err.body.retryAfterSeconds) {
         setCooldown(err.body.retryAfterSeconds);
@@ -160,6 +169,8 @@ export function OtpScreen({ email, channel = 'email', mode, onBack }: Props) {
               },
             ]}
           />
+
+          {channel === 'phone' ? <RecaptchaSlot /> : null}
 
           {errorMessage ? (
             <BrandText style={{ color: theme.colors.destructive }}>
