@@ -212,10 +212,8 @@ export async function apiRequest<T>(
     if (
       method !== 'GET' &&
       method !== 'HEAD' &&
-      isCsrfMismatch(error) &&
-      path.includes('/auth/')
+      isCsrfMismatch(error)
     ) {
-      await clearSession();
       await primeCsrfCookie();
       return await apiRequestOnce<T>(path, options);
     }
@@ -321,11 +319,16 @@ export async function requestOtp(
 export async function loginWithReviewPassword(
   email: string,
   password: string,
+  options?: { linkCurrentAccount?: boolean },
 ): Promise<OtpVerifyResult> {
   await primeCsrfCookie();
   const payload = await apiRequest<OtpVerifyResult>(API_PATHS.reviewLogin, {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email,
+      password,
+      linkCurrentAccount: options?.linkCurrentAccount ?? false,
+    }),
   });
   resetCsrfPrimed();
   return payload;
@@ -340,11 +343,12 @@ export async function verifyOtp(
     firebaseIdToken?: string;
     language?: string;
     country?: string | null;
+    linkCurrentAccount?: boolean;
   },
 ): Promise<OtpVerifyResult> {
   const channel = options?.channel ?? 'email';
   await primeCsrfCookie();
-  return apiRequest(API_PATHS.otpVerify, {
+  const payload = await apiRequest<OtpVerifyResult>(API_PATHS.otpVerify, {
     method: 'POST',
     body: JSON.stringify({
       channel,
@@ -354,8 +358,11 @@ export async function verifyOtp(
       firebaseIdToken: options?.firebaseIdToken,
       language: options?.language,
       country: options?.country,
+      linkCurrentAccount: options?.linkCurrentAccount ?? false,
     }),
   });
+  resetCsrfPrimed();
+  return payload;
 }
 
 /**

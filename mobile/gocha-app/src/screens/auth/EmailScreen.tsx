@@ -17,6 +17,7 @@ import { BrandInput } from '../../components/brand/BrandInput';
 import { BrandText } from '../../components/brand/BrandText';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
 import { useAuth } from '../../context/AuthContext';
+import { useAccounts } from '../../context/AccountsContext';
 import { useGochaTheme } from '../../theme';
 
 const DEFAULT_REVIEW_LOGIN_EMAIL = 'google-review@gocha.ai';
@@ -31,6 +32,7 @@ type Props = {
 export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const { theme } = useGochaTheme();
   const { requestAuthCode, signInWithReviewPassword } = useAuth();
+  const { isAddingAccount } = useAccounts();
   const [channel, setChannel] = useState<AccountChannel>('email');
   const [emailValue, setEmailValue] = useState('');
   const [phoneValue, setPhoneValue] = useState('');
@@ -142,14 +144,16 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
         style={styles.flex}>
         <View style={styles.content}>
           <BrandText variant="title">
-            {isSignUp ? 'Create your account' : 'Sign in'}
+            {isAddingAccount ? 'Link another account' : isSignUp ? 'Create your account' : 'Sign in'}
           </BrandText>
           <BrandText muted style={styles.subtitle}>
             {isSignUp
               ? 'Use email or phone. The other is optional later.'
               : showPasswordField
                 ? 'Enter your email and password, or leave password blank to use a sign-in code.'
-                : 'Use the email or phone on your Gocha account.'}
+                : isAddingAccount
+                  ? 'Sign in to the other Gocha account. It will stay linked so you can switch.'
+                  : 'Use the email or phone on your Gocha account.'}
           </BrandText>
 
           <View style={styles.channelRow}>

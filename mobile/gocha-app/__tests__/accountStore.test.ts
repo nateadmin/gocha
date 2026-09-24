@@ -1,4 +1,5 @@
 import {
+  mergeLinkedAccounts,
   readStoredAccounts,
   updateStoredAccountProfile,
   writeStoredAccounts,
@@ -71,5 +72,62 @@ describe('updateStoredAccountProfile', () => {
 
     expect(after[0]?.displayName).toBe('Nate Admin');
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')[0].displayName).toBe('Nate Admin');
+  });
+});
+
+describe('mergeLinkedAccounts', () => {
+  test('keeps the original account when the server list is empty', () => {
+    const original: StoredAccount = {
+      userId: 1,
+      label: 'nate@example.com',
+      displayName: 'Nate',
+      avatarUrl: null,
+      deviceToken: 'token-a',
+      primaryLoginChannel: 'email',
+    };
+    const added: StoredAccount = {
+      userId: 3,
+      label: 'nate@wefoundd.com',
+      displayName: 'Giggly',
+      avatarUrl: null,
+      deviceToken: 'token-b',
+      primaryLoginChannel: 'email',
+    };
+
+    const merged = mergeLinkedAccounts([original, added], [], added);
+
+    expect(merged.map((entry) => entry.userId).sort()).toEqual([1, 3]);
+    expect(merged.find((entry) => entry.userId === 1)?.deviceToken).toBe('token-a');
+  });
+
+  test('fills in linked accounts while preserving stored device tokens', () => {
+    const original: StoredAccount = {
+      userId: 1,
+      label: 'nate@example.com',
+      displayName: 'Nate',
+      avatarUrl: null,
+      deviceToken: 'token-a',
+      primaryLoginChannel: 'email',
+    };
+    const added: StoredAccount = {
+      userId: 3,
+      label: 'nate@wefoundd.com',
+      displayName: 'Giggly',
+      avatarUrl: null,
+      deviceToken: 'token-b',
+      primaryLoginChannel: 'email',
+    };
+
+    const withPrev = mergeLinkedAccounts([original, added], [
+      {
+        id: 1,
+        label: 'nate@example.com',
+        displayName: 'Nate Mandel',
+        avatarUrl: null,
+        primaryLoginChannel: 'email',
+      },
+    ], added);
+    expect(withPrev.find((entry) => entry.userId === 1)?.deviceToken).toBe('token-a');
+    expect(withPrev.find((entry) => entry.userId === 1)?.displayName).toBe('Nate Mandel');
   });
 });

@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\AccountLink;
+use App\Models\LoginOtp;
 use App\Models\User;
 use App\Services\Auth\DeviceTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AccountLinkTest extends TestCase
@@ -95,6 +97,73 @@ class AccountLinkTest extends TestCase
                 ->where('user_id_high', max($alice->id, $bob->id))
                 ->exists()
         );
+    }
+
+    public function test_otp_verify_links_the_current_session_account(): void
+    {
+        $alice = User::factory()->create(['email' => 'alice-link@example.com']);
+        $bob = User::factory()->create(['email' => 'bob-link@example.com']);
+        $code = '424242';
+
+        LoginOtp::query()->create([
+            'channel' => 'email',
+            'identifier' => $bob->email,
+            'code_hash' => Hash::make($code),
+            'attempts' => 0,
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $this->actingAs($alice)
+            ->withHeaders([
+                'Origin' => 'http://localhost',
+                'Referer' => 'http://localhost',
+            ])
+            ->postJson('/api/auth/otp/verify', [
+                'email' => $bob->email,
+                'code' => $code,
+                'mode' => 'signin',
+                'linkCurrentAccount' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('user.id', $bob->id);
+
+        $this->assertTrue(
+            AccountLink::query()
+                ->where('user_id_low', min($alice->id, $bob->id))
+                ->where('user_id_high', max($alice->id, $bob->id))
+                ->exists()
+        );
+        $this->assertSame($bob->id, auth('web')->id());
+
+        $this->actingAs($bob)
+            ->getJson('/api/accounts/linked')
+            ->assertOk()
+            ->assertJsonPath('accounts.0.id', $alice->id);
+    }
+
+    public function test_otp_verify_link_flag_requires_an_existing_session(): void
+    {
+        $bob = User::factory()->create(['email' => 'bob-nolink@example.com']);
+        $code = '111111';
+
+        LoginOtp::query()->create([
+            'channel' => 'email',
+            'identifier' => $bob->email,
+            'code_hash' => Hash::make($code),
+            'attempts' => 0,
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $this->postJson('/api/auth/otp/verify', [
+            'email' => $bob->email,
+            'code' => $code,
+            'mode' => 'signin',
+            'linkCurrentAccount' => true,
+        ])
+            ->assertUnauthorized()
+            ->assertJsonPath('code', 'UNAUTHENTICATED');
+
+        $this->assertDatabaseCount('account_links', 0);
     }
 
     public function test_cannot_link_an_account_to_itself(): void

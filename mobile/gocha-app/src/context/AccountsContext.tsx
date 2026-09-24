@@ -11,6 +11,7 @@ import {
 import {
   readActiveAccountId,
   readStoredAccounts,
+  mergeLinkedAccounts,
   updateStoredAccountDeviceToken,
   updateStoredAccountProfile,
   writeActiveAccountId,
@@ -24,7 +25,6 @@ import {
   setActiveDeviceToken,
   switchSession,
   unlinkAccount as apiUnlinkAccount,
-  type AccountSwitcherEntry,
 } from '../api/client';
 
 type AccountsContextValue = {
@@ -39,6 +39,7 @@ type AccountsContextValue = {
   removeAccount: (userId: number) => void;
   unlinkAccount: (userId: number) => Promise<void>;
   persistAccountLink: (counterpartDeviceToken: string) => Promise<void>;
+  completeAddAccount: () => void;
   hydrateLinkedAccounts: (current?: StoredAccount | null) => Promise<void>;
   patchAccountDeviceToken: (userId: number, deviceToken: string) => void;
   syncAccountProfile: (
@@ -48,20 +49,6 @@ type AccountsContextValue = {
 };
 
 const AccountsContext = createContext<AccountsContextValue | null>(null);
-
-function toStoredAccount(
-  entry: AccountSwitcherEntry,
-  existing?: StoredAccount,
-): StoredAccount {
-  return {
-    userId: entry.id,
-    label: entry.label,
-    displayName: entry.displayName,
-    avatarUrl: entry.avatarUrl,
-    deviceToken: existing?.deviceToken ?? '',
-    primaryLoginChannel: entry.primaryLoginChannel,
-  };
-}
 
 export function AccountsProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<StoredAccount[]>(() => readStoredAccounts());
@@ -106,7 +93,6 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     });
     setActiveAccountId(account.userId);
     writeActiveAccountId(account.userId);
-    setIsAddingAccount(false);
     setActiveDeviceToken(account.deviceToken || null);
   }, []);
 
@@ -115,26 +101,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       try {
         const linked = await fetchLinkedAccounts();
         setAccounts((prev) => {
-          const byId = new Map(prev.map((entry) => [entry.userId, entry]));
-          if (current) {
-            byId.set(current.userId, { ...byId.get(current.userId), ...current });
-          }
-          const activeId = current?.userId ?? activeAccountId;
-          const next: StoredAccount[] = [];
-          const seen = new Set<number>();
-          const push = (entry: StoredAccount) => {
-            if (seen.has(entry.userId)) {
-              return;
-            }
-            seen.add(entry.userId);
-            next.push(entry);
-          };
-          if (activeId != null && byId.has(activeId)) {
-            push(byId.get(activeId)!);
-          }
-          for (const item of linked) {
-            push(toStoredAccount(item, byId.get(item.id)));
-          }
+          const next = mergeLinkedAccounts(prev, linked, current);
           writeStoredAccounts(next);
           return next;
         });
@@ -142,23 +109,14 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
         // Keep the locally stored accounts if the network call fails.
       }
     },
-    [activeAccountId],
+    [],
   );
 
   const persistAccountLink = useCallback(
     async (counterpartDeviceToken: string) => {
       const linked = await apiLinkAccount(counterpartDeviceToken);
       setAccounts((prev) => {
-        const byId = new Map(prev.map((entry) => [entry.userId, entry]));
-        const next = prev.slice();
-        for (const item of linked) {
-          if (byId.has(item.id)) {
-            continue;
-          }
-          const stored = toStoredAccount(item);
-          next.push(stored);
-          byId.set(item.id, stored);
-        }
+        const next = mergeLinkedAccounts(prev, linked);
         writeStoredAccounts(next);
         return next;
       });
@@ -261,6 +219,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
 
   const beginAddAccount = useCallback(() => setIsAddingAccount(true), []);
   const cancelAddAccount = useCallback(() => setIsAddingAccount(false), []);
+  const completeAddAccount = useCallback(() => setIsAddingAccount(false), []);
 
   const value = useMemo(
     () => ({
@@ -275,6 +234,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       removeAccount,
       unlinkAccount,
       persistAccountLink,
+      completeAddAccount,
       hydrateLinkedAccounts,
       patchAccountDeviceToken,
       syncAccountProfile,
@@ -291,6 +251,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       removeAccount,
       unlinkAccount,
       persistAccountLink,
+      completeAddAccount,
       hydrateLinkedAccounts,
       patchAccountDeviceToken,
       syncAccountProfile,

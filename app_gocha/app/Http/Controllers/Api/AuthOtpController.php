@@ -68,6 +68,7 @@ class AuthOtpController extends Controller
             'firebaseIdToken' => ['sometimes', 'nullable', 'string', 'max:4000'],
             'language' => ['sometimes', 'nullable', 'string', 'max:16'],
             'country' => ['sometimes', 'nullable', 'string', 'max:8'],
+            'linkCurrentAccount' => ['sometimes', 'boolean'],
         ]);
 
         try {
@@ -102,6 +103,12 @@ class AuthOtpController extends Controller
                 'user' => $user->load('activeBusinessListing')->toAuthPayload(),
             ]);
         }
+
+        $this->linkCurrentAccountIfRequested(
+            (bool) ($validated['linkCurrentAccount'] ?? false),
+            $actor,
+            $user,
+        );
 
         Auth::login($user);
 
@@ -285,6 +292,23 @@ class AuthOtpController extends Controller
         throw ValidationException::withMessages([
             'identifier' => ['Provide channel and identifier, or email.'],
         ]);
+    }
+
+    private function linkCurrentAccountIfRequested(bool $requested, ?User $actor, User $verified): void
+    {
+        if (! $requested) {
+            return;
+        }
+
+        if (! $actor) {
+            throw new \Illuminate\Auth\AuthenticationException(
+                'Sign in to your current account before linking another.',
+            );
+        }
+
+        if ($actor->id !== $verified->id) {
+            $this->accountLinks->link($actor, $verified);
+        }
     }
 
     private function requireActor(Request $request): User

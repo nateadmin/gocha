@@ -102,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persistAccountLink,
     hydrateLinkedAccounts,
     isAddingAccount,
+    completeAddAccount,
   } = useAccounts();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,9 +252,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       account: { id: number; label: string; displayName: string; avatarUrl: string | null; primaryLoginChannel: string };
       deviceToken: string;
     }) => {
-      const counterpartToken = isAddingAccount
-        ? accounts.find((entry) => entry.userId !== payload.account.id)?.deviceToken
+      const origin = isAddingAccount
+        ? accounts.find((entry) => entry.userId !== payload.account.id)
         : null;
+      const counterpartToken = origin?.deviceToken || null;
 
       registerAccount({
         userId: payload.account.id,
@@ -267,27 +269,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
       syncUserToStoredAccount(payload.user);
 
-      if (counterpartToken) {
-        try {
-          await persistAccountLink(counterpartToken);
-        } catch {
-          // Local switcher still works; hydrate will retry from the server.
+      try {
+        if (counterpartToken) {
+          try {
+            await persistAccountLink(counterpartToken);
+          } catch {
+            // Server-side link during OTP/review login is the source of truth.
+          }
+        }
+
+        await hydrateLinkedAccounts({
+          userId: payload.account.id,
+          label: payload.account.label,
+          displayName: payload.account.displayName,
+          avatarUrl: payload.account.avatarUrl,
+          deviceToken: payload.deviceToken,
+          primaryLoginChannel: payload.account.primaryLoginChannel,
+        });
+      } finally {
+        if (isAddingAccount) {
+          completeAddAccount();
         }
       }
-
-      await hydrateLinkedAccounts({
-        userId: payload.account.id,
-        label: payload.account.label,
-        displayName: payload.account.displayName,
-        avatarUrl: payload.account.avatarUrl,
-        deviceToken: payload.deviceToken,
-        primaryLoginChannel: payload.account.primaryLoginChannel,
-      });
     },
     [
       accounts,
       hydrateLinkedAccounts,
       isAddingAccount,
+      completeAddAccount,
       persistAccountLink,
       registerAccount,
       syncUserToStoredAccount,
@@ -296,7 +305,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithReviewPassword = useCallback(
     async (email: string, password: string) => {
-      const payload = await loginWithReviewPassword(email, password);
+      const payload = await loginWithReviewPassword(email, password, {
+        linkCurrentAccount: isAddingAccount,
+      });
       if (!payload.account || !payload.deviceToken) {
         throw new Error('Could not finish sign-in.');
       }
@@ -306,7 +317,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         deviceToken: payload.deviceToken,
       });
     },
-    [finishAccountSignIn],
+    [finishAccountSignIn, isAddingAccount],
   );
 
   const verifyWithOtp = useCallback(
@@ -321,7 +332,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         country?: string | null;
       },
     ) => {
-      const payload = await verifyOtp(identifier, code, mode, options);
+      const payload = await verifyOtp(identifier, code, mode, {
+        ...options,
+        linkCurrentAccount: isAddingAccount,
+      });
       if (mode === 'link') {
         setUser(payload.user);
         setError(null);
@@ -337,7 +351,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         deviceToken: payload.deviceToken,
       });
     },
-    [finishAccountSignIn, syncUserToStoredAccount],
+    [finishAccountSignIn, isAddingAccount, syncUserToStoredAccount],
   );
 
   const finishOnboarding = useCallback(

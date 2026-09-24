@@ -7,6 +7,14 @@ export type StoredAccount = {
   primaryLoginChannel: string;
 };
 
+export type LinkedAccountEntry = {
+  id: number;
+  label: string;
+  displayName: string;
+  avatarUrl: string | null;
+  primaryLoginChannel: string;
+};
+
 const STORAGE_KEY = 'gocha.accounts.v1';
 const ACTIVE_KEY = 'gocha.accounts.active.v1';
 
@@ -93,6 +101,36 @@ export function updateStoredAccountProfile(
   );
   writeStoredAccounts(accounts);
   return accounts;
+}
+
+export function mergeLinkedAccounts(
+  prev: StoredAccount[],
+  linked: LinkedAccountEntry[],
+  current?: StoredAccount | null,
+): StoredAccount[] {
+  const byId = new Map(prev.map((entry) => [entry.userId, entry]));
+  if (current) {
+    const existing = byId.get(current.userId);
+    byId.set(current.userId, existing ? { ...existing, ...current } : current);
+  }
+  for (const item of linked) {
+    byId.set(item.id, toStoredFromSwitcher(item, byId.get(item.id)));
+  }
+  return Array.from(byId.values());
+}
+
+function toStoredFromSwitcher(
+  entry: LinkedAccountEntry,
+  existing?: StoredAccount,
+): StoredAccount {
+  return {
+    userId: entry.id,
+    label: entry.label,
+    displayName: entry.displayName,
+    avatarUrl: entry.avatarUrl,
+    deviceToken: existing?.deviceToken ?? '',
+    primaryLoginChannel: entry.primaryLoginChannel,
+  };
 }
 
 export function updateStoredAccountDeviceToken(userId: number, deviceToken: string): StoredAccount[] {
