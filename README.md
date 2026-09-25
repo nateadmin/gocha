@@ -41,7 +41,7 @@ Laravel reads the OpenAI key as `OPENAI_API_KEY` (also accepts `OPEN_AI_API_KEY`
 
 Sign-up and sign-in accept email or phone as the primary channel. The other contact is optional and is added only after a verification code. Phone SMS is sent by the Firebase JS SDK in the browser (`signInWithPhoneNumber`). The API only checks signup/signin rules, then verifies the Firebase ID token with Identity Toolkit `accounts:lookup`. `GET /api/meta` sets `account.phoneSignInEnabled` when the Firebase key is present, and includes the public Firebase web config the client needs. That web API key is a public Firebase client identifier, stored in Infisical as the source of truth. The Firebase project must be on Blaze for live SMS.
 
-Google Play / store review login: set `GOCHA_REVIEW_LOGIN_EMAIL` and `GOCHA_REVIEW_LOGIN_PASSWORD` in Infisical (Production). After deploy, run `php artisan gocha:sync-review-login-user` on the server. Reviewers sign in on the app with that email and password; OTP is skipped. Give Google the same credentials in Play Console app access notes.
+Google Play / store review login: set `GOCHA_REVIEW_LOGIN_EMAIL` and `GOCHA_REVIEW_LOGIN_PASSWORD` in Infisical (Production). After deploy, run `php artisan gocha:sync-review-login-user` on the server. Reviewers type that email on Sign in or Create account; a password field appears and OTP is skipped. Give Google the same credentials in Play Console app access notes.
 
 ## Catch Up pipeline
 

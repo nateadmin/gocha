@@ -99,3 +99,7 @@ Edit `store/version.json`, then sync:
 - Xcode target → `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`
 
 Increment `androidVersionCode` on every Play upload. Increment `iosBuildNumber` on every App Store upload.
+
+## Google Play review login
+
+Reviewers use `google-review@gocha.ai` and the Infisical password. The password field must appear after they type that email on both Sign in and Create account. Do not remove this path.

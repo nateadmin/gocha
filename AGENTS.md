@@ -45,6 +45,8 @@ npm run android      # or npm run ios on macOS
 
 Pull, test, commit, push, deploy with `scripts/deploy-to-contabo.sh`, then run post-deploy smoke checks in README before reporting complete. See personal-playbook `standards/development/ship-live-and-test.md`.
 
+Do not remove shipped behavior unless the owner asked to remove it. Google Play review login (`google-review@gocha.ai` plus password on Sign in and Create account) is protected: `.cursor/rules/google-review-login.mdc`.
+
 ## Branding
 
 Neon Cyber theme in `mobile/gocha-app/src/theme/`. Primary `#1B00D8`, dark default. Logo: `mobile/gocha-app/assets/branding/Logo.jpeg`. Store release kit: `mobile/gocha-app/store/README.md`.

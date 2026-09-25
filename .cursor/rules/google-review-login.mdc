@@ -1,0 +1,21 @@
+---
+description: Never remove shipped Gocha behavior unless the owner asked to remove it
+alwaysApply: true
+---
+
+# Do not regress shipped features
+
+Do not delete, hide, or bypass a behavior that already shipped (store review login, session/logout, account linking, phone/email field split, and anything in README smoke or store docs) unless this conversation explicitly says to remove it.
+
+If the current prompt is about recaptcha, linking, search, or another area, leave unrelated shipped auth paths unchanged. Do not "simplify" login while fixing something else.
+
+# Google Play review login (protected)
+
+Reviewers type `google-review@gocha.ai` and a password. OTP is skipped. This must work on Sign in and on Create your account, on https://app.gocha.ai/ and on native.
+
+- Password field: `shouldShowReviewPasswordField` in `mobile/gocha-app/src/auth/reviewLogin.ts`. Do not gate it on `mode === 'signup'` or `!isSignUp`.
+- API: `POST /api/auth/review/login` plus Infisical `GOCHA_REVIEW_LOGIN_EMAIL` / `GOCHA_REVIEW_LOGIN_PASSWORD`.
+- Tests: `mobile/gocha-app/__tests__/reviewLoginField.test.ts` and `app_gocha/tests/Feature/AuthReviewLoginTest.php`. Do not delete or weaken them to land other work.
+- Smoke after any EmailScreen or auth-meta change: type `google-review@gocha.ai` on Create account and on Sign in; the Password field must appear without tapping anything else.
+
+If a task would make that field disappear, stop and keep the field.

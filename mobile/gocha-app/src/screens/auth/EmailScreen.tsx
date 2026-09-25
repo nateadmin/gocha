@@ -10,6 +10,10 @@ import {
 } from '../../api/client';
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import {
+  DEFAULT_REVIEW_LOGIN_EMAIL,
+  shouldShowReviewPasswordField,
+} from '../../auth/reviewLogin';
+import {
   clearPhoneSms,
   isPhoneRecaptchaSolved,
   preparePhoneRecaptcha,
@@ -24,8 +28,6 @@ import { ScreenContainer } from '../../components/app/ScreenContainer';
 import { useAuth } from '../../context/AuthContext';
 import { useAccounts } from '../../context/AccountsContext';
 import { useGochaTheme } from '../../theme';
-
-const DEFAULT_REVIEW_LOGIN_EMAIL = 'google-review@gocha.ai';
 
 type Props = {
   mode: OtpAuthMode;
@@ -46,7 +48,6 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
   const [phoneEnabled, setPhoneEnabled] = useState(true);
-  const [reviewLoginEnabled, setReviewLoginEnabled] = useState(false);
   const [reviewLoginEmail, setReviewLoginEmail] = useState<string | null>(null);
 
   const isSignUp = mode === 'signup';
@@ -56,11 +57,11 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const configuredReviewEmail = (
     reviewLoginEmail ?? DEFAULT_REVIEW_LOGIN_EMAIL
   ).toLowerCase();
-  const showPasswordField =
-    !isSignUp &&
-    channel === 'email' &&
-    normalizedIdentifier === configuredReviewEmail &&
-    (reviewLoginEnabled || configuredReviewEmail === DEFAULT_REVIEW_LOGIN_EMAIL);
+  const showPasswordField = shouldShowReviewPasswordField({
+    channel,
+    identifier: normalizedIdentifier,
+    configuredReviewEmail,
+  });
   const usesPasswordSignIn = showPasswordField && password.trim().length > 0;
 
   useEffect(() => {
@@ -71,12 +72,10 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
     void fetchAppMeta()
       .then((meta) => {
         setPhoneEnabled(meta.account.phoneSignInEnabled || meta.auth.phoneSignInEnabled);
-        setReviewLoginEnabled(Boolean(meta.auth.reviewLoginEnabled));
         setReviewLoginEmail(meta.auth.reviewLoginEmail ?? null);
       })
       .catch(() => {
         setPhoneEnabled(true);
-        setReviewLoginEnabled(false);
         setReviewLoginEmail(null);
       });
   }, []);
@@ -171,10 +170,10 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
             {isAddingAccount ? 'Link another account' : isSignUp ? 'Create your account' : 'Sign in'}
           </BrandText>
           <BrandText muted style={styles.subtitle}>
-            {isSignUp
-              ? 'Use email or phone. The other is optional later.'
-              : showPasswordField
-                ? 'Enter your email and password, or leave password blank to use a sign-in code.'
+            {showPasswordField
+              ? 'Enter the review email and password. A sign-in code is not required.'
+              : isSignUp
+                ? 'Use email or phone. The other is optional later.'
                 : isAddingAccount
                   ? 'Sign in to the other Gocha account. It will stay linked so you can switch.'
                   : 'Use the email or phone on your Gocha account.'}
