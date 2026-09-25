@@ -53,14 +53,20 @@ if [[ -x "$ROOT/scripts/infisical-pull.sh" ]] && { command -v infisical >/dev/nu
   if [[ -n "${FIREBASE_APP_ID:-}" ]]; then
     printf 'FIREBASE_APP_ID=%s\n' "$FIREBASE_APP_ID" >> "$INJECT_ENV_FILE"
   fi
+  write_dotenv_line() {
+    KEY="$1" VAL="$2" python3 - <<'PY'
+import json, os
+print(os.environ["KEY"] + "=" + json.dumps(os.environ["VAL"]))
+PY
+  }
   if [[ -n "${GOCHA_REVIEW_LOGIN_EMAIL:-}" ]]; then
-    printf 'GOCHA_REVIEW_LOGIN_EMAIL=%q\n' "$GOCHA_REVIEW_LOGIN_EMAIL" >> "$INJECT_ENV_FILE"
+    write_dotenv_line GOCHA_REVIEW_LOGIN_EMAIL "$GOCHA_REVIEW_LOGIN_EMAIL" >> "$INJECT_ENV_FILE"
   fi
   if [[ -n "${GOCHA_REVIEW_LOGIN_PASSWORD:-}" ]]; then
-    printf 'GOCHA_REVIEW_LOGIN_PASSWORD=%q\n' "$GOCHA_REVIEW_LOGIN_PASSWORD" >> "$INJECT_ENV_FILE"
+    write_dotenv_line GOCHA_REVIEW_LOGIN_PASSWORD "$GOCHA_REVIEW_LOGIN_PASSWORD" >> "$INJECT_ENV_FILE"
   fi
   if [[ -n "${GOCHA_REVIEW_LOGIN_NAME:-}" ]]; then
-    printf 'GOCHA_REVIEW_LOGIN_NAME=%q\n' "$GOCHA_REVIEW_LOGIN_NAME" >> "$INJECT_ENV_FILE"
+    write_dotenv_line GOCHA_REVIEW_LOGIN_NAME "$GOCHA_REVIEW_LOGIN_NAME" >> "$INJECT_ENV_FILE"
   fi
   unset OPENAI_VALUE
   if [[ -s "$INJECT_ENV_FILE" ]]; then
@@ -183,6 +189,8 @@ PY
 fi
 php artisan migrate --force
 php artisan storage:link || true
+php artisan config:clear || true
+php artisan gocha:sync-review-login-user || true
 php artisan config:cache
 php artisan route:cache
 CRON_LINE="* * * * * cd $REMOTE_PATH && /usr/bin/php artisan schedule:run >> $REMOTE_PATH/storage/logs/scheduler.log 2>&1"
