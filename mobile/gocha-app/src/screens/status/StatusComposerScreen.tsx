@@ -167,9 +167,13 @@ export function StatusComposerScreen() {
         });
       }
       if (afterSave === 'back' || !user?.id) {
-        navigation.goBack();
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          navigation.navigate('Main');
+        }
       } else {
-        navigation.replace('StatusViewer', { userId: user.id });
+        navigation.navigate('StatusViewer', { userId: user.id });
       }
     } catch (err) {
       setError(formatApiError(err, itemId ? t('status.updateFailed') : t('status.postFailed')));

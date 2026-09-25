@@ -46,8 +46,13 @@ export function StatusViewerScreen() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { startDirectMessage, sendTextMessage } = useChat();
-  const playlist = route.params.userIds?.length ? route.params.userIds : [route.params.userId];
-  const [authorUserId, setAuthorUserId] = useState(route.params.userId);
+  const viewerUserId = route.params?.userId;
+  const playlist = route.params?.userIds?.length
+    ? route.params.userIds
+    : viewerUserId
+      ? [viewerUserId]
+      : [];
+  const [authorUserId, setAuthorUserId] = useState(viewerUserId ?? 0);
   const [items, setItems] = useState<StatusItemRecord[]>([]);
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -155,9 +160,13 @@ export function StatusViewerScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const startId = route.params.startItemId;
-      loadAuthor(route.params.userId, startId ?? 'first');
-    }, [loadAuthor, route.params.startItemId, route.params.userId]),
+      if (!viewerUserId) {
+        close();
+        return;
+      }
+      const startId = route.params?.startItemId;
+      loadAuthor(viewerUserId, startId ?? 'first');
+    }, [close, loadAuthor, route.params?.startItemId, viewerUserId]),
   );
 
   useEffect(() => {

@@ -35,8 +35,11 @@ export function StatusHeaderButton({ mine, onOpenMine, onAdd }: Props) {
         />
       </StatusRing>
       <Pressable
-        onPress={onAdd}
-        hitSlop={6}
+        onPress={(event) => {
+          event.stopPropagation?.();
+          onAdd();
+        }}
+        hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel={t('status.add')}
         style={[styles.add, { backgroundColor: theme.colors.primary }]}>

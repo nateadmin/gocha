@@ -134,4 +134,31 @@ describe('AuthProvider refresh', () => {
     expect(latest.appPhase).toBe('main');
     expect(latest.error).toBe('Server error.');
   });
+
+  test('keeps a live device token session when local account storage is empty', async () => {
+    fetchCurrentUserMock.mockResolvedValue(mockUser);
+
+    let latest = {
+      refresh: async () => {},
+      appPhase: 'auth',
+      error: null as string | null,
+    };
+
+    await ReactTestRenderer.act(async () => {
+      ReactTestRenderer.create(
+        <AccountsProvider>
+          <AuthProvider>
+            <AuthProbe
+              onReady={(value) => {
+                latest = value;
+              }}
+            />
+          </AuthProvider>
+        </AccountsProvider>,
+      );
+      await Promise.resolve();
+    });
+
+    expect(latest.appPhase).toBe('main');
+  });
 });

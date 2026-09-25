@@ -1,6 +1,8 @@
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import type { LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useEffect } from 'react';
+import { BackHandler } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { BootstrapErrorBoundary } from './src/components/app/BootstrapErrorBoundary';
@@ -8,6 +10,7 @@ import { AccountsProvider, useAccounts } from './src/context/AccountsContext';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { appNavigationRef } from './src/navigation/rootNavigation';
+import { shouldKeepSignedInOnBack } from './src/navigation/sessionBackPolicy';
 import type { AppStackParamList } from './src/navigation/types';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
 import { PublicProfileCardScreen } from './src/screens/chats/PublicProfileCardScreen';
@@ -37,6 +40,46 @@ const linking: LinkingOptions<AppStackParamList> = {
   },
 };
 
+function SessionBackGuard() {
+  const { appPhase } = useAuthGate();
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      const canGoBack = appNavigationRef.isReady() && appNavigationRef.canGoBack();
+      if (canGoBack) {
+        appNavigationRef.goBack();
+        return true;
+      }
+      return shouldKeepSignedInOnBack({ appPhase, canGoBack: false });
+    });
+    return () => sub.remove();
+  }, [appPhase]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const staySignedIn = appPhase === 'main' || appPhase === 'onboarding';
+    if (!staySignedIn) {
+      return;
+    }
+    const trap = () => {
+      window.history.pushState(null, '', window.location.pathname || '/');
+    };
+    const onPopState = () => {
+      const canGoBack = appNavigationRef.isReady() && appNavigationRef.canGoBack();
+      if (shouldKeepSignedInOnBack({ appPhase, canGoBack })) {
+        trap();
+      }
+    };
+    trap();
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [appPhase]);
+
+  return null;
+}
+
 function MainSwitch() {
   const { isAddingAccount } = useAccounts();
   const { appPhase } = useAuthGate();
@@ -53,8 +96,7 @@ function MainSwitch() {
 function AppShell() {
   const { ready } = useBrandFonts();
   const { theme } = useGochaTheme();
-  const { isAddingAccount } = useAccounts();
-  const { loading, appPhase } = useAuthGate();
+  const { loading } = useAuthGate();
   const splashReady = useSplashGate(ready && !loading);
 
   const navTheme =
@@ -90,8 +132,8 @@ function AppShell() {
     <NavigationContainer
       ref={appNavigationRef}
       linking={linking}
-      theme={navTheme}
-      key={`${appPhase}-${isAddingAccount ? 'add' : 'main'}`}>
+      theme={navTheme}>
+      <SessionBackGuard />
       <AppStack.Navigator screenOptions={{ headerShown: false }}>
         <AppStack.Screen name="Main" component={MainSwitch} />
         <AppStack.Screen name="PublicProfileCard" component={PublicProfileCardScreen} />

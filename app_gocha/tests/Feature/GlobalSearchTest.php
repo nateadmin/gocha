@@ -53,7 +53,8 @@ class GlobalSearchTest extends TestCase
 
         $this->actingAs($alice)->getJson('/api/search?q=Carol')
             ->assertOk()
-            ->assertJsonCount(0, 'people');
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.displayName', 'Carol Discover');
 
         $peopleSearch = $this->actingAs($alice)->getJson('/api/search?q='.urlencode('Carol Discover'));
         $peopleSearch
@@ -88,22 +89,45 @@ class GlobalSearchTest extends TestCase
             ->assertJsonPath('messages.0.conversationId', $conversationId);
     }
 
-    public function test_discoverable_user_requires_exact_full_name(): void
+    public function test_discoverable_user_can_be_found_by_partial_name_username_or_email(): void
     {
         $searcher = User::factory()->create();
         User::factory()->create([
             'name' => 'giggly goo',
+            'username' => 'gigglygoo',
+            'email' => 'giggly@gocha.ai',
             'discoverable' => true,
+        ]);
+        User::factory()->create([
+            'name' => 'Hidden From Search',
+            'username' => 'hiddenfrom',
+            'email' => 'hidden@gocha.ai',
+            'discoverable' => false,
         ]);
 
         $this->actingAs($searcher)->getJson('/api/search?q=Giggly')
             ->assertOk()
-            ->assertJsonCount(0, 'people');
-
-        $this->actingAs($searcher)->getJson('/api/search?q='.urlencode('giggly goo'))
-            ->assertOk()
             ->assertJsonCount(1, 'people')
             ->assertJsonPath('people.0.displayName', 'giggly goo');
+
+        $this->actingAs($searcher)->getJson('/api/search?q=giggly')
+            ->assertOk()
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.username', 'gigglygoo');
+
+        $this->actingAs($searcher)->getJson('/api/search?q=@gigglygoo')
+            ->assertOk()
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.username', 'gigglygoo');
+
+        $this->actingAs($searcher)->getJson('/api/search?q=giggly@gocha.ai')
+            ->assertOk()
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.username', 'gigglygoo');
+
+        $this->actingAs($searcher)->getJson('/api/search?q=hidden@gocha.ai')
+            ->assertOk()
+            ->assertJsonCount(0, 'people');
     }
 
     public function test_discoverable_user_can_be_found_by_exact_username_with_at_prefix(): void
@@ -117,7 +141,8 @@ class GlobalSearchTest extends TestCase
 
         $this->actingAs($searcher)->getJson('/api/search?q=giggly')
             ->assertOk()
-            ->assertJsonCount(0, 'people');
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.username', 'gigglygoo');
 
         $this->actingAs($searcher)->getJson('/api/search?q=@gigglygoo')
             ->assertOk()

@@ -15,43 +15,14 @@ class DiscoverableUserSearch
     public function search(User $viewer, string $needle, array $excludeUserIds = []): Collection
     {
         $trimmed = trim($needle);
-        if ($trimmed === '') {
+        if ($trimmed === '' || mb_strlen($trimmed) < 2) {
             return collect();
         }
 
-        if (str_starts_with($trimmed, '@')) {
-            return $this->searchByUsername($viewer, $trimmed, $excludeUserIds);
-        }
+        $query = $this->baseQuery($viewer, $excludeUserIds);
+        $this->applyNeedle($query, $trimmed);
 
-        return $this->searchByExactName($viewer, $trimmed, $excludeUserIds);
-    }
-
-    /**
-     * @param  list<int>  $excludeUserIds
-     * @return Collection<int, User>
-     */
-    private function searchByUsername(User $viewer, string $needle, array $excludeUserIds): Collection
-    {
-        $username = strtolower(ltrim(substr($needle, 1), '@'));
-        if ($username === '') {
-            return collect();
-        }
-
-        return $this->baseQuery($viewer, $excludeUserIds)
-            ->where('username', $username)
-            ->orderBy('name')
-            ->limit(20)
-            ->get();
-    }
-
-    /**
-     * @param  list<int>  $excludeUserIds
-     * @return Collection<int, User>
-     */
-    private function searchByExactName(User $viewer, string $needle, array $excludeUserIds): Collection
-    {
-        return $this->baseQuery($viewer, $excludeUserIds)
-            ->whereRaw('LOWER(name) = ?', [mb_strtolower($needle)])
+        return $query
             ->orderBy('name')
             ->limit(20)
             ->get();
@@ -67,5 +38,36 @@ class DiscoverableUserSearch
             ->where('id', '!=', $viewer->id)
             ->where('discoverable', true)
             ->when($excludeUserIds !== [], fn (Builder $query) => $query->whereNotIn('id', $excludeUserIds));
+    }
+
+    /**
+     * @param  Builder<User>  $query
+     */
+    private function applyNeedle(Builder $query, string $needle): void
+    {
+        $lower = mb_strtolower($needle);
+        $usernameNeedle = ltrim($lower, '@');
+        $like = $this->likeContains($lower);
+        $usernameLike = $this->likeContains($usernameNeedle);
+
+        $query->where(function (Builder $match) use ($lower, $like, $usernameNeedle, $usernameLike) {
+            $match->whereRaw('LOWER(name) LIKE ?', [$like]);
+
+            if ($usernameNeedle !== '') {
+                $match->orWhereRaw('LOWER(username) LIKE ?', [$usernameLike]);
+            }
+
+            if (str_contains($lower, '@')) {
+                $match->orWhereRaw('LOWER(email) = ?', [$lower]);
+                $match->orWhereRaw('LOWER(email) LIKE ?', [$like]);
+            }
+        });
+    }
+
+    private function likeContains(string $needle): string
+    {
+        $safe = str_replace('%', '', $needle);
+
+        return '%'.$safe.'%';
     }
 }

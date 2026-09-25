@@ -1,3 +1,5 @@
+import { memoryKvGet, memoryKvRemove, memoryKvSet } from './memoryKv';
+
 export type StoredAccount = {
   userId: number;
   label: string;
@@ -18,17 +20,9 @@ export type LinkedAccountEntry = {
 const STORAGE_KEY = 'gocha.accounts.v1';
 const ACTIVE_KEY = 'gocha.accounts.active.v1';
 
-function canUseStorage(): boolean {
-  return typeof localStorage !== 'undefined';
-}
-
 export function readStoredAccounts(): StoredAccount[] {
-  if (!canUseStorage()) {
-    return [];
-  }
-
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = memoryKvGet(STORAGE_KEY);
     if (!raw) {
       return [];
     }
@@ -40,17 +34,11 @@ export function readStoredAccounts(): StoredAccount[] {
 }
 
 export function writeStoredAccounts(accounts: StoredAccount[]): void {
-  if (!canUseStorage()) {
-    return;
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
+  memoryKvSet(STORAGE_KEY, JSON.stringify(accounts));
 }
 
 export function readActiveAccountId(): number | null {
-  if (!canUseStorage()) {
-    return null;
-  }
-  const raw = localStorage.getItem(ACTIVE_KEY);
+  const raw = memoryKvGet(ACTIVE_KEY);
   if (!raw) {
     return null;
   }
@@ -59,22 +47,16 @@ export function readActiveAccountId(): number | null {
 }
 
 export function writeActiveAccountId(userId: number | null): void {
-  if (!canUseStorage()) {
-    return;
-  }
   if (userId === null) {
-    localStorage.removeItem(ACTIVE_KEY);
+    memoryKvRemove(ACTIVE_KEY);
     return;
   }
-  localStorage.setItem(ACTIVE_KEY, String(userId));
+  memoryKvSet(ACTIVE_KEY, String(userId));
 }
 
 export function clearAllStoredAccounts(): void {
-  if (!canUseStorage()) {
-    return;
-  }
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(ACTIVE_KEY);
+  memoryKvRemove(STORAGE_KEY);
+  memoryKvRemove(ACTIVE_KEY);
 }
 
 export function updateStoredAccountProfile(

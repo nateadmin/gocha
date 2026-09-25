@@ -19,9 +19,10 @@ export function openStatusFeed(userIds: number[], startUserId?: number): void {
 }
 
 export function openStatusComposer(params?: AppStackParamList['StatusComposer']): void {
-  if (appNavigationRef.isReady()) {
-    appNavigationRef.navigate('StatusComposer', params ?? {});
+  if (!appNavigationRef.isReady()) {
+    return;
   }
+  appNavigationRef.navigate('StatusComposer', params ?? {});
 }
 
 export function openPublicProfileCard(slug: string): void {

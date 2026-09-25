@@ -10,7 +10,7 @@ class DiscoverableUserSearchTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_search_endpoint_requires_exact_name_or_at_username(): void
+    public function test_user_search_endpoint_matches_partial_name_and_username(): void
     {
         User::factory()->create([
             'name' => 'Visible Neo',
@@ -29,7 +29,8 @@ class DiscoverableUserSearchTest extends TestCase
 
         $this->actingAs($user)->getJson('/api/users/search?q=Neo')
             ->assertOk()
-            ->assertJsonCount(0, 'results');
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.displayName', 'Visible Neo');
 
         $this->actingAs($user)->getJson('/api/users/search?q='.urlencode('Visible Neo'))
             ->assertOk()

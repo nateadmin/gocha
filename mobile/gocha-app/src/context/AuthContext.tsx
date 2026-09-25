@@ -138,7 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const hadToken = getActiveDeviceToken();
       const storedAccounts = readStoredAccounts();
-      if (storedAccounts.length === 0) {
+      const liveSession = Boolean(userRef.current || hadToken || storedAccounts.length > 0);
+      if (!liveSession) {
         await clearSession();
         setActiveDeviceToken(null);
         await primeCsrfCookie();
@@ -188,24 +189,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Confirmed unauthenticated session.
+      if (userRef.current) {
+        setUser(userRef.current);
+        setError(null);
+        return;
+      }
+
       setUser(null);
       if (hadToken && activeAccountIdRef.current !== null) {
         removeAccountRef.current(activeAccountIdRef.current);
       }
       setError(null);
     } catch (err) {
-      if (isAuthFailure(err)) {
+      if (userRef.current) {
+        setUser(userRef.current);
+        setError(err instanceof ApiError ? err.message : 'Could not refresh your session.');
+      } else if (isAuthFailure(err)) {
         setUser(null);
         if (activeAccountIdRef.current !== null) {
           removeAccountRef.current(activeAccountIdRef.current);
         }
         setError(null);
       } else {
-        // Transient failures (429, 5xx, network) must not sign the user out.
-        if (userRef.current) {
-          setUser(userRef.current);
-        }
         setError(err instanceof ApiError ? err.message : 'Could not refresh your session.');
       }
     } finally {
