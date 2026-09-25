@@ -33,6 +33,9 @@ export function RecaptchaSlot() {
 
   return (
     <div>
+      <BrandText muted style={{ textAlign: 'center', marginBottom: 8 }}>
+        Check the box to confirm you are not a robot, then send the code.
+      </BrandText>
       <div id={RECAPTCHA_HOST_ID} style={{ minHeight: 78, display: 'flex', justifyContent: 'center' }} />
       {error ? (
         <BrandText style={{ textAlign: 'center', marginTop: 8 }}>{error}</BrandText>

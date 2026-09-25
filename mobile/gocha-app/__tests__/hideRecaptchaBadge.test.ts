@@ -19,6 +19,9 @@ const fakeDocument = {
 
 (globalThis as { document?: typeof fakeDocument }).document = fakeDocument;
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { withTimeout } from '../src/auth/phoneFirebase';
 import {
   hideRecaptchaBadge,
@@ -49,4 +52,9 @@ test('withTimeout rejects when the work never finishes', async () => {
   await expect(
     withTimeout(new Promise(() => undefined), 20, 'Phone verification is taking too long. Refresh and try again.'),
   ).rejects.toThrow('taking too long');
+});
+
+test('web index does not park the recaptcha widget off screen', () => {
+  const html = readFileSync(join(__dirname, '../web/index.html'), 'utf8');
+  expect(html).not.toMatch(/#gocha-recaptcha[\s\S]{0,200}-9999px/);
 });
