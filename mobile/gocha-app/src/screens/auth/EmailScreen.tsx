@@ -9,7 +9,12 @@ import {
   type OtpAuthMode,
 } from '../../api/client';
 import { normalizeIdentifier } from '../../auth/accountChannel';
-import { sendPhoneSms } from '../../auth/phoneFirebase';
+import {
+  clearPhoneSms,
+  isPhoneRecaptchaSolved,
+  preparePhoneRecaptcha,
+  sendPhoneSms,
+} from '../../auth/phoneFirebase';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
 import { CtaButton } from '../../components/brand/CtaButton';
@@ -103,6 +108,24 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
       return;
     }
 
+    if (channel === 'phone') {
+      try {
+        const meta = await fetchAppMeta();
+        if (!meta.auth.firebase) {
+          setError('Phone sign-in is not configured yet.');
+          return;
+        }
+        await preparePhoneRecaptcha(meta.auth.firebase);
+        if (!isPhoneRecaptchaSolved()) {
+          setError('Complete the I am not a robot check, then send the code again.');
+          return;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not load phone verification.');
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -111,7 +134,6 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
         return;
       }
 
-      const payload = await requestAuthCode(normalized, mode, { channel });
       if (channel === 'phone') {
         const meta = await fetchAppMeta();
         if (!meta.auth.firebase) {
@@ -119,6 +141,8 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
         }
         await sendPhoneSms(meta.auth.firebase, normalized);
       }
+
+      const payload = await requestAuthCode(normalized, mode, { channel });
       if (payload.resendAvailableInSeconds > 0) {
         setRetryAfterSeconds(payload.resendAvailableInSeconds);
       }
@@ -161,6 +185,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
               onPress={() => {
                 setChannel('email');
                 setError(null);
+                clearPhoneSms();
               }}
               style={[
                 styles.channelChip,

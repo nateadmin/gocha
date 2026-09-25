@@ -8,12 +8,21 @@ export type FirebasePublicConfig = {
 };
 
 export const RECAPTCHA_HOST_ID = 'gocha-recaptcha';
+export const PHONE_RECAPTCHA_TIMEOUT_MS = 15000;
+export const PHONE_SMS_TIMEOUT_MS = 20000;
 
 const RECAPTCHA_BADGE_CSS =
   '.grecaptcha-badge{visibility:hidden!important;opacity:0!important;}';
 
+const ROBOT_CHECK_MESSAGE =
+  'Complete the I am not a robot check, then send the code again.';
+const RECAPTCHA_TIMEOUT_MESSAGE =
+  'Phone verification is taking too long. Refresh and try again.';
+
 let confirmation: ConfirmationResult | null = null;
 let verifier: RecaptchaVerifier | null = null;
+let recaptchaSolved = false;
+let preparePromise: Promise<void> | null = null;
 
 function firebaseErrorCode(error: unknown): string {
   if (typeof error === 'object' && error && 'code' in error) {
@@ -26,7 +35,39 @@ export function recaptchaBadgeCss(): string {
   return RECAPTCHA_BADGE_CSS;
 }
 
+export function isPhoneRecaptchaSolved(): boolean {
+  return recaptchaSolved;
+}
+
+export function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(message));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 export function mapFirebasePhoneError(error: unknown): Error {
+  if (error instanceof Error && error.message === RECAPTCHA_TIMEOUT_MESSAGE) {
+    return error;
+  }
+  if (error instanceof Error && error.message === ROBOT_CHECK_MESSAGE) {
+    return error;
+  }
   return new Error(matchFirebaseCode(firebaseErrorCode(error)));
 }
 
@@ -45,7 +86,7 @@ export function matchFirebaseCode(code: string): string {
     case 'auth/captcha-check-failed':
     case 'auth/invalid-app-credential':
     case 'auth/missing-recaptcha-token':
-      return 'Complete the I am not a robot check, then send the code again.';
+      return ROBOT_CHECK_MESSAGE;
     case 'auth/invalid-verification-code':
       return 'That code is incorrect. Try again.';
     case 'auth/code-expired':
@@ -98,11 +139,6 @@ function recaptchaHost(): HTMLElement {
     host.id = RECAPTCHA_HOST_ID;
     document.body.appendChild(host);
   }
-  host.style.position = '';
-  host.style.left = '';
-  host.style.width = '';
-  host.style.height = '';
-  host.style.overflow = '';
   host.style.minHeight = '78px';
   host.style.display = 'flex';
   host.style.justifyContent = 'center';
@@ -111,6 +147,7 @@ function recaptchaHost(): HTMLElement {
 }
 
 function clearVerifier(): void {
+  recaptchaSolved = false;
   if (!verifier) {
     return;
   }
@@ -122,19 +159,53 @@ function clearVerifier(): void {
   verifier = null;
 }
 
-async function createVerifier(
-  config: FirebasePublicConfig,
-  size: 'invisible' | 'normal',
-): Promise<RecaptchaVerifier> {
-  const { RecaptchaVerifier } = await import('firebase/auth');
+async function createVerifier(config: FirebasePublicConfig): Promise<RecaptchaVerifier> {
+  const authModule = await import('firebase/auth');
   const auth = await firebaseAuth(config);
+
+  if (typeof authModule.initializeRecaptchaConfig === 'function') {
+    try {
+      await withTimeout(
+        authModule.initializeRecaptchaConfig(auth),
+        PHONE_RECAPTCHA_TIMEOUT_MS,
+        RECAPTCHA_TIMEOUT_MESSAGE,
+      );
+    } catch {
+      // Config preload is optional. Phone auth still uses RecaptchaVerifier.
+    }
+  }
+
   clearVerifier();
-  const host = recaptchaHost();
-  host.innerHTML = '';
-  const next = new RecaptchaVerifier(auth, host, { size });
-  await next.render();
+  recaptchaHost();
+  const next = new authModule.RecaptchaVerifier(auth, RECAPTCHA_HOST_ID, {
+    size: 'normal',
+    callback: () => {
+      recaptchaSolved = true;
+    },
+    'expired-callback': () => {
+      recaptchaSolved = false;
+    },
+  });
+  await withTimeout(next.render(), PHONE_RECAPTCHA_TIMEOUT_MS, RECAPTCHA_TIMEOUT_MESSAGE);
   verifier = next;
   return next;
+}
+
+export async function preparePhoneRecaptcha(config: FirebasePublicConfig): Promise<void> {
+  if (verifier) {
+    return;
+  }
+  if (preparePromise) {
+    await preparePromise;
+    return;
+  }
+
+  preparePromise = createVerifier(config).then(() => undefined);
+  try {
+    await preparePromise;
+  } finally {
+    preparePromise = null;
+  }
 }
 
 export async function sendPhoneSms(
@@ -142,29 +213,27 @@ export async function sendPhoneSms(
   phone: string,
 ): Promise<void> {
   hideRecaptchaBadge();
+  await preparePhoneRecaptcha(config);
+  if (!recaptchaSolved) {
+    throw new Error(ROBOT_CHECK_MESSAGE);
+  }
+
   const { signInWithPhoneNumber } = await import('firebase/auth');
   const auth = await firebaseAuth(config);
+  const widget = verifier;
+  if (!widget) {
+    throw new Error(RECAPTCHA_TIMEOUT_MESSAGE);
+  }
 
   try {
-    const widget = verifier ?? (await createVerifier(config, 'invisible'));
-    confirmation = await signInWithPhoneNumber(auth, phone, widget);
+    confirmation = await withTimeout(
+      signInWithPhoneNumber(auth, phone, widget),
+      PHONE_SMS_TIMEOUT_MS,
+      RECAPTCHA_TIMEOUT_MESSAGE,
+    );
   } catch (error) {
     confirmation = null;
-    const code = firebaseErrorCode(error);
-    if (
-      code === 'auth/captcha-check-failed' ||
-      code === 'auth/invalid-app-credential' ||
-      code === 'auth/missing-recaptcha-token'
-    ) {
-      try {
-        const widget = await createVerifier(config, 'normal');
-        confirmation = await signInWithPhoneNumber(auth, phone, widget);
-        return;
-      } catch (retryError) {
-        confirmation = null;
-        throw mapFirebasePhoneError(retryError);
-      }
-    }
+    recaptchaSolved = false;
     throw mapFirebasePhoneError(error);
   }
 }
@@ -187,5 +256,6 @@ export async function confirmPhoneSms(code: string): Promise<string> {
 
 export function clearPhoneSms(): void {
   confirmation = null;
+  preparePromise = null;
   clearVerifier();
 }

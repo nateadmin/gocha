@@ -19,6 +19,7 @@ const fakeDocument = {
 
 (globalThis as { document?: typeof fakeDocument }).document = fakeDocument;
 
+import { withTimeout } from '../src/auth/phoneFirebase';
 import {
   hideRecaptchaBadge,
   matchFirebaseCode,
@@ -42,4 +43,10 @@ test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
 test('captcha failures tell the user to complete the visible check', () => {
   expect(matchFirebaseCode('auth/captcha-check-failed')).toContain('robot');
   expect(matchFirebaseCode('auth/invalid-app-credential')).toContain('robot');
+});
+
+test('withTimeout rejects when the work never finishes', async () => {
+  await expect(
+    withTimeout(new Promise(() => undefined), 20, 'Phone verification is taking too long. Refresh and try again.'),
+  ).rejects.toThrow('taking too long');
 });
