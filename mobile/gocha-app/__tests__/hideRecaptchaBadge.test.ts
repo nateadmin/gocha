@@ -25,9 +25,11 @@ import { join } from 'node:path';
 import { withTimeout } from '../src/auth/phoneFirebase';
 import {
   hideRecaptchaBadge,
+  isAuthorizedPhoneHost,
   matchFirebaseCode,
   phoneRecaptchaWidgetPresent,
   recaptchaBadgeCss,
+  unauthorizedPhoneOriginMessage,
 } from '../src/auth/phoneFirebase';
 
 test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
@@ -46,7 +48,23 @@ test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
 
 test('captcha failures tell the user to complete the visible check', () => {
   expect(matchFirebaseCode('auth/captcha-check-failed')).toContain('robot');
-  expect(matchFirebaseCode('auth/invalid-app-credential')).toContain('robot');
+  expect(matchFirebaseCode('auth/missing-recaptcha-token')).toContain('robot');
+});
+
+test('invalid app credential names the current host instead of the checkbox', () => {
+  (globalThis as { window?: { location?: { hostname: string } } }).window = {
+    location: { hostname: 'app.gocha.ai' },
+  };
+  expect(matchFirebaseCode('auth/invalid-app-credential')).toContain('app.gocha.ai');
+  expect(matchFirebaseCode('auth/invalid-app-credential')).toContain('Authorized domains');
+  expect(matchFirebaseCode('auth/invalid-app-credential')).not.toContain('robot');
+});
+
+test('isAuthorizedPhoneHost requires exact Firebase authorized hosts', () => {
+  expect(isAuthorizedPhoneHost('localhost', [])).toBe(true);
+  expect(isAuthorizedPhoneHost('app.gocha.ai', ['localhost', 'gocha.ai'])).toBe(false);
+  expect(isAuthorizedPhoneHost('app.gocha.ai', ['app.gocha.ai', 'gocha.ai'])).toBe(true);
+  expect(unauthorizedPhoneOriginMessage('app.gocha.ai')).toContain('app.gocha.ai');
 });
 
 test('withTimeout rejects when the work never finishes', async () => {

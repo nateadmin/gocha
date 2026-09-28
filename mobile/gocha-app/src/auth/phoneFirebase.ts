@@ -41,6 +41,54 @@ export function recaptchaBadgeCss(): string {
   return RECAPTCHA_BADGE_CSS;
 }
 
+export function currentPhoneAuthHost(): string {
+  if (typeof window === 'undefined' || !window.location?.hostname) {
+    return '';
+  }
+  return window.location.hostname;
+}
+
+export function unauthorizedPhoneOriginMessage(host: string): string {
+  return (
+    `Firebase is blocking phone SMS from ${host}. Add ${host} in Firebase Authentication settings, Authorized domains.`
+  );
+}
+
+export function isAuthorizedPhoneHost(host: string, domains: string[]): boolean {
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return true;
+  }
+  return domains.includes(host);
+}
+
+export async function fetchAuthorizedPhoneDomains(apiKey: string): Promise<string[]> {
+  const response = await fetch(
+    `https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=${encodeURIComponent(apiKey)}`,
+  );
+  if (!response.ok) {
+    return [];
+  }
+  const body = (await response.json()) as { authorizedDomains?: unknown };
+  if (!Array.isArray(body.authorizedDomains)) {
+    return [];
+  }
+  return body.authorizedDomains.filter((value): value is string => typeof value === 'string');
+}
+
+export async function assertPhoneAuthHost(config: FirebasePublicConfig): Promise<void> {
+  const host = currentPhoneAuthHost();
+  if (!host) {
+    return;
+  }
+  const domains = await fetchAuthorizedPhoneDomains(config.apiKey);
+  if (domains.length === 0) {
+    return;
+  }
+  if (!isAuthorizedPhoneHost(host, domains)) {
+    throw new Error(unauthorizedPhoneOriginMessage(host));
+  }
+}
+
 function grecaptchaApi(): GrecaptchaApi | null {
   if (typeof window === 'undefined') {
     return null;
@@ -116,9 +164,15 @@ export function matchFirebaseCode(code: string): string {
     case 'auth/quota-exceeded':
       return 'Too many SMS codes today. Try again tomorrow.';
     case 'auth/captcha-check-failed':
-    case 'auth/invalid-app-credential':
     case 'auth/missing-recaptcha-token':
       return ROBOT_CHECK_MESSAGE;
+    case 'auth/invalid-app-credential': {
+      const host = currentPhoneAuthHost();
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return unauthorizedPhoneOriginMessage(host);
+      }
+      return ROBOT_CHECK_MESSAGE;
+    }
     case 'auth/invalid-verification-code':
       return 'That code is incorrect. Try again.';
     case 'auth/code-expired':
@@ -224,6 +278,7 @@ async function createVerifier(config: FirebasePublicConfig): Promise<RecaptchaVe
 }
 
 export async function preparePhoneRecaptcha(config: FirebasePublicConfig): Promise<void> {
+  await assertPhoneAuthHost(config);
   if (verifier) {
     return;
   }
@@ -245,6 +300,7 @@ export async function sendPhoneSms(
   phone: string,
 ): Promise<void> {
   hideRecaptchaBadge();
+  await assertPhoneAuthHost(config);
   await preparePhoneRecaptcha(config);
   const widget = verifier;
   if (!widget) {
