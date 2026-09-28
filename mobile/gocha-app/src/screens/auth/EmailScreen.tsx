@@ -313,6 +313,7 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: 'center',
     gap: 12,
+    overflow: 'visible' as const,
   },
   subtitle: { marginBottom: 8 },
   input: { marginBottom: 8 },

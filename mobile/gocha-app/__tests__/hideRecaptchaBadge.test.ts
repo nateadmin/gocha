@@ -26,7 +26,9 @@ import { withTimeout } from '../src/auth/phoneFirebase';
 import {
   hideRecaptchaBadge,
   matchFirebaseCode,
+  phoneRecaptchaWidgetPresent,
   recaptchaBadgeCss,
+  recaptchaWidgetCss,
 } from '../src/auth/phoneFirebase';
 
 test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
@@ -35,12 +37,15 @@ test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
   hideRecaptchaBadge();
   hideRecaptchaBadge();
 
-  expect(created).toHaveLength(1);
+  expect(created).toHaveLength(2);
   expect(created[0].id).toBe('gocha-hide-recaptcha');
   expect(created[0].textContent).toBe(recaptchaBadgeCss());
   expect(created[0].textContent).toContain('.grecaptcha-badge');
   expect(created[0].textContent).not.toContain('#gocha-recaptcha');
   expect(created[0].textContent).not.toContain('-9999px');
+  expect(created[1].id).toBe('gocha-show-recaptcha-widget');
+  expect(created[1].textContent).toBe(recaptchaWidgetCss());
+  expect(created[1].textContent).toContain('#gocha-recaptcha iframe');
 });
 
 test('captcha failures tell the user to complete the visible check', () => {
@@ -57,4 +62,35 @@ test('withTimeout rejects when the work never finishes', async () => {
 test('web index does not park the recaptcha widget off screen', () => {
   const html = readFileSync(join(__dirname, '../web/index.html'), 'utf8');
   expect(html).not.toMatch(/#gocha-recaptcha[\s\S]{0,200}-9999px/);
+});
+
+test('phone recaptcha uses a visible checkbox widget', () => {
+  const source = readFileSync(join(__dirname, '../src/auth/phoneFirebase.ts'), 'utf8');
+  expect(source).toContain("size: 'normal'");
+  expect(source).not.toContain("size: 'invisible'");
+  expect(source).not.toContain('initializeRecaptchaConfig');
+  expect(source).toContain('phoneRecaptchaWidgetPresent');
+});
+
+test('RecaptchaSlot web mounts a live host instead of an empty parked box', () => {
+  const source = readFileSync(
+    join(__dirname, '../src/components/auth/RecaptchaSlot.web.tsx'),
+    'utf8',
+  );
+  expect(source).toContain('preparePhoneRecaptcha');
+  expect(source).toContain('styleRecaptchaHost');
+  expect(source).not.toContain('clearPhoneSms');
+  expect(source).not.toContain('replaceChildren');
+  expect(source).not.toContain('-9999px');
+});
+
+test('phoneRecaptchaWidgetPresent requires the live iframe', () => {
+  expect(phoneRecaptchaWidgetPresent()).toBe(false);
+  const host = {
+    id: 'gocha-recaptcha',
+    querySelector: (selector: string) => (selector === 'iframe' ? { tagName: 'IFRAME' } : null),
+  };
+  fakeDocument.getElementById = (id: string) =>
+    id === 'gocha-recaptcha' ? host : created.find((node) => node.id === id) ?? null;
+  expect(phoneRecaptchaWidgetPresent()).toBe(true);
 });
