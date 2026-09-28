@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, StyleSheet } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, Text, TextInput, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,25 +7,18 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SettingsToggleRow } from '../../components/app';
 import { CtaButton } from '../../components/brand';
 import { AddressAutocompleteField } from '../../components/places/AddressAutocompleteField';
-import { createCommunityGroup, globalSearch, type PublicUserProfile } from '../../api/client';
+import { MemberPicker } from '../../components/chat/MemberPicker';
+import { createCommunityGroup, type PublicUserProfile } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
 import { isSelectedPlace } from '../../places/addressPlaces';
 import { useChat } from '../../chat/ChatContext';
-import { searchLocalContacts } from '../../chat/globalSearchLocal';
-import { useAuth } from '../../context/AuthContext';
-import {
-  mergeGroupMemberResults,
-  profileFromLocalChat,
-  profileFromSearchContact,
-} from '../../groups/groupMemberSearch';
 import type { ChatsStackParamList } from '../../navigation/types';
 import { useGochaTheme } from '../../theme';
 
 export function CreateGroupScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ChatsStackParamList>>();
   const { theme } = useGochaTheme();
-  const { user } = useAuth();
-  const { chats, archivedChats, refreshConversations, startGroupConversation } = useChat();
+  const { refreshConversations, startGroupConversation } = useChat();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(false);
@@ -36,35 +29,9 @@ export function CreateGroupScreen() {
   const [region, setRegion] = useState<string | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [memberQuery, setMemberQuery] = useState('');
-  const [remoteContacts, setRemoteContacts] = useState<PublicUserProfile[]>([]);
-  const [remotePeople, setRemotePeople] = useState<PublicUserProfile[]>([]);
-  const [memberSearchLoading, setMemberSearchLoading] = useState(false);
   const [members, setMembers] = useState<PublicUserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchableChats = useMemo(() => [...chats, ...archivedChats], [archivedChats, chats]);
-  const selectedIds = useMemo(() => members.map((member) => member.id), [members]);
-  const localMembers = useMemo(() => {
-    const needle = memberQuery.trim();
-    if (!needle) {
-      return [];
-    }
-    return searchLocalContacts(searchableChats, needle, new Set()).flatMap((chat) => {
-      const profile = profileFromLocalChat(chat);
-      return profile ? [profile] : [];
-    });
-  }, [memberQuery, searchableChats]);
-  const memberResults = useMemo(
-    () =>
-      mergeGroupMemberResults({
-        local: localMembers,
-        contacts: remoteContacts,
-        people: remotePeople,
-        excludeIds: [user?.id ?? 0, ...selectedIds],
-      }),
-    [localMembers, remoteContacts, remotePeople, selectedIds, user?.id],
-  );
 
   useFocusEffect(
     useCallback(() => {
@@ -87,50 +54,8 @@ export function CreateGroupScreen() {
     }
   }
 
-  useEffect(() => {
-    const needle = memberQuery.trim();
-    if (needle.length < 2) {
-      setRemoteContacts([]);
-      setRemotePeople([]);
-      setMemberSearchLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      setMemberSearchLoading(true);
-      void globalSearch(needle)
-        .then((payload) => {
-          if (cancelled) {
-            return;
-          }
-          setRemoteContacts(payload.contacts.map(profileFromSearchContact));
-          setRemotePeople(payload.people);
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setRemoteContacts([]);
-            setRemotePeople([]);
-          }
-        })
-        .finally(() => {
-          if (!cancelled) {
-            setMemberSearchLoading(false);
-          }
-        });
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [memberQuery]);
-
   function addMember(profile: PublicUserProfile) {
     setMembers((prev) => (prev.some((member) => member.id === profile.id) ? prev : [...prev, profile]));
-    setMemberQuery('');
-    setRemoteContacts([]);
-    setRemotePeople([]);
   }
 
   function removeMember(userId: number) {
@@ -196,55 +121,7 @@ export function CreateGroupScreen() {
         placeholderTextColor={theme.colors.mutedForeground}
         style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
       />
-      <TextInput
-        value={memberQuery}
-        onChangeText={setMemberQuery}
-        placeholder="Add people"
-        autoCorrect={false}
-        autoCapitalize="none"
-        placeholderTextColor={theme.colors.mutedForeground}
-        style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
-      />
-      <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginBottom: 8 }}>
-        Type a name to pick people from your chats.
-      </Text>
-      {memberSearchLoading && memberResults.length === 0 ? (
-        <View style={styles.searching}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={{ color: theme.colors.mutedForeground }}>Searching…</Text>
-        </View>
-      ) : null}
-      {memberResults.map((result) => (
-        <Pressable
-          key={result.id}
-          onPress={() => addMember(result)}
-          accessibilityRole="button"
-          accessibilityLabel={`Add ${result.displayName}`}
-          style={[styles.result, { borderColor: theme.colors.border }]}>
-          <Text style={{ color: theme.colors.cardForeground }}>{result.displayName}</Text>
-          {result.username ? (
-            <Text style={{ color: theme.colors.mutedForeground }}>@{result.username}</Text>
-          ) : null}
-        </Pressable>
-      ))}
-      {memberQuery.trim().length >= 2 && !memberSearchLoading && memberResults.length === 0 ? (
-        <Text style={{ color: theme.colors.mutedForeground, marginBottom: 12 }}>
-          No matching people in your chats.
-        </Text>
-      ) : null}
-      {members.length > 0 ? (
-        <View style={styles.chips}>
-          {members.map((member) => (
-            <Pressable
-              key={member.id}
-              onPress={() => removeMember(member.id)}
-              style={[styles.chip, { backgroundColor: theme.colors.muted }]}>
-              <Text style={{ color: theme.colors.cardForeground }}>{member.displayName}</Text>
-              <Ionicons name="close" size={14} color={theme.colors.mutedForeground} />
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+      <MemberPicker members={members} onAdd={addMember} onRemove={removeMember} />
       <TextInput
         value={description}
         onChangeText={setDescription}

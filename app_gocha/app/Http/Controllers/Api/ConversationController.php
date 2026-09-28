@@ -95,8 +95,8 @@ class ConversationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $type = $request->input('type', ConversationType::DM);
-        if ($type === ConversationType::GROUP) {
-            return $this->storeGroup($request);
+        if ($type === ConversationType::GROUP || $type === ConversationType::BROADCAST) {
+            return $this->storeNamedConversation($request, (string) $type);
         }
 
         $validated = $request->validate([
@@ -384,10 +384,76 @@ class ConversationController extends Controller
         ], 201);
     }
 
-    private function storeGroup(Request $request): JsonResponse
+    public function addParticipant(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeBroadcastOwner($user, $conversation);
+
+        $validated = $request->validate([
+            'userId' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $memberId = (int) $validated['userId'];
+        if ($memberId === (int) $user->id) {
+            return response()->json([
+                'code' => 'INVALID_PARTICIPANT',
+                'message' => 'You are already on this broadcast.',
+            ], 422);
+        }
+
+        $exists = ConversationParticipant::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $memberId)
+            ->exists();
+        if ($exists) {
+            $conversation->load(['participants', 'participantRows']);
+
+            return response()->json([
+                'conversation' => $this->toConversationPayload($conversation, $user),
+            ]);
+        }
+
+        ConversationParticipant::query()->create([
+            'conversation_id' => $conversation->id,
+            'user_id' => $memberId,
+        ]);
+
+        $conversation->load(['participants', 'participantRows']);
+
+        return response()->json([
+            'conversation' => $this->toConversationPayload($conversation, $user),
+        ]);
+    }
+
+    public function removeParticipant(Request $request, Conversation $conversation, User $user): JsonResponse
+    {
+        $actor = $request->user();
+        $this->authorizeBroadcastOwner($actor, $conversation);
+
+        $memberId = (int) $user->id;
+        if ($memberId === (int) $actor->id || $memberId === (int) $conversation->created_by_user_id) {
+            return response()->json([
+                'code' => 'INVALID_PARTICIPANT',
+                'message' => 'You cannot remove the broadcast owner.',
+            ], 422);
+        }
+
+        ConversationParticipant::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $memberId)
+            ->delete();
+
+        $conversation->load(['participants', 'participantRows']);
+
+        return response()->json([
+            'conversation' => $this->toConversationPayload($conversation, $actor),
+        ]);
+    }
+
+    private function storeNamedConversation(Request $request, string $type): JsonResponse
     {
         $validated = $request->validate([
-            'type' => ['required', 'string', Rule::in([ConversationType::GROUP])],
+            'type' => ['required', 'string', Rule::in([ConversationType::GROUP, ConversationType::BROADCAST])],
             'name' => ['required', 'string', 'max:120'],
             'participantUserIds' => ['sometimes', 'array', 'max:255'],
             'participantUserIds.*' => ['integer', 'exists:users,id', 'distinct'],
@@ -397,8 +463,10 @@ class ConversationController extends Controller
         $name = trim($validated['name']);
         if ($name === '') {
             return response()->json([
-                'code' => 'INVALID_GROUP_NAME',
-                'message' => 'Group name is required.',
+                'code' => $type === ConversationType::BROADCAST ? 'INVALID_BROADCAST_NAME' : 'INVALID_GROUP_NAME',
+                'message' => $type === ConversationType::BROADCAST
+                    ? 'Broadcast name is required.'
+                    : 'Group name is required.',
             ], 422);
         }
 
@@ -408,10 +476,11 @@ class ConversationController extends Controller
             ->unique()
             ->values();
 
-        $conversation = DB::transaction(function () use ($user, $name, $memberIds) {
+        $conversation = DB::transaction(function () use ($user, $name, $memberIds, $type) {
             $conversation = Conversation::query()->create([
-                'type' => ConversationType::GROUP,
+                'type' => $type,
                 'name' => $name,
+                'created_by_user_id' => $user->id,
             ]);
 
             ConversationParticipant::query()->create([
@@ -434,6 +503,18 @@ class ConversationController extends Controller
         return response()->json([
             'conversation' => $this->toConversationPayload($conversation, $user),
         ], 201);
+    }
+
+    private function authorizeBroadcastOwner(User $user, Conversation $conversation): void
+    {
+        $this->authorizeParticipant($user, $conversation);
+        if (! $conversation->isBroadcast()) {
+            abort(422, 'Members can only be edited on a broadcast.');
+        }
+        $ownerId = (int) ($conversation->created_by_user_id ?? 0);
+        if ($ownerId !== 0 && $ownerId !== (int) $user->id) {
+            abort(403, 'Only the broadcast owner can add or remove members.');
+        }
     }
 
     private function visibleMessagesQuery(Conversation $conversation, User $viewer)
@@ -484,7 +565,8 @@ class ConversationController extends Controller
     private function toConversationPayload(Conversation $conversation, User $viewer, array $statusFlags = []): array
     {
         $isGroup = $conversation->isGroup();
-        $other = $isGroup ? null : $conversation->otherParticipant($viewer);
+        $isBroadcast = $conversation->isBroadcast();
+        $other = ($isGroup || $isBroadcast) ? null : $conversation->otherParticipant($viewer);
         $participantRow = $conversation->participantRows
             ->firstWhere('user_id', $viewer->id);
 
@@ -522,7 +604,18 @@ class ConversationController extends Controller
             'unreadCount' => (int) ($participantRow?->unread_count ?? 0),
             'isBusiness' => $other?->isBusinessProfileMode() ?? false,
             'isGroup' => $isGroup,
-            'groupCount' => $isGroup ? $conversation->participants->count() : null,
+            'isBroadcast' => $isBroadcast,
+            'createdByUserId' => $conversation->created_by_user_id ? (int) $conversation->created_by_user_id : null,
+            'groupCount' => $isBroadcast
+                ? max(0, $conversation->participants->count() - 1)
+                : ($isGroup ? $conversation->participants->count() : null),
+            'members' => ($isGroup || $isBroadcast)
+                ? $conversation->participants->map(fn (User $member) => [
+                    'id' => $member->id,
+                    'displayName' => $member->chatDisplayName(),
+                    'username' => $member->username,
+                ])->values()->all()
+                : [],
             'hasStatus' => (bool) ($statusFlags[$other?->id ?? 0]['hasStatus'] ?? false),
             'statusUnseen' => (bool) ($statusFlags[$other?->id ?? 0]['unseen'] ?? false),
         ];

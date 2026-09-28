@@ -115,6 +115,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('throttle:120,1');
     Route::get('/conversations/{conversation}/typing', [ConversationController::class, 'typing']);
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
+    Route::post('/conversations/{conversation}/participants', [ConversationController::class, 'addParticipant']);
+    Route::delete('/conversations/{conversation}/participants/{user}', [ConversationController::class, 'removeParticipant']);
     Route::get('/statuses', [StatusController::class, 'index']);
     Route::post('/statuses', [StatusController::class, 'store']);
     Route::post('/statuses/media', [StatusController::class, 'storeMedia']);

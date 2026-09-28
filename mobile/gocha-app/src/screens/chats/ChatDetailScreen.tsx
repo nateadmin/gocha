@@ -422,7 +422,9 @@ export function ChatDetailScreen() {
               fontFamily: theme.typography.sans,
               fontSize: 12,
             }}>
-            {chat.isGroup
+            {chat.isBroadcast
+              ? `${chat.groupCount ?? chat.members?.length ?? 0} recipients`
+              : chat.isGroup
               ? `${chat.groupCount ?? 0} members`
               : chat.isSecret
                 ? 'Secret chat'

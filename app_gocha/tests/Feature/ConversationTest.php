@@ -283,4 +283,72 @@ class ConversationTest extends TestCase
         $this->actingAs($outsider)->getJson("/api/conversations/{$conversationId}")
             ->assertForbidden();
     }
+
+    public function test_user_can_create_a_broadcast_and_add_or_remove_members(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+        $carol = User::factory()->create();
+        $dana = User::factory()->create();
+
+        $create = $this->actingAs($alice)->postJson('/api/conversations', [
+            'type' => 'broadcast',
+            'name' => 'Neighbors',
+            'participantUserIds' => [$bob->id, $carol->id],
+        ])->assertCreated()
+            ->assertJsonPath('conversation.type', 'broadcast')
+            ->assertJsonPath('conversation.name', 'Neighbors')
+            ->assertJsonPath('conversation.isBroadcast', true)
+            ->assertJsonPath('conversation.isGroup', false)
+            ->assertJsonPath('conversation.groupCount', 2)
+            ->assertJsonPath('conversation.createdByUserId', $alice->id);
+
+        $conversationId = $create->json('conversation.id');
+        $memberIds = collect($create->json('conversation.members'))->pluck('id')->sort()->values();
+        $this->assertEquals(
+            collect([$alice->id, $bob->id, $carol->id])->sort()->values(),
+            $memberIds
+        );
+
+        $this->actingAs($bob)->getJson('/api/conversations')
+            ->assertOk()
+            ->assertJsonPath('conversations.0.id', $conversationId);
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/participants", [
+            'userId' => $dana->id,
+        ])->assertOk()
+            ->assertJsonPath('conversation.groupCount', 3);
+
+        $this->actingAs($alice)->deleteJson("/api/conversations/{$conversationId}/participants/{$bob->id}")
+            ->assertOk()
+            ->assertJsonPath('conversation.groupCount', 2);
+
+        $this->actingAs($alice)->deleteJson("/api/conversations/{$conversationId}/participants/{$alice->id}")
+            ->assertStatus(422);
+
+        $this->actingAs($carol)->postJson("/api/conversations/{$conversationId}/participants", [
+            'userId' => $bob->id,
+        ])->assertForbidden();
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/participants", [
+            'userId' => $alice->id,
+        ])->assertStatus(422);
+    }
+
+    public function test_group_members_cannot_be_edited_via_broadcast_participant_routes(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+        $carol = User::factory()->create();
+
+        $conversationId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'type' => 'group',
+            'name' => 'Family',
+            'participantUserIds' => [$bob->id],
+        ])->json('conversation.id');
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/participants", [
+            'userId' => $carol->id,
+        ])->assertStatus(422);
+    }
 }

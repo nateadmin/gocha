@@ -24,6 +24,14 @@ export function profileFromLocalChat(chat: ChatRecord): PublicUserProfile | null
   return emptyProfile(chat.otherUserId, chat.name, null, null);
 }
 
+export function profileFromMember(member: {
+  id: number;
+  displayName: string;
+  username?: string | null;
+}): PublicUserProfile {
+  return emptyProfile(member.id, member.displayName, member.username ?? null, null);
+}
+
 export function profileFromSearchContact(contact: GlobalSearchContactResult): PublicUserProfile {
   return emptyProfile(contact.userId, contact.displayName, contact.username, contact.avatarUrl);
 }

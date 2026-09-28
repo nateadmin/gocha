@@ -892,6 +892,12 @@ export async function globalSearch(query: string): Promise<GlobalSearchResponse>
   );
 }
 
+export type ConversationMemberRecord = {
+  id: number;
+  displayName: string;
+  username: string | null;
+};
+
 export type ConversationRecord = {
   id: number;
   type: string;
@@ -905,7 +911,10 @@ export type ConversationRecord = {
   unreadCount: number;
   isBusiness: boolean;
   isGroup?: boolean;
+  isBroadcast?: boolean;
+  createdByUserId?: number | null;
   groupCount?: number | null;
+  members?: ConversationMemberRecord[];
   hasStatus?: boolean;
   statusUnseen?: boolean;
 };
@@ -965,6 +974,46 @@ export async function createGroupConversation(input: {
       participantUserIds: input.participantUserIds,
     }),
   });
+  return payload.conversation;
+}
+
+export async function createBroadcastConversation(input: {
+  name: string;
+  participantUserIds: number[];
+}): Promise<ConversationRecord> {
+  const payload = await apiRequest<{ conversation: ConversationRecord }>(API_PATHS.conversations, {
+    method: 'POST',
+    body: JSON.stringify({
+      type: 'broadcast',
+      name: input.name,
+      participantUserIds: input.participantUserIds,
+    }),
+  });
+  return payload.conversation;
+}
+
+export async function addConversationParticipant(
+  conversationId: number,
+  userId: number,
+): Promise<ConversationRecord> {
+  const payload = await apiRequest<{ conversation: ConversationRecord }>(
+    `${API_PATHS.conversations}/${conversationId}/participants`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    },
+  );
+  return payload.conversation;
+}
+
+export async function removeConversationParticipant(
+  conversationId: number,
+  userId: number,
+): Promise<ConversationRecord> {
+  const payload = await apiRequest<{ conversation: ConversationRecord }>(
+    `${API_PATHS.conversations}/${conversationId}/participants/${userId}`,
+    { method: 'DELETE' },
+  );
   return payload.conversation;
 }
 

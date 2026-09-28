@@ -12,6 +12,7 @@ class Conversation extends Model
     protected $fillable = [
         'type',
         'name',
+        'created_by_user_id',
         'last_message_body',
         'last_message_at',
         'last_message_sender_user_id',
@@ -48,12 +49,20 @@ class Conversation extends Model
         return $this->type === ConversationType::GROUP;
     }
 
+    public function isBroadcast(): bool
+    {
+        return $this->type === ConversationType::BROADCAST;
+    }
+
     public function displayNameFor(User $viewer): string
     {
-        if ($this->isGroup()) {
+        if ($this->isGroup() || $this->isBroadcast()) {
             $name = trim((string) $this->name);
+            if ($name !== '') {
+                return $name;
+            }
 
-            return $name !== '' ? $name : 'Group';
+            return $this->isBroadcast() ? 'Broadcast' : 'Group';
         }
 
         return $this->otherParticipant($viewer)?->chatDisplayName() ?? 'Conversation';

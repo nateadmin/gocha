@@ -95,6 +95,12 @@ export type MuteDuration = '1h' | '8h' | '1w' | 'forever';
 
 export type SwipeAction = 'pin' | 'read' | 'archive' | 'mute' | 'delete';
 
+export type ConversationMember = {
+  id: number;
+  displayName: string;
+  username?: string | null;
+};
+
 export type ChatRecord = {
   id: string;
   name: string;
@@ -117,6 +123,8 @@ export type ChatRecord = {
   groupCount?: number;
   isBusiness: boolean;
   isBroadcast?: boolean;
+  createdByUserId?: number;
+  members?: ConversationMember[];
   isOrderAssistant?: boolean;
   isSecret: boolean;
   listIds: string[];

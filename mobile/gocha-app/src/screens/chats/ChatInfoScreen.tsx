@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { formatApiError } from '../../api/formatApiError';
+import type { PublicUserProfile } from '../../api/client';
 import {
   fetchUserProfileCards,
   requestProfileCardAccess,
@@ -20,6 +21,9 @@ import { statusRingTone } from '../../status/statusLogic';
 import { ProfileCardTile } from '../../components/profileCards/ProfileCardTile';
 import { DurationPickerSheet } from '../../components/chat/DurationPickerSheet';
 import { useChat } from '../../chat/ChatContext';
+import { MemberPicker } from '../../components/chat/MemberPicker';
+import { profileFromMember } from '../../groups/groupMemberSearch';
+import { useAuth } from '../../context/AuthContext';
 import { disappearingSettingSummary } from '../../chat/disappearingMessages';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 import { useGochaTheme } from '../../theme';
@@ -34,11 +38,14 @@ export function ChatInfoScreen() {
   const route = useRoute<RouteProp<ChatsStackParamList, 'ChatInfo'>>();
   const { theme } = useGochaTheme();
   const chatApi = useChat();
+  const { user } = useAuth();
   const chat = chatApi.getChat(route.params.chatId);
   const [cards, setCards] = useState<ProfileCardSummary[] | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [memberBusy, setMemberBusy] = useState(false);
   const [hasStatus, setHasStatus] = useState(false);
   const [statusUnseen, setStatusUnseen] = useState(false);
   const [disappearPickerOpen, setDisappearPickerOpen] = useState(false);
@@ -128,7 +135,7 @@ export function ChatInfoScreen() {
           fontSize: 28,
           marginBottom: 16,
         }}>
-        {chat.isGroup ? 'Group' : 'Profile'}
+        {chat.isBroadcast ? 'Broadcast' : chat.isGroup ? 'Group' : 'Profile'}
       </Text>
 
       <View style={styles.hero}>
@@ -153,7 +160,11 @@ export function ChatInfoScreen() {
           }}>
           {chat.name}
         </Text>
-        {chat.isGroup ? (
+        {chat.isBroadcast ? (
+          <Text style={{ color: theme.colors.mutedForeground, marginTop: 4 }}>
+            {chat.groupCount ?? 0} recipients
+          </Text>
+        ) : chat.isGroup ? (
           <Text style={{ color: theme.colors.mutedForeground, marginTop: 4 }}>
             {chat.groupCount ?? 0} members
           </Text>
@@ -168,7 +179,7 @@ export function ChatInfoScreen() {
             </View>
             <Text style={{ color: theme.colors.mutedForeground, fontSize: 12, marginTop: 6 }}>Message</Text>
           </Pressable>
-          {chat.isGroup ? null : (
+          {chat.isGroup || chat.isBroadcast ? null : (
             <Pressable onPress={() => navigation.navigate('CallsTab')} style={styles.action}>
               <View style={[styles.actionCircle, { borderColor: theme.colors.border }]}>
                 <Ionicons name="call-outline" size={22} color={theme.colors.cardForeground} />
@@ -178,6 +189,40 @@ export function ChatInfoScreen() {
           )}
         </View>
       </View>
+
+      {chat.isBroadcast ? (
+        <>
+          <Text style={[styles.section, { color: theme.colors.mutedForeground }]}>RECIPIENTS</Text>
+          <MemberPicker
+            members={(chat.members ?? [])
+              .filter((member) => member.id !== user?.id && member.id !== chat.createdByUserId)
+              .map(profileFromMember)}
+            onAdd={(profile: PublicUserProfile) => {
+              setMemberError(null);
+              setMemberBusy(true);
+              void chatApi
+                .addBroadcastMember(chat.id, profile.id)
+                .catch((err) => setMemberError(formatApiError(err, 'Could not add that person.')))
+                .finally(() => setMemberBusy(false));
+            }}
+            onRemove={(userId: number) => {
+              setMemberError(null);
+              setMemberBusy(true);
+              void chatApi
+                .removeBroadcastMember(chat.id, userId)
+                .catch((err) => setMemberError(formatApiError(err, 'Could not remove that person.')))
+                .finally(() => setMemberBusy(false));
+            }}
+            helperText="Add people from your chats. Tap a name to remove them."
+          />
+          {memberBusy ? (
+            <Text style={{ color: theme.colors.mutedForeground, marginBottom: 8 }}>Updating recipients…</Text>
+          ) : null}
+          {memberError ? (
+            <Text style={{ color: theme.colors.destructive, marginBottom: 8 }}>{memberError}</Text>
+          ) : null}
+        </>
+      ) : null}
 
       <Text style={[styles.section, { color: theme.colors.mutedForeground, marginTop: 8 }]}>
         CHAT SETTINGS

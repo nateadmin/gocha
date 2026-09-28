@@ -57,6 +57,9 @@ import {
   deleteChatMessage,
   openDirectConversation,
   openGroupConversation,
+  openBroadcastConversation,
+  addBroadcastMember as addBroadcastMemberOnServer,
+  removeBroadcastMember as removeBroadcastMemberOnServer,
   postEmojiMessage,
   postGroupPost,
   postImageMessage,
@@ -144,6 +147,9 @@ type ChatContextValue = {
   refreshConversations: () => Promise<void>;
   startDirectMessage: (userId: number) => Promise<string>;
   startGroupConversation: (name: string, participantUserIds: number[]) => Promise<string>;
+  createBroadcast: (name: string, participantUserIds: number[]) => Promise<string>;
+  addBroadcastMember: (chatId: string, userId: number) => Promise<void>;
+  removeBroadcastMember: (chatId: string, userId: number) => Promise<void>;
   ensureConversationLoaded: (chatId: string) => Promise<boolean>;
   ensureMessagesLoaded: (chatId: string) => Promise<void>;
   refreshMessagesForChat: (chatId: string) => Promise<void>;
@@ -152,7 +158,6 @@ type ChatContextValue = {
   isChatTyping: (chatId: string) => boolean;
   typingLabelNames: (chatId: string) => string[];
   conversationsLoading: boolean;
-  createBroadcast: (name: string) => string;
   sendTextMessage: (chatId: string, text: string, replyToId?: string) => void;
   sendEmojiMessage: (chatId: string, emoji: string) => void;
   sendStickerMessage: (chatId: string, stickerKey: string) => void;
@@ -366,6 +371,31 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const chat = await openGroupConversation(name, participantUserIds);
       insertChat(chat);
       return chat.id;
+    },
+    [insertChat],
+  );
+
+  const createBroadcast = useCallback(
+    async (name: string, participantUserIds: number[]) => {
+      const chat = await openBroadcastConversation(name, participantUserIds);
+      insertChat(chat);
+      return chat.id;
+    },
+    [insertChat],
+  );
+
+  const addBroadcastMember = useCallback(
+    async (chatId: string, userId: number) => {
+      const chat = await addBroadcastMemberOnServer(chatId, userId);
+      insertChat(chat);
+    },
+    [insertChat],
+  );
+
+  const removeBroadcastMember = useCallback(
+    async (chatId: string, userId: number) => {
+      const chat = await removeBroadcastMemberOnServer(chatId, userId);
+      insertChat(chat);
     },
     [insertChat],
   );
@@ -958,46 +988,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [ensureMessagesLoaded, markChatRead],
   );
 
-  const createBroadcast = useCallback((name: string): string => {
-    const id = `broadcast-${Date.now()}`;
-    const trimmed = name.trim() || 'Broadcast';
-    const label = trimmed
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join('');
-
-    const record: ChatRecord = {
-      id,
-      name: trimmed,
-      avatarLabel: label || 'BC',
-      avatarColor: '#7c6cf0',
-      preview: 'Broadcast list created',
-      dateLabel: formatDateLabel(),
-      lastActivityAt: Date.now(),
-      unreadCount: 0,
-      pinned: false,
-      archived: false,
-      muted: false,
-      blocked: false,
-      locked: false,
-      hidden: false,
-      favorite: false,
-      markedUnread: false,
-      isGroup: true,
-      groupCount: 0,
-      isBusiness: false,
-      isBroadcast: true,
-      isSecret: false,
-      listIds: [],
-      labelIds: [],
-    };
-
-    setChats((prev) => [record, ...prev]);
-    setMessages((prev) => ({ ...prev, [id]: [] }));
-    return id;
-  }, []);
-
   const getChatDraft = useCallback(
     (chatId: string) => drafts[chatId]?.text ?? '',
     [drafts],
@@ -1465,6 +1455,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       typingLabelNames,
       conversationsLoading,
       createBroadcast,
+      addBroadcastMember,
+      removeBroadcastMember,
       sendTextMessage,
       sendEmojiMessage,
       sendStickerMessage,
@@ -1558,6 +1550,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       typingLabelNames,
       conversationsLoading,
       createBroadcast,
+      addBroadcastMember,
+      removeBroadcastMember,
       sendTextMessage,
       sendEmojiMessage,
       sendStickerMessage,

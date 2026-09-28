@@ -3,6 +3,9 @@ import {
   deleteConversationMessage,
   createConversation,
   createGroupConversation,
+  createBroadcastConversation,
+  addConversationParticipant,
+  removeConversationParticipant,
   fetchConversation,
   fetchConversationMessages,
   fetchConversationTyping,
@@ -62,6 +65,9 @@ export function mapConversationRecord(
     favorite: existing?.favorite ?? false,
     markedUnread: existing?.markedUnread ?? false,
     isGroup: record.type === 'group' || record.isGroup === true,
+    isBroadcast: record.type === 'broadcast' || record.isBroadcast === true,
+    createdByUserId: record.createdByUserId ?? existing?.createdByUserId,
+    members: record.members ?? existing?.members,
     groupCount: record.groupCount ?? existing?.groupCount,
     isBusiness: record.isBusiness,
     isSecret: existing?.isSecret ?? false,
@@ -131,6 +137,36 @@ export async function openGroupConversation(
   participantUserIds: number[],
 ): Promise<ChatRecord> {
   const record = await createGroupConversation({ name, participantUserIds });
+  return mapConversationRecord(record);
+}
+
+export async function openBroadcastConversation(
+  name: string,
+  participantUserIds: number[],
+): Promise<ChatRecord> {
+  const record = await createBroadcastConversation({ name, participantUserIds });
+  return mapConversationRecord(record);
+}
+
+export async function addBroadcastMember(
+  chatId: string,
+  userId: number,
+): Promise<ChatRecord> {
+  if (!/^\d+$/.test(chatId)) {
+    throw new Error('Create a new broadcast to add people.');
+  }
+  const record = await addConversationParticipant(Number(chatId), userId);
+  return mapConversationRecord(record);
+}
+
+export async function removeBroadcastMember(
+  chatId: string,
+  userId: number,
+): Promise<ChatRecord> {
+  if (!/^\d+$/.test(chatId)) {
+    throw new Error('Create a new broadcast to remove people.');
+  }
+  const record = await removeConversationParticipant(Number(chatId), userId);
   return mapConversationRecord(record);
 }
 

@@ -8,9 +8,11 @@ final class ConversationType
 
     public const GROUP = 'group';
 
+    public const BROADCAST = 'broadcast';
+
     /** @return list<string> */
     public static function all(): array
     {
-        return [self::DM, self::GROUP];
+        return [self::DM, self::GROUP, self::BROADCAST];
     }
 }

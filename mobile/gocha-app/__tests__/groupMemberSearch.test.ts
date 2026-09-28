@@ -3,6 +3,7 @@ import { searchLocalContacts } from '../src/chat/globalSearchLocal';
 import {
   mergeGroupMemberResults,
   profileFromLocalChat,
+  profileFromMember,
   profileFromSearchContact,
 } from '../src/groups/groupMemberSearch';
 
@@ -41,6 +42,13 @@ describe('groupMemberSearch', () => {
     expect(profile?.displayName).toBe('Bob Contact');
     expect(profileFromLocalChat(chat({ isGroup: true, otherUserId: 8 }))).toBeNull();
     expect(profileFromLocalChat(chat({ otherUserId: undefined }))).toBeNull();
+  });
+
+  it('maps a listed member to a selectable profile', () => {
+    const profile = profileFromMember({ id: 12, displayName: 'Eve', username: 'eve' });
+    expect(profile.id).toBe(12);
+    expect(profile.displayName).toBe('Eve');
+    expect(profile.username).toBe('eve');
   });
 
   it('maps a remote chat contact', () => {

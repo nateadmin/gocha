@@ -31,7 +31,9 @@ class CatchUpController extends Controller
                 $latestGenerated = $brief->generated_at;
             }
 
-            $other = $conversation->isGroup() ? null : $conversation->otherParticipant($user);
+            $other = ($conversation->isGroup() || $conversation->isBroadcast())
+                ? null
+                : $conversation->otherParticipant($user);
             $displayName = $conversation->displayNameFor($user);
             $participantRow = $conversation->participantRows
                 ->firstWhere('user_id', $user->id);

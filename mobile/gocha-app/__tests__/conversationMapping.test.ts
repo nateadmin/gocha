@@ -34,6 +34,29 @@ describe('mapConversationRecord', () => {
     expect(mapped.otherUserId).toBeUndefined();
   });
 
+  it('marks broadcast conversations with recipient count and members', () => {
+    const mapped = mapConversationRecord({
+      ...baseRecord,
+      type: 'broadcast',
+      name: 'Neighbors',
+      otherUserId: null,
+      isGroup: false,
+      isBroadcast: true,
+      createdByUserId: 1,
+      groupCount: 2,
+      members: [
+        { id: 1, displayName: 'Alice', username: 'alice' },
+        { id: 4, displayName: 'Bob', username: 'bob' },
+        { id: 5, displayName: 'Carol', username: null },
+      ],
+    });
+
+    expect(mapped.isBroadcast).toBe(true);
+    expect(mapped.isGroup).toBe(false);
+    expect(mapped.groupCount).toBe(2);
+    expect(mapped.members?.map((member) => member.id)).toEqual([1, 4, 5]);
+  });
+
   it('keeps direct chats as one-to-one', () => {
     const mapped = mapConversationRecord(baseRecord);
 
