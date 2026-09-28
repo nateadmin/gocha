@@ -1,11 +1,7 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 
 import { fetchAppMeta } from '../../api/client';
-import {
-  preparePhoneRecaptcha,
-  RECAPTCHA_HOST_ID,
-  styleRecaptchaHost,
-} from '../../auth/phoneFirebase';
+import { preparePhoneRecaptcha, RECAPTCHA_HOST_ID } from '../../auth/phoneFirebase';
 import { BrandText } from '../brand/BrandText';
 
 export const RecaptchaSlot = memo(function RecaptchaSlot() {
@@ -26,7 +22,6 @@ export const RecaptchaSlot = memo(function RecaptchaSlot() {
     if (host.parentElement !== mount) {
       mount.appendChild(host);
     }
-    styleRecaptchaHost(host);
 
     let cancelled = false;
     void fetchAppMeta()
@@ -52,23 +47,11 @@ export const RecaptchaSlot = memo(function RecaptchaSlot() {
   }, []);
 
   return (
-    <div style={{ width: '100%', overflow: 'visible', zIndex: 2 }}>
+    <div>
       <BrandText muted style={{ textAlign: 'center', marginBottom: 8 }}>
         Check the box to confirm you are not a robot, then send the code.
       </BrandText>
-      <div
-        ref={mountRef}
-        style={{
-          minHeight: 78,
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          overflow: 'visible',
-          backgroundColor: '#fff',
-          borderRadius: 8,
-          padding: 8,
-        }}
-      />
+      <div ref={mountRef} style={{ minHeight: 78, display: 'flex', justifyContent: 'center' }} />
       {error ? (
         <BrandText style={{ textAlign: 'center', marginTop: 8 }}>{error}</BrandText>
       ) : null}

@@ -13,12 +13,7 @@ import {
   DEFAULT_REVIEW_LOGIN_EMAIL,
   shouldShowReviewPasswordField,
 } from '../../auth/reviewLogin';
-import {
-  clearPhoneSms,
-  isPhoneRecaptchaSolved,
-  preparePhoneRecaptcha,
-  sendPhoneSms,
-} from '../../auth/phoneFirebase';
+import { clearPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
 import { CtaButton } from '../../components/brand/CtaButton';
@@ -105,24 +100,6 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
 
     if (blocked) {
       return;
-    }
-
-    if (channel === 'phone') {
-      try {
-        const meta = await fetchAppMeta();
-        if (!meta.auth.firebase) {
-          setError('Phone sign-in is not configured yet.');
-          return;
-        }
-        await preparePhoneRecaptcha(meta.auth.firebase);
-        if (!isPhoneRecaptchaSolved()) {
-          setError('Complete the I am not a robot check, then send the code again.');
-          return;
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load phone verification.');
-        return;
-      }
     }
 
     setLoading(true);
@@ -313,7 +290,6 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: 'center',
     gap: 12,
-    overflow: 'visible' as const,
   },
   subtitle: { marginBottom: 8 },
   input: { marginBottom: 8 },

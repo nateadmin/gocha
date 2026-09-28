@@ -28,7 +28,6 @@ import {
   matchFirebaseCode,
   phoneRecaptchaWidgetPresent,
   recaptchaBadgeCss,
-  recaptchaWidgetCss,
 } from '../src/auth/phoneFirebase';
 
 test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
@@ -37,15 +36,12 @@ test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
   hideRecaptchaBadge();
   hideRecaptchaBadge();
 
-  expect(created).toHaveLength(2);
+  expect(created).toHaveLength(1);
   expect(created[0].id).toBe('gocha-hide-recaptcha');
   expect(created[0].textContent).toBe(recaptchaBadgeCss());
   expect(created[0].textContent).toContain('.grecaptcha-badge');
   expect(created[0].textContent).not.toContain('#gocha-recaptcha');
   expect(created[0].textContent).not.toContain('-9999px');
-  expect(created[1].id).toBe('gocha-show-recaptcha-widget');
-  expect(created[1].textContent).toBe(recaptchaWidgetCss());
-  expect(created[1].textContent).toContain('#gocha-recaptcha iframe');
 });
 
 test('captcha failures tell the user to complete the visible check', () => {
@@ -62,25 +58,37 @@ test('withTimeout rejects when the work never finishes', async () => {
 test('web index does not park the recaptcha widget off screen', () => {
   const html = readFileSync(join(__dirname, '../web/index.html'), 'utf8');
   expect(html).not.toMatch(/#gocha-recaptcha[\s\S]{0,200}-9999px/);
+  expect(html).not.toContain('#gocha-recaptcha iframe');
 });
 
-test('phone recaptcha uses a visible checkbox widget', () => {
+test('phone recaptcha uses a visible checkbox widget and sends without a local solved flag', () => {
   const source = readFileSync(join(__dirname, '../src/auth/phoneFirebase.ts'), 'utf8');
   expect(source).toContain("size: 'normal'");
   expect(source).not.toContain("size: 'invisible'");
   expect(source).not.toContain('initializeRecaptchaConfig');
-  expect(source).toContain('phoneRecaptchaWidgetPresent');
+  expect(source).toContain('signInWithPhoneNumber');
+  expect(source).not.toMatch(/if \(!recaptchaSolved\)/);
 });
 
-test('RecaptchaSlot web mounts a live host instead of an empty parked box', () => {
+test('EmailScreen does not block send on a local recaptcha solved flag', () => {
+  const source = readFileSync(
+    join(__dirname, '../src/screens/auth/EmailScreen.tsx'),
+    'utf8',
+  );
+  expect(source).toContain('sendPhoneSms');
+  expect(source).not.toContain('isPhoneRecaptchaSolved');
+  expect(source).not.toContain('preparePhoneRecaptcha');
+  expect(source).toContain('shouldShowReviewPasswordField');
+  expect(source).not.toMatch(/showPasswordField\s*=\s*!isSignUp/);
+});
+
+test('RecaptchaSlot web mounts a compact live host', () => {
   const source = readFileSync(
     join(__dirname, '../src/components/auth/RecaptchaSlot.web.tsx'),
     'utf8',
   );
   expect(source).toContain('preparePhoneRecaptcha');
-  expect(source).toContain('styleRecaptchaHost');
-  expect(source).not.toContain('clearPhoneSms');
-  expect(source).not.toContain('replaceChildren');
+  expect(source).not.toContain('backgroundColor');
   expect(source).not.toContain('-9999px');
 });
 

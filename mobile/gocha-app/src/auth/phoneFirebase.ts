@@ -13,9 +13,6 @@ export const PHONE_SMS_TIMEOUT_MS = 20000;
 
 const RECAPTCHA_BADGE_CSS =
   '.grecaptcha-badge{visibility:hidden!important;opacity:0!important;}';
-const RECAPTCHA_WIDGET_CSS =
-  '#gocha-recaptcha{display:block!important;min-height:78px!important;min-width:304px!important;overflow:visible!important;opacity:1!important;visibility:visible!important}' +
-  '#gocha-recaptcha iframe{display:block!important;opacity:1!important;visibility:visible!important;min-width:304px;min-height:78px}';
 
 const ROBOT_CHECK_MESSAGE =
   'Complete the I am not a robot check, then send the code again.';
@@ -24,8 +21,14 @@ const RECAPTCHA_TIMEOUT_MESSAGE =
 
 let confirmation: ConfirmationResult | null = null;
 let verifier: RecaptchaVerifier | null = null;
+let widgetId: number | null = null;
 let recaptchaSolved = false;
 let preparePromise: Promise<void> | null = null;
+
+type GrecaptchaApi = {
+  getResponse?: (id?: number) => string;
+  enterprise?: { getResponse?: (id?: number) => string };
+};
 
 function firebaseErrorCode(error: unknown): string {
   if (typeof error === 'object' && error && 'code' in error) {
@@ -38,12 +41,34 @@ export function recaptchaBadgeCss(): string {
   return RECAPTCHA_BADGE_CSS;
 }
 
-export function recaptchaWidgetCss(): string {
-  return RECAPTCHA_WIDGET_CSS;
+function grecaptchaApi(): GrecaptchaApi | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const api = (window as Window & { grecaptcha?: GrecaptchaApi }).grecaptcha;
+  return api ?? null;
+}
+
+export function phoneRecaptchaResponse(): string {
+  const api = grecaptchaApi();
+  if (!api) {
+    return '';
+  }
+  try {
+    const id = widgetId ?? undefined;
+    return (
+      api.getResponse?.(id) ||
+      api.enterprise?.getResponse?.(id) ||
+      api.getResponse?.() ||
+      ''
+    );
+  } catch {
+    return '';
+  }
 }
 
 export function isPhoneRecaptchaSolved(): boolean {
-  return recaptchaSolved;
+  return recaptchaSolved || phoneRecaptchaResponse().length > 0;
 }
 
 export function withTimeout<T>(
@@ -136,29 +161,6 @@ export function hideRecaptchaBadge(): void {
     style.textContent = RECAPTCHA_BADGE_CSS;
     document.head.appendChild(style);
   }
-
-  if (!document.getElementById('gocha-show-recaptcha-widget')) {
-    const style = document.createElement('style');
-    style.id = 'gocha-show-recaptcha-widget';
-    style.textContent = RECAPTCHA_WIDGET_CSS;
-    document.head.appendChild(style);
-  }
-}
-
-export function styleRecaptchaHost(host: HTMLElement): void {
-  host.style.display = 'block';
-  host.style.minHeight = '78px';
-  host.style.minWidth = '304px';
-  host.style.width = '304px';
-  host.style.margin = '0 auto';
-  host.style.overflow = 'visible';
-  host.style.opacity = '1';
-  host.style.visibility = 'visible';
-  host.removeAttribute('aria-hidden');
-  host.style.removeProperty('left');
-  host.style.removeProperty('position');
-  host.style.removeProperty('clip');
-  host.style.removeProperty('transform');
 }
 
 function recaptchaHost(): HTMLElement {
@@ -169,12 +171,12 @@ function recaptchaHost(): HTMLElement {
     host.id = RECAPTCHA_HOST_ID;
     document.body.appendChild(host);
   }
-  styleRecaptchaHost(host);
   return host;
 }
 
 function clearVerifier(): void {
   recaptchaSolved = false;
+  widgetId = null;
   if (!verifier) {
     return;
   }
@@ -199,8 +201,8 @@ async function createVerifier(config: FirebasePublicConfig): Promise<RecaptchaVe
   const auth = await firebaseAuth(config);
 
   clearVerifier();
-  recaptchaHost();
-  const next = new authModule.RecaptchaVerifier(auth, RECAPTCHA_HOST_ID, {
+  const host = recaptchaHost();
+  const next = new authModule.RecaptchaVerifier(auth, host, {
     size: 'normal',
     callback: () => {
       recaptchaSolved = true;
@@ -209,24 +211,25 @@ async function createVerifier(config: FirebasePublicConfig): Promise<RecaptchaVe
       recaptchaSolved = false;
     },
   });
-  await withTimeout(next.render(), PHONE_RECAPTCHA_TIMEOUT_MS, RECAPTCHA_TIMEOUT_MESSAGE);
-  verifier = next;
-  if (!phoneRecaptchaWidgetPresent()) {
-    clearVerifier();
-    throw new Error(RECAPTCHA_TIMEOUT_MESSAGE);
+  const rendered = await withTimeout(
+    next.render(),
+    PHONE_RECAPTCHA_TIMEOUT_MS,
+    RECAPTCHA_TIMEOUT_MESSAGE,
+  );
+  if (typeof rendered === 'number') {
+    widgetId = rendered;
   }
+  verifier = next;
   return next;
 }
 
 export async function preparePhoneRecaptcha(config: FirebasePublicConfig): Promise<void> {
-  if (verifier && phoneRecaptchaWidgetPresent()) {
+  if (verifier) {
     return;
   }
   if (preparePromise) {
     await preparePromise;
-    if (verifier && phoneRecaptchaWidgetPresent()) {
-      return;
-    }
+    return;
   }
 
   preparePromise = createVerifier(config).then(() => undefined);
@@ -243,16 +246,13 @@ export async function sendPhoneSms(
 ): Promise<void> {
   hideRecaptchaBadge();
   await preparePhoneRecaptcha(config);
-  if (!recaptchaSolved) {
-    throw new Error(ROBOT_CHECK_MESSAGE);
-  }
-
-  const { signInWithPhoneNumber } = await import('firebase/auth');
-  const auth = await firebaseAuth(config);
   const widget = verifier;
   if (!widget) {
     throw new Error(RECAPTCHA_TIMEOUT_MESSAGE);
   }
+
+  const { signInWithPhoneNumber } = await import('firebase/auth');
+  const auth = await firebaseAuth(config);
 
   try {
     confirmation = await withTimeout(
@@ -260,6 +260,7 @@ export async function sendPhoneSms(
       PHONE_SMS_TIMEOUT_MS,
       RECAPTCHA_TIMEOUT_MESSAGE,
     );
+    recaptchaSolved = true;
   } catch (error) {
     confirmation = null;
     recaptchaSolved = false;
