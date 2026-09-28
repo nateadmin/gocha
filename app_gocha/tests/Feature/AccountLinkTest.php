@@ -166,7 +166,48 @@ class AccountLinkTest extends TestCase
         $this->assertDatabaseCount('account_links', 0);
     }
 
-    public function test_cannot_link_an_account_to_itself(): void
+    public function test_linking_own_phone_says_the_account_is_already_signed_in_with_email(): void
+    {
+        config([
+            'gocha.firebase.web_api_key' => 'test-firebase-key',
+            'gocha.firebase.project_id' => 'gocha-test',
+        ]);
+
+        $alice = User::factory()->create([
+            'email' => 'alice-self@example.com',
+            'phone' => '+18015550111',
+            'phone_verified_at' => now(),
+            'primary_login_channel' => 'email',
+        ]);
+
+        $this->actingAs($alice)
+            ->postJson('/api/auth/otp/request', [
+                'channel' => 'phone',
+                'identifier' => '+18015550111',
+                'mode' => 'signin',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'ACCOUNT_ALREADY_SIGNED_IN')
+            ->assertJsonPath('message', 'This account is already logged in with email.');
+    }
+
+    public function test_linking_own_email_from_a_phone_account_names_phone(): void
+    {
+        $bob = User::factory()->phonePrimary('+18015550222')->create([
+            'email' => 'bob-self@example.com',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($bob)
+            ->postJson('/api/auth/otp/request', [
+                'channel' => 'email',
+                'identifier' => 'bob-self@example.com',
+                'mode' => 'signin',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'ACCOUNT_ALREADY_SIGNED_IN')
+            ->assertJsonPath('message', 'This account is already logged in with phone.');
+    }
     {
         $alice = User::factory()->create();
         $token = app(DeviceTokenService::class)->issue($alice)->plainTextToken;

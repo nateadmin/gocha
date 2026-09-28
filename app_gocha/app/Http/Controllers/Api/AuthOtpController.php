@@ -308,6 +308,13 @@ class AuthOtpController extends Controller
 
         if ($actor->id !== $verified->id) {
             $this->accountLinks->link($actor, $verified);
+        } else {
+            throw new OtpVerificationException(
+                'ACCOUNT_ALREADY_SIGNED_IN',
+                filled($actor->email)
+                    ? 'This account is already logged in with email.'
+                    : 'This account is already logged in with phone.',
+            );
         }
     }
 

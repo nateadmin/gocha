@@ -46,6 +46,7 @@ class OtpAuthService
             $this->assertCanLink($actor, $channel, $identifier);
         } else {
             $this->assertAuthModeAllowed($channel, $identifier, $mode);
+            $this->assertNotCurrentAccount($actor, $channel, $identifier);
         }
 
         if ($this->cooldown->isActive($channel, $identifier)) {
@@ -103,6 +104,10 @@ class OtpAuthService
                 'SMS_NOT_CONFIGURED',
                 'Phone sign-in is coming soon. Use email for now.',
             );
+        }
+
+        if ($mode !== 'link') {
+            $this->assertNotCurrentAccount($actor, $channel, $identifier, asVerification: true);
         }
 
         $otp = LoginOtp::query()
@@ -184,6 +189,45 @@ class OtpAuthService
         }
 
         return $user->fresh();
+    }
+
+    private function assertNotCurrentAccount(
+        ?User $actor,
+        string $channel,
+        string $identifier,
+        bool $asVerification = false,
+    ): void {
+        if (! $actor) {
+            return;
+        }
+
+        $existing = $this->findUserByChannel($channel, $identifier, verifiedOnly: false);
+        if (! $existing || $existing->id !== $actor->id) {
+            return;
+        }
+
+        $via = $this->signedInViaLabel($actor);
+        $message = 'This account is already logged in with '.$via.'.';
+        if ($asVerification) {
+            throw new OtpVerificationException('ACCOUNT_ALREADY_SIGNED_IN', $message);
+        }
+
+        throw new OtpRequestException('ACCOUNT_ALREADY_SIGNED_IN', $message);
+    }
+
+    private function signedInViaLabel(User $actor): string
+    {
+        if ($actor->primary_login_channel === AccountChannel::PHONE && filled($actor->phone)) {
+            return 'phone';
+        }
+        if (filled($actor->email)) {
+            return 'email';
+        }
+        if (filled($actor->phone)) {
+            return 'phone';
+        }
+
+        return 'this login';
     }
 
     private function assertAuthModeAllowed(string $channel, string $identifier, string $mode): void

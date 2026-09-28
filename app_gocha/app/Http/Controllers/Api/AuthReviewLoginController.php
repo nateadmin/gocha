@@ -56,6 +56,13 @@ class AuthReviewLoginController extends Controller
             }
             if ($actor->id !== $user->id) {
                 $this->accountLinks->link($actor, $user);
+            } else {
+                return response()->json([
+                    'code' => 'ACCOUNT_ALREADY_SIGNED_IN',
+                    'message' => filled($actor->email)
+                        ? 'This account is already logged in with email.'
+                        : 'This account is already logged in with phone.',
+                ], 422);
             }
         }
 
