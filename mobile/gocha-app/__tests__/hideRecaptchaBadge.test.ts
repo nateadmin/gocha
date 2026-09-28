@@ -29,6 +29,7 @@ import {
   matchFirebaseCode,
   phoneRecaptchaWidgetPresent,
   recaptchaBadgeCss,
+  shouldRetryVisibleRecaptcha,
   unauthorizedPhoneOriginMessage,
 } from '../src/auth/phoneFirebase';
 
@@ -49,15 +50,14 @@ test('hideRecaptchaBadge injects CSS that hides the Google badge only', () => {
 test('captcha failures tell the user to complete the visible check', () => {
   expect(matchFirebaseCode('auth/captcha-check-failed')).toContain('robot');
   expect(matchFirebaseCode('auth/missing-recaptcha-token')).toContain('robot');
+  expect(matchFirebaseCode('auth/missing-client-identifier')).toContain('robot');
 });
 
-test('invalid app credential names the current host instead of the checkbox', () => {
+test('invalid app credential names the host only when it is unauthorized', () => {
   (globalThis as { window?: { location?: { hostname: string } } }).window = {
     location: { hostname: 'app.gocha.ai' },
   };
-  expect(matchFirebaseCode('auth/invalid-app-credential')).toContain('app.gocha.ai');
-  expect(matchFirebaseCode('auth/invalid-app-credential')).toContain('Authorized domains');
-  expect(matchFirebaseCode('auth/invalid-app-credential')).not.toContain('robot');
+  expect(matchFirebaseCode('auth/invalid-app-credential')).toContain('robot');
 });
 
 test('isAuthorizedPhoneHost requires exact Firebase authorized hosts', () => {
@@ -79,13 +79,37 @@ test('web index does not park the recaptcha widget off screen', () => {
   expect(html).not.toContain('#gocha-recaptcha iframe');
 });
 
-test('phone recaptcha uses a visible checkbox widget and sends without a local solved flag', () => {
+test('phone recaptcha starts invisible and can show a visible checkbox', () => {
   const source = readFileSync(join(__dirname, '../src/auth/phoneFirebase.ts'), 'utf8');
-  expect(source).toContain("size: 'normal'");
-  expect(source).not.toContain("size: 'invisible'");
+  expect(source).toContain("'invisible'");
+  expect(source).toContain("'normal'");
+  expect(source).toContain("createVerifier(config, 'invisible')");
+  expect(source).toContain("createVerifier(config, 'normal')");
   expect(source).not.toContain('initializeRecaptchaConfig');
   expect(source).toContain('signInWithPhoneNumber');
-  expect(source).not.toMatch(/if \(!recaptchaSolved\)/);
+});
+
+test('unknown SMS failures retry with a visible recaptcha checkbox', () => {
+  expect(shouldRetryVisibleRecaptcha({ code: 'auth/captcha-check-failed' })).toBe(true);
+  expect(shouldRetryVisibleRecaptcha({ code: 'auth/internal-error' })).toBe(true);
+  expect(shouldRetryVisibleRecaptcha(new Error('Could not send an SMS code. Try again.'))).toBe(
+    true,
+  );
+  expect(shouldRetryVisibleRecaptcha({ code: 'auth/invalid-phone-number' })).toBe(false);
+  expect(shouldRetryVisibleRecaptcha({ code: 'auth/too-many-requests' })).toBe(false);
+  expect(
+    shouldRetryVisibleRecaptcha(new Error('Firebase is blocking phone SMS from app.gocha.ai. Add app.gocha.ai in Firebase Authentication settings, Authorized domains.')),
+  ).toBe(false);
+});
+
+test('Link another account phone path still mounts RecaptchaSlot', () => {
+  const source = readFileSync(
+    join(__dirname, '../src/screens/auth/EmailScreen.tsx'),
+    'utf8',
+  );
+  expect(source).toContain('isAddingAccount');
+  expect(source).toContain('channel === \'phone\' ? <RecaptchaSlot />');
+  expect(source).not.toMatch(/isAddingAccount\s*\?\s*null/);
 });
 
 test('EmailScreen does not block send on a local recaptcha solved flag', () => {
@@ -100,12 +124,13 @@ test('EmailScreen does not block send on a local recaptcha solved flag', () => {
   expect(source).not.toMatch(/showPasswordField\s*=\s*!isSignUp/);
 });
 
-test('RecaptchaSlot web mounts a compact live host', () => {
+test('RecaptchaSlot web mounts a live host and only prompts when visible', () => {
   const source = readFileSync(
     join(__dirname, '../src/components/auth/RecaptchaSlot.web.tsx'),
     'utf8',
   );
   expect(source).toContain('preparePhoneRecaptcha');
+  expect(source).toContain('subscribePhoneRecaptchaVisibility');
   expect(source).not.toContain('backgroundColor');
   expect(source).not.toContain('-9999px');
 });

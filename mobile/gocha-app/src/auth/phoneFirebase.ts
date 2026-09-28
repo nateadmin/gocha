@@ -19,11 +19,34 @@ const ROBOT_CHECK_MESSAGE =
 const RECAPTCHA_TIMEOUT_MESSAGE =
   'Phone verification is taking too long. Refresh and try again.';
 
+const CAPTCHA_ERROR_CODES = new Set([
+  'auth/captcha-check-failed',
+  'auth/missing-recaptcha-token',
+  'auth/missing-client-identifier',
+  'auth/invalid-recaptcha-token',
+  'auth/argument-error',
+]);
+
+const NON_CAPTCHA_ERROR_CODES = new Set([
+  'auth/billing-not-enabled',
+  'auth/operation-not-allowed',
+  'auth/invalid-phone-number',
+  'auth/too-many-requests',
+  'auth/quota-exceeded',
+  'auth/unauthorized-domain',
+  'auth/invalid-verification-code',
+  'auth/code-expired',
+]);
+
 let confirmation: ConfirmationResult | null = null;
 let verifier: RecaptchaVerifier | null = null;
+let verifierSize: 'invisible' | 'normal' | null = null;
 let widgetId: number | null = null;
 let recaptchaSolved = false;
 let preparePromise: Promise<void> | null = null;
+let visibleRequired = false;
+let cachedAuthorizedDomains: string[] | null = null;
+const visibilityListeners = new Set<(visible: boolean) => void>();
 
 type GrecaptchaApi = {
   getResponse?: (id?: number) => string;
@@ -35,6 +58,23 @@ function firebaseErrorCode(error: unknown): string {
     return String((error as { code?: string }).code);
   }
   return '';
+}
+
+export function shouldRetryVisibleRecaptcha(error: unknown): boolean {
+  if (error instanceof Error && error.message.includes('Authorized domains')) {
+    return false;
+  }
+  const code = firebaseErrorCode(error);
+  if (NON_CAPTCHA_ERROR_CODES.has(code)) {
+    return false;
+  }
+  if (CAPTCHA_ERROR_CODES.has(code)) {
+    return true;
+  }
+  if (code === 'auth/invalid-app-credential' && currentHostUnauthorized()) {
+    return false;
+  }
+  return true;
 }
 
 export function recaptchaBadgeCss(): string {
@@ -49,9 +89,7 @@ export function currentPhoneAuthHost(): string {
 }
 
 export function unauthorizedPhoneOriginMessage(host: string): string {
-  return (
-    `Firebase is blocking phone SMS from ${host}. Add ${host} in Firebase Authentication settings, Authorized domains.`
-  );
+  return `Firebase is blocking phone SMS from ${host}. Add ${host} in Firebase Authentication settings, Authorized domains.`;
 }
 
 export function isAuthorizedPhoneHost(host: string, domains: string[]): boolean {
@@ -59,6 +97,14 @@ export function isAuthorizedPhoneHost(host: string, domains: string[]): boolean 
     return true;
   }
   return domains.includes(host);
+}
+
+function currentHostUnauthorized(): boolean {
+  const host = currentPhoneAuthHost();
+  if (!host || !cachedAuthorizedDomains || cachedAuthorizedDomains.length === 0) {
+    return false;
+  }
+  return !isAuthorizedPhoneHost(host, cachedAuthorizedDomains);
 }
 
 export async function fetchAuthorizedPhoneDomains(apiKey: string): Promise<string[]> {
@@ -81,12 +127,30 @@ export async function assertPhoneAuthHost(config: FirebasePublicConfig): Promise
     return;
   }
   const domains = await fetchAuthorizedPhoneDomains(config.apiKey);
+  cachedAuthorizedDomains = domains;
   if (domains.length === 0) {
     return;
   }
   if (!isAuthorizedPhoneHost(host, domains)) {
     throw new Error(unauthorizedPhoneOriginMessage(host));
   }
+}
+
+export function phoneRecaptchaNeedsVisibleCheck(): boolean {
+  return visibleRequired;
+}
+
+export function subscribePhoneRecaptchaVisibility(listener: (visible: boolean) => void): () => void {
+  visibilityListeners.add(listener);
+  listener(visibleRequired);
+  return () => {
+    visibilityListeners.delete(listener);
+  };
+}
+
+function setVisibleRequired(next: boolean): void {
+  visibleRequired = next;
+  visibilityListeners.forEach((listener) => listener(next));
 }
 
 function grecaptchaApi(): GrecaptchaApi | null {
@@ -148,6 +212,9 @@ export function mapFirebasePhoneError(error: unknown): Error {
   if (error instanceof Error && error.message === ROBOT_CHECK_MESSAGE) {
     return error;
   }
+  if (error instanceof Error && error.message.includes('Authorized domains')) {
+    return error;
+  }
   return new Error(matchFirebaseCode(firebaseErrorCode(error)));
 }
 
@@ -165,11 +232,12 @@ export function matchFirebaseCode(code: string): string {
       return 'Too many SMS codes today. Try again tomorrow.';
     case 'auth/captcha-check-failed':
     case 'auth/missing-recaptcha-token':
+    case 'auth/missing-client-identifier':
+    case 'auth/invalid-recaptcha-token':
       return ROBOT_CHECK_MESSAGE;
     case 'auth/invalid-app-credential': {
-      const host = currentPhoneAuthHost();
-      if (host && host !== 'localhost' && host !== '127.0.0.1') {
-        return unauthorizedPhoneOriginMessage(host);
+      if (currentHostUnauthorized()) {
+        return unauthorizedPhoneOriginMessage(currentPhoneAuthHost());
       }
       return ROBOT_CHECK_MESSAGE;
     }
@@ -228,10 +296,17 @@ function recaptchaHost(): HTMLElement {
   return host;
 }
 
+function emptyHost(host: HTMLElement): void {
+  while (host.firstChild) {
+    host.removeChild(host.firstChild);
+  }
+}
+
 function clearVerifier(): void {
   recaptchaSolved = false;
   widgetId = null;
   if (!verifier) {
+    verifierSize = null;
     return;
   }
   try {
@@ -240,6 +315,7 @@ function clearVerifier(): void {
     // Widget may already be gone.
   }
   verifier = null;
+  verifierSize = null;
 }
 
 export function phoneRecaptchaWidgetPresent(): boolean {
@@ -250,14 +326,18 @@ export function phoneRecaptchaWidgetPresent(): boolean {
   return Boolean(host && host.querySelector('iframe'));
 }
 
-async function createVerifier(config: FirebasePublicConfig): Promise<RecaptchaVerifier> {
+async function createVerifier(
+  config: FirebasePublicConfig,
+  size: 'invisible' | 'normal',
+): Promise<RecaptchaVerifier> {
   const authModule = await import('firebase/auth');
   const auth = await firebaseAuth(config);
 
   clearVerifier();
   const host = recaptchaHost();
+  emptyHost(host);
   const next = new authModule.RecaptchaVerifier(auth, host, {
-    size: 'normal',
+    size,
     callback: () => {
       recaptchaSolved = true;
     },
@@ -274,6 +354,8 @@ async function createVerifier(config: FirebasePublicConfig): Promise<RecaptchaVe
     widgetId = rendered;
   }
   verifier = next;
+  verifierSize = size;
+  setVisibleRequired(size === 'normal');
   return next;
 }
 
@@ -287,12 +369,29 @@ export async function preparePhoneRecaptcha(config: FirebasePublicConfig): Promi
     return;
   }
 
-  preparePromise = createVerifier(config).then(() => undefined);
+  preparePromise = createVerifier(config, visibleRequired ? 'normal' : 'invisible').then(
+    () => undefined,
+  );
   try {
     await preparePromise;
   } finally {
     preparePromise = null;
   }
+}
+
+async function sendWithVerifier(
+  config: FirebasePublicConfig,
+  phone: string,
+  widget: RecaptchaVerifier,
+): Promise<void> {
+  const { signInWithPhoneNumber } = await import('firebase/auth');
+  const auth = await firebaseAuth(config);
+  confirmation = await withTimeout(
+    signInWithPhoneNumber(auth, phone, widget),
+    PHONE_SMS_TIMEOUT_MS,
+    RECAPTCHA_TIMEOUT_MESSAGE,
+  );
+  recaptchaSolved = true;
 }
 
 export async function sendPhoneSms(
@@ -302,25 +401,31 @@ export async function sendPhoneSms(
   hideRecaptchaBadge();
   await assertPhoneAuthHost(config);
   await preparePhoneRecaptcha(config);
-  const widget = verifier;
+  let widget = verifier;
   if (!widget) {
-    throw new Error(RECAPTCHA_TIMEOUT_MESSAGE);
+    widget = await createVerifier(config, 'invisible');
   }
 
-  const { signInWithPhoneNumber } = await import('firebase/auth');
-  const auth = await firebaseAuth(config);
-
   try {
-    confirmation = await withTimeout(
-      signInWithPhoneNumber(auth, phone, widget),
-      PHONE_SMS_TIMEOUT_MS,
-      RECAPTCHA_TIMEOUT_MESSAGE,
-    );
-    recaptchaSolved = true;
+    await sendWithVerifier(config, phone, widget);
   } catch (error) {
     confirmation = null;
     recaptchaSolved = false;
-    throw mapFirebasePhoneError(error);
+    if (verifierSize === 'normal' || !shouldRetryVisibleRecaptcha(error)) {
+      throw mapFirebasePhoneError(error);
+    }
+
+    widget = await createVerifier(config, 'normal');
+    if (!isPhoneRecaptchaSolved()) {
+      throw new Error(ROBOT_CHECK_MESSAGE);
+    }
+    try {
+      await sendWithVerifier(config, phone, widget);
+    } catch (retryError) {
+      confirmation = null;
+      recaptchaSolved = false;
+      throw mapFirebasePhoneError(retryError);
+    }
   }
 }
 
@@ -343,5 +448,6 @@ export async function confirmPhoneSms(code: string): Promise<string> {
 export function clearPhoneSms(): void {
   confirmation = null;
   preparePromise = null;
+  setVisibleRequired(false);
   clearVerifier();
 }

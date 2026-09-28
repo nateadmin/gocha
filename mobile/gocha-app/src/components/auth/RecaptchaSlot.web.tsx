@@ -1,12 +1,21 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 
 import { fetchAppMeta } from '../../api/client';
-import { preparePhoneRecaptcha, RECAPTCHA_HOST_ID } from '../../auth/phoneFirebase';
+import {
+  preparePhoneRecaptcha,
+  RECAPTCHA_HOST_ID,
+  subscribePhoneRecaptchaVisibility,
+} from '../../auth/phoneFirebase';
 import { BrandText } from '../brand/BrandText';
 
 export const RecaptchaSlot = memo(function RecaptchaSlot() {
   const mountRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useLayoutEffect(() => {
+    return subscribePhoneRecaptchaVisibility(setVisible);
+  }, []);
 
   useLayoutEffect(() => {
     const mount = mountRef.current;
@@ -37,7 +46,7 @@ export const RecaptchaSlot = memo(function RecaptchaSlot() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Could not load the robot check.');
+          setError(err instanceof Error ? err.message : 'Could not load phone verification.');
         }
       });
 
@@ -48,10 +57,19 @@ export const RecaptchaSlot = memo(function RecaptchaSlot() {
 
   return (
     <div>
-      <BrandText muted style={{ textAlign: 'center', marginBottom: 8 }}>
-        Check the box to confirm you are not a robot, then send the code.
-      </BrandText>
-      <div ref={mountRef} style={{ minHeight: 78, display: 'flex', justifyContent: 'center' }} />
+      {visible ? (
+        <BrandText muted style={{ textAlign: 'center', marginBottom: 8 }}>
+          Check the box to confirm you are not a robot, then send the code.
+        </BrandText>
+      ) : null}
+      <div
+        ref={mountRef}
+        style={{
+          minHeight: visible ? 78 : 0,
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      />
       {error ? (
         <BrandText style={{ textAlign: 'center', marginTop: 8 }}>{error}</BrandText>
       ) : null}
