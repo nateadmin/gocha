@@ -92,7 +92,9 @@ class GlobalSearchController extends Controller
         return Message::query()
             ->whereIn('type', ['text', 'emoji'])
             ->where('body', 'like', '%'.$needle.'%')
-            ->whereHas('conversation.participantRows', fn ($query) => $query->where('user_id', $user->id))
+            ->whereHas('conversation', function ($query) use ($user) {
+                $query->listedFor($user);
+            })
             ->with(['conversation.participants', 'conversation.participantRows'])
             ->orderByDesc('created_at')
             ->limit(30)

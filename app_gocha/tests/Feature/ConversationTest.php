@@ -312,7 +312,7 @@ class ConversationTest extends TestCase
 
         $this->actingAs($bob)->getJson('/api/conversations')
             ->assertOk()
-            ->assertJsonPath('conversations.0.id', $conversationId);
+            ->assertJsonMissing(['id' => $conversationId]);
 
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/participants", [
             'userId' => $dana->id,
@@ -333,6 +333,67 @@ class ConversationTest extends TestCase
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/participants", [
             'userId' => $alice->id,
         ])->assertStatus(422);
+    }
+
+    public function test_broadcast_sends_arrive_as_direct_messages(): void
+    {
+        $alice = User::factory()->create(['name' => 'Alice']);
+        $bob = User::factory()->create(['name' => 'Bob']);
+        $carol = User::factory()->create(['name' => 'Carol']);
+
+        $broadcastId = $this->actingAs($alice)->postJson('/api/conversations', [
+            'type' => 'broadcast',
+            'name' => 'Neighbors',
+            'participantUserIds' => [$bob->id, $carol->id],
+        ])->json('conversation.id');
+
+        $this->actingAs($alice)->postJson("/api/conversations/{$broadcastId}/messages", [
+            'text' => 'Snow day',
+        ])->assertCreated()
+            ->assertJsonPath('message.text', 'Snow day')
+            ->assertJsonPath('message.isOutgoing', true);
+
+        $this->actingAs($bob)->getJson("/api/conversations/{$broadcastId}")
+            ->assertForbidden();
+        $this->actingAs($bob)->postJson("/api/conversations/{$broadcastId}/messages", [
+            'text' => 'Reply to list',
+        ])->assertForbidden();
+
+        $bobInbox = $this->actingAs($bob)->getJson('/api/conversations')
+            ->assertOk()
+            ->json('conversations');
+        $this->assertCount(1, $bobInbox);
+        $this->assertSame('dm', $bobInbox[0]['type']);
+        $this->assertSame($alice->id, $bobInbox[0]['otherUserId']);
+        $this->assertSame('Snow day', $bobInbox[0]['preview']);
+        $this->assertSame(1, $bobInbox[0]['unreadCount']);
+
+        $dmId = $bobInbox[0]['id'];
+        $this->assertNotEquals($broadcastId, $dmId);
+
+        $this->actingAs($bob)->getJson("/api/conversations/{$dmId}/messages")
+            ->assertOk()
+            ->assertJsonCount(1, 'messages')
+            ->assertJsonPath('messages.0.text', 'Snow day')
+            ->assertJsonPath('messages.0.isOutgoing', false);
+
+        $this->actingAs($bob)->postJson("/api/conversations/{$dmId}/messages", [
+            'text' => 'Got it',
+        ])->assertCreated();
+
+        $this->actingAs($alice)->getJson("/api/conversations/{$dmId}/messages")
+            ->assertOk()
+            ->assertJsonPath('messages.1.text', 'Got it')
+            ->assertJsonPath('messages.1.isOutgoing', false);
+
+        $this->actingAs($alice)->getJson("/api/conversations/{$broadcastId}/messages")
+            ->assertOk()
+            ->assertJsonCount(1, 'messages')
+            ->assertJsonPath('messages.0.text', 'Snow day');
+
+        $carolInbox = $this->actingAs($carol)->getJson('/api/conversations')->json('conversations');
+        $this->assertSame($alice->id, $carolInbox[0]['otherUserId']);
+        $this->assertSame('Snow day', $carolInbox[0]['preview']);
     }
 
     public function test_group_members_cannot_be_edited_via_broadcast_participant_routes(): void

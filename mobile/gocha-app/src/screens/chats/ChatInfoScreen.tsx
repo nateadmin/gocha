@@ -213,7 +213,7 @@ export function ChatInfoScreen() {
                 .catch((err) => setMemberError(formatApiError(err, 'Could not remove that person.')))
                 .finally(() => setMemberBusy(false));
             }}
-            helperText="Add people from your chats. Tap a name to remove them."
+            helperText="Each send goes out as a private message. Tap a name to remove them."
           />
           {memberBusy ? (
             <Text style={{ color: theme.colors.mutedForeground, marginBottom: 8 }}>Updating recipients…</Text>

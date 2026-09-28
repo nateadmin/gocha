@@ -68,7 +68,7 @@ export function NewBroadcastScreen() {
         New broadcast
       </Text>
       <Text style={{ color: theme.colors.mutedForeground, marginBottom: 16 }}>
-        Send one message to many recipients. Add or remove people now, or later from the broadcast.
+        Send one message to many people. Each person gets it as a private chat with you. They reply to you, not to the list.
       </Text>
 
       <TextInput
@@ -83,7 +83,7 @@ export function NewBroadcastScreen() {
         members={members}
         onAdd={addMember}
         onRemove={removeMember}
-        helperText="Type a name to add or tap a name to remove it."
+        helperText="Each send goes out as a private message. Tap a name to remove them."
       />
 
       {error ? <Text style={{ color: theme.colors.destructive, marginBottom: 8 }}>{error}</Text> : null}

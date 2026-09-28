@@ -41,10 +41,12 @@ class ChatMediaMessageService
                 'last_message_sender_user_id' => $sender->id,
             ])->save();
 
-            ConversationParticipant::query()
-                ->where('conversation_id', $conversation->id)
-                ->where('user_id', '!=', $sender->id)
-                ->increment('unread_count');
+            if (! $conversation->isBroadcast()) {
+                ConversationParticipant::query()
+                    ->where('conversation_id', $conversation->id)
+                    ->where('user_id', '!=', $sender->id)
+                    ->increment('unread_count');
+            }
 
             ConversationParticipant::query()
                 ->where('conversation_id', $conversation->id)

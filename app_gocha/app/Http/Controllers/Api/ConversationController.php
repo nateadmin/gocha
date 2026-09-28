@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Chat\BroadcastDeliveryService;
 use App\Services\Chat\ChatMediaMessageService;
 use App\Services\Chat\ChatTypingService;
 use App\Services\Chat\GroupPostService;
@@ -31,6 +32,7 @@ class ConversationController extends Controller
         private readonly ChatTypingService $typing,
         private readonly MessageDeletionService $messageDeletion,
         private readonly ChatMediaMessageService $mediaMessages,
+        private readonly BroadcastDeliveryService $broadcasts,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -39,7 +41,7 @@ class ConversationController extends Controller
         $this->markIncomingMessagesDelivered($user);
 
         $conversations = Conversation::query()
-            ->whereHas('participantRows', fn ($query) => $query->where('user_id', $user->id))
+            ->listedFor($user)
             ->with(['participants', 'participantRows'])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
@@ -79,10 +81,12 @@ class ConversationController extends Controller
         $user = $request->user();
         $unreadMessages = (int) ConversationParticipant::query()
             ->where('user_id', $user->id)
+            ->whereHas('conversation', fn ($query) => $query->listedFor($user))
             ->sum('unread_count');
         $unreadConversations = (int) ConversationParticipant::query()
             ->where('user_id', $user->id)
             ->where('unread_count', '>', 0)
+            ->whereHas('conversation', fn ($query) => $query->listedFor($user))
             ->count();
 
         return response()->json([
@@ -210,10 +214,12 @@ class ConversationController extends Controller
                 'last_message_sender_user_id' => $user->id,
             ])->save();
 
-            ConversationParticipant::query()
-                ->where('conversation_id', $conversation->id)
-                ->where('user_id', '!=', $user->id)
-                ->increment('unread_count');
+            if (! $conversation->isBroadcast()) {
+                ConversationParticipant::query()
+                    ->where('conversation_id', $conversation->id)
+                    ->where('user_id', '!=', $user->id)
+                    ->increment('unread_count');
+            }
 
             ConversationParticipant::query()
                 ->where('conversation_id', $conversation->id)
@@ -222,6 +228,8 @@ class ConversationController extends Controller
                     'last_read_at' => $message->created_at,
                     'unread_count' => 0,
                 ]);
+
+            $this->broadcasts->deliver($conversation, $message, $user);
 
             return $message;
         });
@@ -345,6 +353,8 @@ class ConversationController extends Controller
             $request->file('image'),
             isset($validated['text']) ? (string) $validated['text'] : null,
         );
+
+        $this->broadcasts->deliver($conversation, $message, $user);
 
         return response()->json([
             'message' => $this->toMessagePayload($message, $user),
@@ -526,6 +536,10 @@ class ConversationController extends Controller
 
     private function authorizeParticipant(User $user, Conversation $conversation): void
     {
+        if ($conversation->isBroadcast() && ! $conversation->isBroadcastOwner($user)) {
+            abort(403, 'Broadcasts can only be sent by the owner. Replies go to the private chat.');
+        }
+
         $isParticipant = ConversationParticipant::query()
             ->where('conversation_id', $conversation->id)
             ->where('user_id', $user->id)

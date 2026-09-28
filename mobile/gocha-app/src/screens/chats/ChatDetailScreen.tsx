@@ -330,11 +330,15 @@ export function ChatDetailScreen() {
 
   const messageMenuItems: ActionSheetItem[] = messageMenu
     ? [
-        {
-          id: 'reply',
-          label: 'Reply',
-          onPress: () => setReplyTo(messageMenu),
-        },
+        ...(chat.isBroadcast
+          ? []
+          : [
+              {
+                id: 'reply',
+                label: 'Reply',
+                onPress: () => setReplyTo(messageMenu),
+              },
+            ]),
         {
           id: 'copy',
           label: 'Copy',
@@ -560,7 +564,11 @@ export function ChatDetailScreen() {
         value={draft}
         onChangeText={setDraft}
         onSend={handleSend}
-        onTypingActivity={(active) => chatApi.signalComposerTyping(chatId, active)}
+        onTypingActivity={(active) => {
+          if (!chat.isBroadcast) {
+            chatApi.signalComposerTyping(chatId, active);
+          }
+        }}
         onDraftBlur={() => chatApi.setChatDraft(chatId, draftRef.current)}
         onSendEmoji={(emoji) => chatApi.sendEmojiMessage(chatId, emoji)}
         onSendSticker={(key) => chatApi.sendStickerMessage(chatId, key)}

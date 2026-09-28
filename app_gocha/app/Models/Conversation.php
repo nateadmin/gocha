@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\ConversationType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -52,6 +53,21 @@ class Conversation extends Model
     public function isBroadcast(): bool
     {
         return $this->type === ConversationType::BROADCAST;
+    }
+
+    public function isBroadcastOwner(User $user): bool
+    {
+        return $this->isBroadcast() && (int) $this->created_by_user_id === (int) $user->id;
+    }
+
+    public function scopeListedFor(Builder $query, User $user): Builder
+    {
+        return $query
+            ->whereHas('participantRows', fn ($inner) => $inner->where('user_id', $user->id))
+            ->where(function ($inner) use ($user) {
+                $inner->where('type', '!=', ConversationType::BROADCAST)
+                    ->orWhere('created_by_user_id', $user->id);
+            });
     }
 
     public function displayNameFor(User $viewer): string
