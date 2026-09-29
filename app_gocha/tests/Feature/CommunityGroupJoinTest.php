@@ -6,6 +6,7 @@ use App\Models\CommunityGroup;
 use App\Models\CommunityGroupMembership;
 use App\Models\Conversation;
 use App\Models\ConversationParticipant;
+use App\Models\Message;
 use App\Models\User;
 use App\Support\CommunityGroupMembershipStatus;
 use App\Support\ConversationType;
@@ -38,6 +39,25 @@ class CommunityGroupJoinTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'requests')
             ->assertJsonPath('requests.0.user.displayName', 'Jordan Shore');
+
+        $this->actingAs($owner)
+            ->getJson('/api/inbox/unread')
+            ->assertOk()
+            ->assertJsonPath('hasUnread', true)
+            ->assertJsonPath('unreadMessages', 1);
+
+        $this->assertDatabaseHas('messages', [
+            'sender_user_id' => $joiner->id,
+            'body' => 'Requested to join Shore Runners. Approve from Around Me.',
+        ]);
+
+        $this->actingAs($joiner)
+            ->postJson("/api/groups/{$group->id}/join-requests")
+            ->assertCreated();
+
+        $this->actingAs($owner)
+            ->getJson('/api/inbox/unread')
+            ->assertJsonPath('unreadMessages', 1);
     }
 
     public function test_owner_can_approve_a_join_request_and_add_the_member_to_the_group_chat(): void
@@ -72,6 +92,18 @@ class CommunityGroupJoinTest extends TestCase
             'conversation_id' => $conversation->id,
             'user_id' => $joiner->id,
         ]);
+
+        $this->actingAs($joiner)
+            ->getJson('/api/inbox/unread')
+            ->assertOk()
+            ->assertJsonPath('hasUnread', true);
+
+        $this->assertTrue(
+            Message::query()
+                ->where('sender_user_id', $owner->id)
+                ->where('body', 'You are now a member of Shore Runners.')
+                ->exists()
+        );
 
         $this->actingAs($joiner)
             ->getJson('/api/groups/discover')

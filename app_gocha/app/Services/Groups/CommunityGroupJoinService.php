@@ -7,6 +7,7 @@ use App\Models\CommunityGroupMembership;
 use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\User;
+use App\Services\Chat\BroadcastDeliveryService;
 use App\Support\CommunityGroupMembershipStatus;
 use App\Support\ConversationType;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -16,6 +17,10 @@ use Illuminate\Validation\ValidationException;
 
 class CommunityGroupJoinService
 {
+    public function __construct(
+        private readonly BroadcastDeliveryService $messages,
+    ) {}
+
     public function addOwnerMembership(CommunityGroup $group, User $owner): CommunityGroupMembership
     {
         return CommunityGroupMembership::query()->firstOrCreate(
@@ -89,12 +94,25 @@ class CommunityGroupJoinService
             ]);
         }
 
+        $alreadyPending = $membership->exists && $membership->isPending();
+
         $membership->forceFill([
             'status' => CommunityGroupMembershipStatus::PENDING,
             'role' => 'member',
             'requested_at' => $membership->requested_at ?? now(),
             'decided_at' => null,
         ])->save();
+
+        if (! $alreadyPending) {
+            $owner = $group->owner()->first();
+            if ($owner) {
+                $this->messages->sendDirect(
+                    $user,
+                    $owner,
+                    'Requested to join '.$group->name.'. Approve from Around Me.',
+                );
+            }
+        }
 
         return $membership->fresh(['user', 'group']);
     }
@@ -108,7 +126,7 @@ class CommunityGroupJoinService
             return $membership->fresh(['user', 'group']);
         }
 
-        return DB::transaction(function () use ($membership, $group) {
+        return DB::transaction(function () use ($membership, $group, $owner) {
             $membership->forceFill([
                 'status' => CommunityGroupMembershipStatus::APPROVED,
                 'role' => 'member',
@@ -120,6 +138,26 @@ class CommunityGroupJoinService
             ])->save();
 
             $this->addToConversation($group, (int) $membership->user_id);
+
+            $joiner = $membership->user()->first();
+            if ($joiner) {
+                $this->messages->sendDirect(
+                    $owner,
+                    $joiner,
+                    'You are now a member of '.$group->name.'.',
+                );
+                $conversation = $group->conversation_id
+                    ? Conversation::query()->find($group->conversation_id)
+                    : null;
+                if ($conversation && $conversation->type === ConversationType::GROUP) {
+                    $this->messages->postText(
+                        $conversation,
+                        $owner,
+                        $joiner->publicDisplayName().' joined the group.',
+                        [(int) $joiner->id],
+                    );
+                }
+            }
 
             return $membership->fresh(['user', 'group']);
         });
