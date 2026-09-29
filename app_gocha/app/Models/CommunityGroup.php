@@ -5,11 +5,13 @@ namespace App\Models;
 use App\Support\GroupPrivacy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommunityGroup extends Model
 {
     protected $fillable = [
         'owner_user_id',
+        'conversation_id',
         'name',
         'description',
         'privacy',
@@ -35,6 +37,16 @@ class CommunityGroup extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class);
+    }
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(CommunityGroupMembership::class);
     }
 
     public function isPublic(): bool
@@ -83,6 +95,10 @@ class CommunityGroup extends Model
             'isPublic' => $this->isPublic(),
             'hasLocation' => $this->hasAroundMeLocation(),
             'ownerUserId' => $this->owner_user_id,
+            'conversationId' => $this->conversation_id,
+            'membershipStatus' => 'none',
+            'pendingRequestCount' => 0,
+            'pendingRequests' => [],
         ];
     }
 }

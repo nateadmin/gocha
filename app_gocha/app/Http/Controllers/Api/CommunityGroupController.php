@@ -4,15 +4,27 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CommunityGroup;
+use App\Models\CommunityGroupMembership;
+use App\Models\Conversation;
+use App\Models\ConversationParticipant;
+use App\Models\User;
+use App\Services\Groups\CommunityGroupJoinService;
+use App\Support\CommunityGroupMembershipStatus;
+use App\Support\ConversationType;
 use App\Support\GroupPrivacy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CommunityGroupController extends Controller
 {
-    public function discover(): JsonResponse
+    public function __construct(
+        private readonly CommunityGroupJoinService $joins,
+    ) {}
+
+    public function discover(Request $request): JsonResponse
     {
         $groups = CommunityGroup::query()
             ->where('privacy', GroupPrivacy::PUBLIC)
@@ -20,10 +32,11 @@ class CommunityGroupController extends Controller
             ->orderByDesc('member_count')
             ->get()
             ->filter(fn (CommunityGroup $group) => $group->isDiscoverableInAroundMe())
-            ->values()
-            ->map(fn (CommunityGroup $group) => $group->toPayload());
+            ->values();
 
-        return response()->json(['groups' => $groups]);
+        return response()->json([
+            'groups' => $this->decorateGroups($groups, $this->optionalUser($request)),
+        ]);
     }
 
     public function search(Request $request): JsonResponse
@@ -43,11 +56,11 @@ class CommunityGroupController extends Controller
             })
             ->orderBy('name')
             ->limit(30)
-            ->get()
-            ->map(fn (CommunityGroup $group) => $group->toPayload())
-            ->values();
+            ->get();
 
-        return response()->json(['groups' => $groups]);
+        return response()->json([
+            'groups' => $this->decorateGroups($groups, $this->optionalUser($request)),
+        ]);
     }
 
     public function mine(Request $request): JsonResponse
@@ -55,19 +68,22 @@ class CommunityGroupController extends Controller
         $groups = CommunityGroup::query()
             ->where('owner_user_id', $request->user()->id)
             ->orderByDesc('updated_at')
-            ->get()
-            ->map(fn (CommunityGroup $group) => $group->toPayload())
-            ->values();
+            ->get();
 
-        return response()->json(['groups' => $groups]);
+        return response()->json([
+            'groups' => $this->decorateGroups($groups, $request->user()),
+        ]);
     }
 
     public function store(Request $request): JsonResponse
     {
         $validated = $this->validateGroup($request);
+        $user = $request->user();
+        $conversationId = $this->authorizedConversationId($request, $user);
 
         $group = CommunityGroup::query()->create([
-            'owner_user_id' => $request->user()->id,
+            'owner_user_id' => $user->id,
+            'conversation_id' => $conversationId,
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'privacy' => $validated['privacy'],
@@ -83,7 +99,12 @@ class CommunityGroupController extends Controller
             'member_count' => 1,
         ]);
 
-        return response()->json(['group' => $group->toPayload()], 201);
+        $this->joins->addOwnerMembership($group, $user);
+        $this->joins->syncConversationMembers($group);
+
+        return response()->json([
+            'group' => $this->decorateGroup($group->fresh(), $user),
+        ], 201);
     }
 
     public function update(Request $request, CommunityGroup $communityGroup): JsonResponse
@@ -119,7 +140,56 @@ class CommunityGroupController extends Controller
                 : $communityGroup->show_in_around_me,
         ])->save();
 
-        return response()->json(['group' => $communityGroup->fresh()->toPayload()]);
+        return response()->json([
+            'group' => $this->decorateGroup($communityGroup->fresh(), $request->user()),
+        ]);
+    }
+
+    public function requestJoin(Request $request, CommunityGroup $communityGroup): JsonResponse
+    {
+        $membership = $this->joins->requestJoin($communityGroup, $request->user());
+
+        return response()->json([
+            'request' => $membership->toPayload(),
+            'group' => $this->decorateGroup($communityGroup->fresh(), $request->user()),
+        ], 201);
+    }
+
+    public function joinRequests(Request $request, CommunityGroup $communityGroup): JsonResponse
+    {
+        $requests = $this->joins->pendingForGroup($communityGroup, $request->user())
+            ->map(fn (CommunityGroupMembership $membership) => $membership->toPayload())
+            ->values();
+
+        return response()->json(['requests' => $requests]);
+    }
+
+    public function approveJoin(
+        Request $request,
+        CommunityGroup $communityGroup,
+        CommunityGroupMembership $membership,
+    ): JsonResponse {
+        $this->assertMembershipBelongsToGroup($communityGroup, $membership);
+        $approved = $this->joins->approve($membership, $request->user());
+
+        return response()->json([
+            'request' => $approved->toPayload(),
+            'group' => $this->decorateGroup($communityGroup->fresh(), $request->user()),
+        ]);
+    }
+
+    public function declineJoin(
+        Request $request,
+        CommunityGroup $communityGroup,
+        CommunityGroupMembership $membership,
+    ): JsonResponse {
+        $this->assertMembershipBelongsToGroup($communityGroup, $membership);
+        $declined = $this->joins->decline($membership, $request->user());
+
+        return response()->json([
+            'request' => $declined->toPayload(),
+            'group' => $this->decorateGroup($communityGroup->fresh(), $request->user()),
+        ]);
     }
 
     /**
@@ -138,6 +208,7 @@ class CommunityGroupController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'show_in_around_me' => ['sometimes', 'boolean'],
+            'conversation_id' => ['sometimes', 'nullable', 'integer', 'exists:conversations,id'],
         ]);
 
         $privacy = $validated['privacy'] ?? $existing?->privacy;
@@ -182,11 +253,135 @@ class CommunityGroupController extends Controller
         return $validated;
     }
 
+    private function authorizedConversationId(Request $request, User $user): ?int
+    {
+        $conversationId = $request->integer('conversation_id');
+        if ($conversationId <= 0) {
+            return null;
+        }
+
+        $conversation = Conversation::query()->find($conversationId);
+        if (! $conversation || $conversation->type !== ConversationType::GROUP) {
+            throw ValidationException::withMessages([
+                'conversation_id' => ['Link a group chat you belong to.'],
+            ]);
+        }
+
+        $isParticipant = ConversationParticipant::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $user->id)
+            ->exists();
+        if (! $isParticipant) {
+            throw ValidationException::withMessages([
+                'conversation_id' => ['You can only link a group chat you belong to.'],
+            ]);
+        }
+
+        return $conversation->id;
+    }
+
     private function authorizeOwner(Request $request, CommunityGroup $group): void
     {
         if ($group->owner_user_id !== $request->user()->id) {
             abort(403, 'You can only manage your own groups.');
         }
+    }
+
+    private function assertMembershipBelongsToGroup(
+        CommunityGroup $group,
+        CommunityGroupMembership $membership,
+    ): void {
+        if ((int) $membership->community_group_id !== (int) $group->id) {
+            abort(404);
+        }
+    }
+
+    private function optionalUser(Request $request): ?User
+    {
+        return $request->user() ?? $request->user('sanctum');
+    }
+
+    /**
+     * @param  Collection<int, CommunityGroup>  $groups
+     * @return list<array<string, mixed>>
+     */
+    private function decorateGroups(Collection $groups, ?User $viewer): array
+    {
+        if ($groups->isEmpty()) {
+            return [];
+        }
+
+        $memberships = collect();
+        $pendingByGroup = collect();
+        if ($viewer) {
+            $ids = $groups->pluck('id');
+            $memberships = CommunityGroupMembership::query()
+                ->whereIn('community_group_id', $ids)
+                ->where('user_id', $viewer->id)
+                ->get()
+                ->keyBy('community_group_id');
+            $ownedIds = $groups
+                ->filter(fn (CommunityGroup $group) => (int) $group->owner_user_id === (int) $viewer->id)
+                ->pluck('id');
+            if ($ownedIds->isNotEmpty()) {
+                $pendingByGroup = CommunityGroupMembership::query()
+                    ->whereIn('community_group_id', $ownedIds)
+                    ->where('status', CommunityGroupMembershipStatus::PENDING)
+                    ->with('user')
+                    ->orderByDesc('requested_at')
+                    ->get()
+                    ->groupBy('community_group_id');
+            }
+        }
+
+        return $groups
+            ->map(function (CommunityGroup $group) use ($viewer, $memberships, $pendingByGroup) {
+                return $this->decorateGroup(
+                    $group,
+                    $viewer,
+                    $memberships->get($group->id),
+                    $pendingByGroup->get($group->id) ?? collect(),
+                );
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int, CommunityGroupMembership>|null  $pending
+     * @return array<string, mixed>
+     */
+    private function decorateGroup(
+        CommunityGroup $group,
+        ?User $viewer,
+        ?CommunityGroupMembership $membership = null,
+        ?Collection $pending = null,
+    ): array {
+        if ($viewer && $membership === null) {
+            $membership = CommunityGroupMembership::query()
+                ->where('community_group_id', $group->id)
+                ->where('user_id', $viewer->id)
+                ->first();
+        }
+
+        $pendingRequests = $pending;
+        if ($pendingRequests === null && $viewer && (int) $group->owner_user_id === (int) $viewer->id) {
+            $pendingRequests = CommunityGroupMembership::query()
+                ->where('community_group_id', $group->id)
+                ->where('status', CommunityGroupMembershipStatus::PENDING)
+                ->with('user')
+                ->orderByDesc('requested_at')
+                ->get();
+        }
+
+        $payload = $group->toPayload();
+        $payload['membershipStatus'] = $this->joins->membershipStatus($group, $viewer, $membership);
+        $payload['pendingRequestCount'] = $pendingRequests?->count() ?? 0;
+        $payload['pendingRequests'] = $pendingRequests
+            ? $pendingRequests->map(fn (CommunityGroupMembership $row) => $row->toPayload())->values()->all()
+            : [];
+
+        return $payload;
     }
 
     private function avatarLabel(string $name): string

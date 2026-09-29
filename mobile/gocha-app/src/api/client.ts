@@ -693,6 +693,17 @@ export async function updateUsername(username: string): Promise<AuthUser> {
   return payload.user;
 }
 
+export type GroupJoinRequest = {
+  id: number;
+  groupId: number;
+  groupName: string | null;
+  status: 'pending' | 'approved' | 'declined';
+  role: string;
+  requestedAt: string | null;
+  decidedAt: string | null;
+  user: { id: number; displayName: string; username: string | null } | null;
+};
+
 export type CommunityGroupRecord = {
   id: number;
   name: string;
@@ -711,6 +722,10 @@ export type CommunityGroupRecord = {
   isPublic: boolean;
   hasLocation: boolean;
   ownerUserId: number;
+  conversationId?: number | null;
+  membershipStatus?: 'none' | 'pending' | 'member' | 'owner';
+  pendingRequestCount?: number;
+  pendingRequests?: GroupJoinRequest[];
 };
 
 export async function fetchDiscoverableGroups(): Promise<CommunityGroupRecord[]> {
@@ -734,6 +749,7 @@ export async function createCommunityGroup(input: {
   googlePlaceId?: string;
   latitude?: number | null;
   longitude?: number | null;
+  conversationId?: number | null;
 }): Promise<CommunityGroupRecord> {
   const payload = await apiRequest<{ group: CommunityGroupRecord }>(API_PATHS.groups, {
     method: 'POST',
@@ -748,9 +764,44 @@ export async function createCommunityGroup(input: {
       google_place_id: input.googlePlaceId,
       latitude: input.latitude,
       longitude: input.longitude,
+      conversation_id: input.conversationId,
     }),
   });
   return payload.group;
+}
+
+export async function requestJoinCommunityGroup(groupId: number): Promise<{
+  request: GroupJoinRequest;
+  group: CommunityGroupRecord;
+}> {
+  return apiRequest(`${API_PATHS.groups}/${groupId}/join-requests`, {
+    method: 'POST',
+  });
+}
+
+export async function fetchCommunityGroupJoinRequests(groupId: number): Promise<GroupJoinRequest[]> {
+  const payload = await apiRequest<{ requests: GroupJoinRequest[] }>(
+    `${API_PATHS.groups}/${groupId}/join-requests`,
+  );
+  return payload.requests;
+}
+
+export async function approveCommunityGroupJoinRequest(
+  groupId: number,
+  requestId: number,
+): Promise<{ request: GroupJoinRequest; group: CommunityGroupRecord }> {
+  return apiRequest(`${API_PATHS.groups}/${groupId}/join-requests/${requestId}/approve`, {
+    method: 'POST',
+  });
+}
+
+export async function declineCommunityGroupJoinRequest(
+  groupId: number,
+  requestId: number,
+): Promise<{ request: GroupJoinRequest; group: CommunityGroupRecord }> {
+  return apiRequest(`${API_PATHS.groups}/${groupId}/join-requests/${requestId}/decline`, {
+    method: 'POST',
+  });
 }
 
 export async function updateCommunityGroup(

@@ -80,6 +80,7 @@ export function CreateGroupScreen() {
       );
       const wantsCommunity = Boolean(description.trim() || isPublic || showInAroundMe);
       if (wantsCommunity) {
+        const conversationId = Number.parseInt(chatId, 10);
         await createCommunityGroup({
           name: name.trim(),
           description: description.trim() || undefined,
@@ -91,6 +92,7 @@ export function CreateGroupScreen() {
           googlePlaceId: showInAroundMe ? placeId ?? undefined : undefined,
           latitude: showInAroundMe ? latitude : undefined,
           longitude: showInAroundMe ? longitude : undefined,
+          conversationId: Number.isFinite(conversationId) ? conversationId : undefined,
         });
       }
       navigation.replace('ChatDetail', { chatId });

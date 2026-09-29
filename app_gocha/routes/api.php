@@ -159,6 +159,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/groups/mine', [CommunityGroupController::class, 'mine']);
     Route::post('/groups', [CommunityGroupController::class, 'store']);
     Route::put('/groups/{communityGroup}', [CommunityGroupController::class, 'update']);
+    Route::post('/groups/{communityGroup}/join-requests', [CommunityGroupController::class, 'requestJoin']);
+    Route::get('/groups/{communityGroup}/join-requests', [CommunityGroupController::class, 'joinRequests']);
+    Route::post('/groups/{communityGroup}/join-requests/{membership}/approve', [CommunityGroupController::class, 'approveJoin']);
+    Route::post('/groups/{communityGroup}/join-requests/{membership}/decline', [CommunityGroupController::class, 'declineJoin']);
 
     Route::get('/verifications/mine', [VerificationController::class, 'mine']);
     Route::post('/verifications/user', [VerificationController::class, 'submitUserIdentity']);

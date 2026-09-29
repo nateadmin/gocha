@@ -11,9 +11,12 @@ import { AddressAutocompleteField } from '../../components/places/AddressAutocom
 import { isSelectedPlace } from '../../places/addressPlaces';
 import {
   ApiError,
+  approveCommunityGroupJoinRequest,
+  declineCommunityGroupJoinRequest,
   fetchMyCommunityGroups,
   updateCommunityGroup,
   type CommunityGroupRecord,
+  type GroupJoinRequest,
 } from '../../api/client';
 import type { ChatsStackParamList } from '../../navigation/types';
 import { useGochaTheme } from '../../theme';
@@ -36,6 +39,7 @@ export function GroupSettingsScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [joinBusyId, setJoinBusyId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const groups = await fetchMyCommunityGroups();
@@ -73,6 +77,24 @@ export function GroupSettingsScreen() {
       setRegion(null);
       setLatitude(null);
       setLongitude(null);
+    }
+  }
+
+  async function decideJoin(requestId: number, decision: 'approve' | 'decline') {
+    if (!group) return;
+    setJoinBusyId(requestId);
+    setError(null);
+    try {
+      const payload =
+        decision === 'approve'
+          ? await approveCommunityGroupJoinRequest(group.id, requestId)
+          : await declineCommunityGroupJoinRequest(group.id, requestId);
+      setGroup(payload.group);
+      setMessage(decision === 'approve' ? 'Member approved.' : 'Request declined.');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not update join request.');
+    } finally {
+      setJoinBusyId(null);
     }
   }
 
@@ -164,6 +186,31 @@ export function GroupSettingsScreen() {
             setLongitude(place.longitude);
           }}
         />
+      ) : null}
+
+      {group?.pendingRequests && group.pendingRequests.length > 0 ? (
+        <View style={{ gap: 8, marginBottom: 16 }}>
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans, fontSize: 16 }}>
+            Join requests
+          </Text>
+          {group.pendingRequests.map((request: GroupJoinRequest) => (
+            <View key={request.id} style={{ gap: 8, marginBottom: 8 }}>
+              <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+                {request.user?.displayName ?? 'Gocha user'}
+              </Text>
+              <CtaButton
+                label="Approve"
+                loading={joinBusyId === request.id}
+                onPress={() => void decideJoin(request.id, 'approve')}
+              />
+              <CtaButton
+                label="Decline"
+                disabled={joinBusyId === request.id}
+                onPress={() => void decideJoin(request.id, 'decline')}
+              />
+            </View>
+          ))}
+        </View>
       ) : null}
 
       {error ? <Text style={{ color: theme.colors.destructive }}>{error}</Text> : null}
