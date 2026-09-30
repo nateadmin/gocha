@@ -22,14 +22,12 @@ import {
 import { mapMessageRecord } from './messageMapping';
 import { isOrderAssistantChat } from './orderAssistant';
 import type { ChatRecord } from './types';
+import { formatIsoNumericDate } from '../utils/formatDateTime';
 
 const RECENT_LOCAL_MS = 30_000;
 
 function formatDateLabel(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
+  return formatIsoNumericDate(iso);
 }
 
 export function mapConversationRecord(

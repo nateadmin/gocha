@@ -11,6 +11,7 @@ import type {
   PublicUserProfile,
 } from '../../api/client';
 import { useGochaTheme } from '../../theme';
+import { formatShortMonthDay } from '../../utils/formatDateTime';
 
 type Props = {
   query: string;
@@ -131,12 +132,7 @@ function MessageResultRow({
   onPress: () => void;
 }) {
   const { theme } = useGochaTheme();
-  const sentLabel = message.sentAt
-    ? new Date(message.sentAt).toLocaleDateString([], {
-        month: 'short',
-        day: 'numeric',
-      })
-    : '';
+  const sentLabel = message.sentAt ? formatShortMonthDay(new Date(message.sentAt)) : '';
 
   return (
     <Pressable onPress={onPress} style={styles.messageRow}>

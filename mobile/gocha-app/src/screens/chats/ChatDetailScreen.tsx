@@ -38,6 +38,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { ORDER_ASSISTANT_SUGGESTIONS } from '../../chat/orderAssistant';
 import type { ChatMessage } from '../../chat/types';
 import { copyText } from '../../utils/copyText';
+import { formatLongDate } from '../../utils/formatDateTime';
 import { useGochaTheme } from '../../theme';
 import type { ChatsStackParamList, RootTabParamList } from '../../navigation/types';
 
@@ -518,11 +519,7 @@ export function ChatDetailScreen() {
                   fontFamily: theme.typography.sans,
                   fontSize: 12,
                 }}>
-                {new Date().toLocaleDateString(undefined, {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {formatLongDate(new Date())}
               </Text>
             </View>
           </View>

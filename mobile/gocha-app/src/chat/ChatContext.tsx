@@ -67,6 +67,7 @@ import {
   signalChatTyping,
 } from './conversationApi';
 import type { GroupPostInput } from '../api/client';
+import { formatActivityLabel, formatClockTime } from '../utils/formatDateTime';
 import { sendGochaAiMessage } from './gochaAiApi';
 import { isOrderAssistantChat, ORDER_ASSISTANT_DEFAULT_NAME } from './orderAssistant';
 import { useAuth } from '../context/AuthContext';
@@ -195,11 +196,7 @@ type ChatContextValue = {
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 function formatTimeLabel(): string {
-  return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-function formatDateLabel(): string {
-  return new Date().toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
+  return formatClockTime(new Date());
 }
 
 function muteUntilFor(duration: MuteDuration): number | null {
@@ -217,18 +214,7 @@ function muteUntilFor(duration: MuteDuration): number | null {
 }
 
 function activityDateLabel(timestamp = Date.now()): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const isToday =
-    date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear();
-
-  if (isToday) {
-    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  }
-
-  return date.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' });
+  return formatActivityLabel(timestamp);
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {

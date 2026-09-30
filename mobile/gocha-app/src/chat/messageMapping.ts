@@ -1,11 +1,9 @@
 import type { ConversationMessageRecord } from '../api/client';
 import type { ChatMessage } from './types';
+import { formatIsoClockTime } from '../utils/formatDateTime';
 
 function formatTimeLabel(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return formatIsoClockTime(iso);
 }
 
 export function resolveIsOutgoing(
