@@ -1,6 +1,3 @@
-import { useFonts } from 'expo-font';
-import { Rajdhani_600SemiBold } from '@expo-google-fonts/rajdhani';
-
 import {
   nativeCtaFamily,
   uiMonoFamily,
@@ -13,10 +10,10 @@ export const brandFontFamilies = {
   cta: nativeCtaFamily,
 } as const;
 
+/**
+ * Bare React Native has no ExpoFontLoader native module. Waiting on expo-font
+ * crashes Android before sign-in. Use system fonts; web still loads Rajdhani via CSS.
+ */
 export function useBrandFonts(): { ready: boolean } {
-  const [loaded] = useFonts({
-    Rajdhani_600SemiBold,
-  });
-
-  return { ready: loaded };
+  return { ready: true };
 }

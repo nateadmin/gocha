@@ -1,9 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { View, StyleSheet } from 'react-native';
-
-import { BrandText } from '../brand/BrandText';
-import { CtaButton } from '../brand/CtaButton';
-import { useGochaTheme } from '../../theme';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 
 type Props = {
   children: ReactNode;
@@ -14,15 +10,15 @@ type State = {
 };
 
 function BootstrapErrorFallback({ onRetry }: { onRetry: () => void }) {
-  const { theme } = useGochaTheme();
-
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <BrandText style={styles.title}>Something went wrong</BrandText>
-      <BrandText muted style={styles.message}>
+    <View style={styles.screen}>
+      <Text style={styles.title}>Something went wrong</Text>
+      <Text style={styles.message}>
         Reload to sign in again or restore your session.
-      </BrandText>
-      <CtaButton label="Reload" onPress={onRetry} fullWidth={false} compact />
+      </Text>
+      <Pressable onPress={onRetry} style={styles.button} accessibilityRole="button">
+        <Text style={styles.buttonLabel}>Reload</Text>
+      </Pressable>
     </View>
   );
 }
@@ -61,13 +57,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
     padding: 24,
+    backgroundColor: '#0d0221',
   },
   title: {
     fontSize: 20,
     textAlign: 'center',
+    color: '#f4f4ff',
   },
   message: {
     textAlign: 'center',
     maxWidth: 320,
+    color: '#9aa0c3',
+  },
+  button: {
+    backgroundColor: '#1B00D8',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  buttonLabel: {
+    color: '#ffffff',
+    fontSize: 16,
   },
 });

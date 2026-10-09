@@ -2,10 +2,8 @@ import { useMemo, useState } from 'react';
 import { Image, View, type ImageStyle, type StyleProp } from 'react-native';
 
 import {
-  buildCharacterAvatarDataUri,
   isSvgAvatarUrl,
   profileAvatarInitials,
-  profileAvatarSeed,
 } from '../../branding/characterAvatarCore';
 import { useGochaTheme } from '../../theme';
 import { Avatar } from './Avatar';
@@ -23,26 +21,17 @@ type Props = {
 export function ProfileAvatar({
   avatarUrl,
   displayName,
-  email,
-  userId,
   size = 56,
   style,
   accessibilityLabel = 'Profile avatar',
 }: Props) {
   const { theme } = useGochaTheme();
   const [failed, setFailed] = useState(false);
-  const seed = useMemo(
-    () => profileAvatarSeed({ email, id: userId, displayName }),
-    [displayName, email, userId],
-  );
-  const generatedUri = useMemo(() => buildCharacterAvatarDataUri(seed), [seed]);
   const initials = useMemo(() => profileAvatarInitials(displayName), [displayName]);
-
   const remoteUri = avatarUrl && !failed ? avatarUrl : null;
-  const canUseRemoteImage = remoteUri && !isSvgAvatarUrl(remoteUri);
-  const sourceUri = canUseRemoteImage ? remoteUri : generatedUri;
+  const canUseRemoteImage = Boolean(remoteUri && !isSvgAvatarUrl(remoteUri));
 
-  if (!canUseRemoteImage && isSvgAvatarUrl(remoteUri)) {
+  if (!canUseRemoteImage) {
     return (
       <View pointerEvents="none">
         <Avatar label={initials} size={size} color={theme.colors.primary} />
@@ -54,7 +43,7 @@ export function ProfileAvatar({
     <View pointerEvents="none">
       <Image
         accessibilityLabel={accessibilityLabel}
-        source={{ uri: sourceUri }}
+        source={{ uri: remoteUri as string }}
         onError={() => setFailed(true)}
         style={[
           {
