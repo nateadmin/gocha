@@ -1,10 +1,11 @@
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import type { LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { hydrateStoredAccounts, isStoredAccountsHydrated } from './src/accounts/accountStore';
 import { BootstrapErrorBoundary } from './src/components/app/BootstrapErrorBoundary';
 import { AccountsProvider, useAccounts } from './src/context/AccountsContext';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
@@ -146,7 +147,35 @@ function AppShell() {
   );
 }
 
+function useStoredAccountsReady(): boolean {
+  const [ready, setReady] = useState(isStoredAccountsHydrated);
+
+  useEffect(() => {
+    if (ready) {
+      return;
+    }
+    let active = true;
+    void hydrateStoredAccounts().then(() => {
+      if (active) {
+        setReady(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [ready]);
+
+  return ready;
+}
+
 function App() {
+  // Native reads the saved session from disk before AccountsProvider reads it,
+  // so a restart keeps the user signed in. Web is ready immediately.
+  const storageReady = useStoredAccountsReady();
+  if (!storageReady) {
+    return null;
+  }
+
   return (
     <BootstrapErrorBoundary>
       <SafeAreaProvider>

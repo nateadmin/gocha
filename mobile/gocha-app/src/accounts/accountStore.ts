@@ -1,4 +1,10 @@
-import { memoryKvGet, memoryKvRemove, memoryKvSet } from './memoryKv';
+import {
+  hydrateMemoryKv,
+  memoryKvGet,
+  memoryKvNeedsHydration,
+  memoryKvRemove,
+  memoryKvSet,
+} from './memoryKv';
 
 export type StoredAccount = {
   userId: number;
@@ -19,6 +25,23 @@ export type LinkedAccountEntry = {
 
 const STORAGE_KEY = 'gocha.accounts.v1';
 const ACTIVE_KEY = 'gocha.accounts.active.v1';
+
+let hydrated = !memoryKvNeedsHydration();
+let hydration: Promise<void> | null = null;
+
+export function isStoredAccountsHydrated(): boolean {
+  return hydrated;
+}
+
+/** Loads saved accounts from disk on native; resolves immediately on web. */
+export function hydrateStoredAccounts(): Promise<void> {
+  if (!hydration) {
+    hydration = hydrateMemoryKv([STORAGE_KEY, ACTIVE_KEY]).finally(() => {
+      hydrated = true;
+    });
+  }
+  return hydration;
+}
 
 export function readStoredAccounts(): StoredAccount[] {
   try {
