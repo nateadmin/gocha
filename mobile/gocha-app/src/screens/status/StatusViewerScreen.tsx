@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, Text, TextInput, View, StyleSheet } from 'react-native';
+import { Dimensions, Image, Pressable, ScrollView, Text, TextInput, View, StyleSheet } from 'react-native';
 import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,6 +35,7 @@ import {
   tickStatusElapsed,
 } from '../../status/statusLogic';
 import { useGochaTheme } from '../../theme';
+import { isWebClient } from '../../utils/isWebClient';
 
 type Route = RouteProp<AppStackParamList, 'StatusViewer'>;
 
@@ -233,7 +234,7 @@ export function StatusViewerScreen() {
       return;
     }
     if (isStatusTap(holdMs, swiped)) {
-      const width = typeof window !== 'undefined' ? window.innerWidth : 400;
+      const width = isWebClient() ? window.innerWidth : Dimensions.get('window').width;
       if (tapSide(endX || pressX.current, width) === 'prev') {
         goPrev();
       } else {
@@ -256,7 +257,8 @@ export function StatusViewerScreen() {
   function handlePressOut(event?: {
     nativeEvent?: { pageX?: number; pageY?: number; locationX?: number; locationY?: number };
   }) {
-    if (typeof window !== 'undefined') {
+    // On web the window pointerup listener below releases the hold instead.
+    if (isWebClient()) {
       return;
     }
     if (!holdingRef.current) {
@@ -268,7 +270,8 @@ export function StatusViewerScreen() {
   }
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    // React Native defines `window` but not its DOM event API.
+    if (!isWebClient()) {
       return;
     }
     const end = (event: PointerEvent) => {

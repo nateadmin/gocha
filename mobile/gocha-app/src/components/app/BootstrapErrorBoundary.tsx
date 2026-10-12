@@ -1,6 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 
+import { isWebClient } from '../../utils/isWebClient';
+
 type Props = {
   children: ReactNode;
 };
@@ -35,10 +37,12 @@ export class BootstrapErrorBoundary extends Component<Props, State> {
   }
 
   private handleRetry = (): void => {
-    this.setState({ error: null });
-    if (typeof window !== 'undefined') {
+    // Native has no window.location; resetting the boundary remounts the app tree.
+    if (isWebClient()) {
       window.location.reload();
+      return;
     }
+    this.setState({ error: null });
   };
 
   render(): ReactNode {

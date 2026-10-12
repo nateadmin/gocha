@@ -22,6 +22,7 @@ import { LanguageProvider } from './src/i18n/LanguageContext';
 import { ChatProvider } from './src/chat/ChatContext';
 import { ThemeProvider, useGochaTheme } from './src/theme';
 import { useBrandFonts } from './src/theme/fonts';
+import { isWebClient } from './src/utils/isWebClient';
 
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
@@ -56,7 +57,8 @@ function SessionBackGuard() {
   }, [appPhase]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    // React Native defines `window` but has no history or DOM events.
+    if (!isWebClient()) {
       return;
     }
     const staySignedIn = appPhase === 'main' || appPhase === 'onboarding';

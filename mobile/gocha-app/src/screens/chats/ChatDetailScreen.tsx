@@ -139,6 +139,16 @@ export function ChatDetailScreen() {
     };
   }, [tabNavigation]);
 
+  // Hooks must stay above the `!chat` early return: the chat can load after the
+  // first render (new chat, search result, deep link) and React then throws.
+  const showTypingIndicator = !searchOpen && chatApi.isChatTyping(chatId);
+
+  useEffect(() => {
+    if (showTypingIndicator && !searchOpen) {
+      listRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [searchOpen, showTypingIndicator]);
+
   if (!chat) {
     return (
       <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
@@ -187,16 +197,9 @@ export function ChatDetailScreen() {
         (message.text ?? '').toLowerCase().includes(searchQuery.trim().toLowerCase()),
       )
     : messages;
-  const showTypingIndicator = !searchOpen && chatApi.isChatTyping(chatId);
   const typingLabel = showTypingIndicator
     ? formatTypingLabel(chatApi.typingLabelNames(chatId), t)
     : '';
-
-  useEffect(() => {
-    if (showTypingIndicator && !searchOpen) {
-      listRef.current?.scrollToEnd({ animated: true });
-    }
-  }, [searchOpen, showTypingIndicator]);
 
   function handleSend(payload: string | ComposerSendPayload) {
     const normalized =
