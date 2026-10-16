@@ -64,6 +64,7 @@ export function mapMessageRecord(
     isOutgoing: resolveIsOutgoing(record, viewerUserId),
     status: record.status ?? 'sent',
     senderName: record.senderName ?? undefined,
+    senderUserId: record.senderUserId ?? undefined,
     senderAvatarLabel: record.senderAvatarLabel ?? undefined,
     mediaUrl: record.mediaUrl ?? undefined,
     fileName: record.fileName ?? undefined,

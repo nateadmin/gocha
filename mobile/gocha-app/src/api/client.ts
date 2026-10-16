@@ -36,6 +36,10 @@ export type AuthUser = {
   businessChatWebsite: string | null;
   activeBusinessListingId: number | null;
   activeBusinessListing: BusinessListingSummary | null;
+  /** Older API builds omit these; treat missing as accepted/decided. */
+  termsAccepted?: boolean;
+  aiFeaturesEnabled?: boolean;
+  aiConsentDecided?: boolean;
 };
 
 export type AccountSwitcherEntry = {
@@ -456,6 +460,60 @@ export async function updateProfileContact(input: {
     body: JSON.stringify(input),
   });
   return payload.user;
+}
+
+/** Permanently deletes the signed-in account (App Store guideline 5.1.1(v)). */
+export async function deleteAccount(): Promise<void> {
+  await apiRequest<{ message: string }>(API_PATHS.accountDelete, {
+    method: 'POST',
+    body: JSON.stringify({ confirm: 'DELETE' }),
+  });
+}
+
+export async function acceptTerms(): Promise<AuthUser> {
+  const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.acceptTerms, {
+    method: 'POST',
+    body: JSON.stringify({ accepted: true }),
+  });
+  return payload.user;
+}
+
+export async function updateAiConsent(enabled: boolean): Promise<AuthUser> {
+  const payload = await apiRequest<{ user: AuthUser }>(API_PATHS.aiConsent, {
+    method: 'POST',
+    body: JSON.stringify({ enabled }),
+  });
+  return payload.user;
+}
+
+export async function blockUser(userId: number): Promise<void> {
+  await apiRequest<{ blocked: boolean }>(API_PATHS.blocks, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function unblockUser(userId: number): Promise<void> {
+  await apiRequest<{ blocked: boolean }>(`${API_PATHS.blocks}/${userId}`, {
+    method: 'DELETE',
+  });
+}
+
+export type ReportReason = 'spam' | 'harassment' | 'hate' | 'sexual' | 'violence' | 'scam' | 'other';
+
+export async function reportContent(input: {
+  reason: ReportReason;
+  details?: string;
+  userId?: number;
+  messageId?: number;
+  conversationId?: number;
+  statusItemId?: number;
+}): Promise<string> {
+  const payload = await apiRequest<{ message: string }>(API_PATHS.reports, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return payload.message;
 }
 
 export async function updateLanguage(language: string): Promise<AuthUser> {
@@ -968,6 +1026,7 @@ export type ConversationRecord = {
   members?: ConversationMemberRecord[];
   hasStatus?: boolean;
   statusUnseen?: boolean;
+  isBlocked?: boolean;
 };
 
 export type ConversationMessageRecord = {

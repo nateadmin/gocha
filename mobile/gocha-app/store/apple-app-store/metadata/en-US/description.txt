@@ -6,12 +6,16 @@ Gocha AI is your built-in assistant for planning, writing, and everyday question
 
 Catch Up uses AI to summarize what matters across your conversations so you can reply faster.
 
+AI features are off until you turn them on. When on, the text of your messages is sent to our AI provider, OpenAI, for translation, summaries, and Gocha AI replies. You can turn them off any time in Settings.
+
 Discover nearby groups and local businesses. Explore menus, offers, and community posts.
 
-Share 24-hour statuses with text, photos, and video.
+Share 24-hour text statuses.
 
 Create profile cards you control for professional and personal use.
 
-Sign in with email or phone, switch accounts, and choose your language.
+Sign in with email, switch accounts, and choose your language.
 
-The same Gocha experience is available at https://app.gocha.ai on web and mobile.
+Stay safe: report messages or people, block anyone, and delete your account any time from Settings.
+
+Gocha is also available on the web at https://app.gocha.ai.

@@ -16,6 +16,8 @@ import {
 } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
 import { ConfirmDialog, ProfileAvatar, UniversalLoader } from '../../components/app';
+import { ActionSheet } from '../../components/chat/ActionSheet';
+import { blockUser, reportContent, type ReportReason } from '../../api/client';
 import { StatusVideo } from '../../components/status/StatusVideo';
 import { useChat } from '../../chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
@@ -60,6 +62,8 @@ export function StatusViewerScreen() {
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewers, setViewers] = useState<StatusViewerRecord[] | null>(null);
@@ -380,6 +384,18 @@ export function StatusViewerScreen() {
         <Text style={styles.name} numberOfLines={1}>
           {isOwn ? t('status.myStatus') : displayName}
         </Text>
+        {!isOwn && item ? (
+          <Pressable
+            onPress={() => {
+              setPaused(true);
+              setReportOpen(true);
+            }}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Report status">
+            <Ionicons name="flag-outline" size={22} color="#fff" />
+          </Pressable>
+        ) : null}
         <Pressable onPress={close} hitSlop={12} accessibilityRole="button">
           <Ionicons name="close" size={26} color="#fff" />
         </Pressable>
@@ -492,6 +508,50 @@ export function StatusViewerScreen() {
           </ScrollView>
         </View>
       ) : null}
+
+      {reportOpen ? (
+        <ActionSheet
+          visible
+          title="Why are you reporting this status?"
+          items={(
+            [
+              ['spam', 'Spam'],
+              ['harassment', 'Harassment or bullying'],
+              ['hate', 'Hate speech'],
+              ['sexual', 'Sexual content'],
+              ['violence', 'Violence or threats'],
+              ['scam', 'Scam or fraud'],
+              ['other', 'Something else'],
+            ] as const
+          ).map(([reason, label]) => ({
+            id: `report-${reason}`,
+            label,
+            onPress: () => {
+              const statusItemId = Number(item?.id);
+              reportContent({ reason: reason as ReportReason, statusItemId })
+                .then((message) => setReportNotice(message))
+                .catch(() => setReportNotice('Could not send your report. Please try again.'));
+            },
+          }))}
+          onClose={() => {
+            setReportOpen(false);
+            setPaused(false);
+          }}
+        />
+      ) : null}
+
+      <ConfirmDialog
+        visible={reportNotice !== null}
+        title="Report"
+        message={`${reportNotice ?? ''} You can also block this person.`}
+        confirmLabel="Block"
+        destructive
+        onConfirm={() => {
+          setReportNotice(null);
+          void blockUser(authorUserId).then(close, close);
+        }}
+        onCancel={() => setReportNotice(null)}
+      />
 
       <ConfirmDialog
         visible={confirmDelete}

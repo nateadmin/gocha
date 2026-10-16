@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { ProfileAvatar, SectionLabel, SettingsToggleRow } from '../../components/app';
+import { ConfirmDialog, ProfileAvatar, SectionLabel, SettingsToggleRow } from '../../components/app';
+import { formatApiError } from '../../api/formatApiError';
+import { LEGAL_URLS } from '../../config/api';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -23,14 +25,50 @@ export function SettingsScreen() {
   const navigation = useNavigation<SettingsNavigationProp>();
   const { theme, mode, setMode } = useGochaTheme();
   const { accounts } = useAccounts();
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount, setAiFeaturesEnabled } = useAuth();
   const { t } = useLanguage();
   const [readReceipts, setReadReceipts] = useState(true);
   const [lastSeen, setLastSeen] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [messagePreview, setMessagePreview] = useState(true);
   const [notificationSound, setNotificationSound] = useState(true);
-  const [aiSummaries, setAiSummaries] = useState(true);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleAiToggle(enabled: boolean) {
+    setAiSaving(true);
+    setAiError(null);
+    try {
+      await setAiFeaturesEnabled(enabled);
+    } catch (err) {
+      setAiError(formatApiError(err, 'Could not update AI features.'));
+    } finally {
+      setAiSaving(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setConfirmDelete(false);
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const result = await deleteAccount();
+      if (result === 'switched') {
+        navigation.navigate('ChatsTab', { screen: 'ChatsList' });
+      }
+    } catch (err) {
+      setDeleteError(formatApiError(err, 'Could not delete your account. Please try again.'));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function openLink(url: string) {
+    Linking.openURL(url).catch(() => undefined);
+  }
 
   async function handleSignOut() {
     const result = await signOut();
@@ -240,6 +278,9 @@ export function SettingsScreen() {
         </Pressable>
       </View>
 
+      {/* Not saved or enforced yet; kept off the store builds (guideline 2.1). */}
+      {Platform.OS === 'web' ? (
+        <>
       <SectionLabel>{t('settings.privacy')}</SectionLabel>
       <View
         style={[
@@ -296,6 +337,8 @@ export function SettingsScreen() {
           onValueChange={setNotificationSound}
         />
       </View>
+        </>
+      ) : null}
 
       <SectionLabel>{t('settings.ai')}</SectionLabel>
       <View
@@ -309,11 +352,32 @@ export function SettingsScreen() {
         ]}>
         <SettingsToggleRow
           icon="sparkles"
-          label="AI chat summaries"
-          value={aiSummaries}
-          onValueChange={setAiSummaries}
+          label="AI features"
+          value={Boolean(user?.aiFeaturesEnabled)}
+          onValueChange={(enabled) => {
+            if (!aiSaving) {
+              void handleAiToggle(enabled);
+            }
+          }}
         />
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.typography.sans,
+            fontSize: 13,
+            lineHeight: 18,
+            paddingBottom: 12,
+          }}>
+          Translation, Catch Up summaries and Gocha AI send your message text to OpenAI. Off means
+          nothing is sent.
+        </Text>
+        {aiError ? (
+          <Text style={{ color: theme.colors.destructive, paddingBottom: 12 }}>{aiError}</Text>
+        ) : null}
       </View>
+      {/* Roadmap note, not a feature; hidden on the store builds. */}
+      {Platform.OS === 'web' ? (
+        <>
       <SectionLabel>GOCHA COLLECTIVE (BUILD 3)</SectionLabel>
       <View
         style={[
@@ -335,6 +399,8 @@ export function SettingsScreen() {
           Phase 2 may start as a standalone website first.
         </Text>
       </View>
+        </>
+      ) : null}
 
       <SectionLabel>{t('settings.appearance')}</SectionLabel>
       <View
@@ -352,6 +418,41 @@ export function SettingsScreen() {
           value={mode === 'light'}
           onValueChange={(enabled) => setMode(enabled ? 'light' : 'dark')}
         />
+      </View>
+
+      <SectionLabel>LEGAL & SUPPORT</SectionLabel>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radii.card,
+          },
+        ]}>
+        <Pressable onPress={() => openLink(LEGAL_URLS.privacy)} style={styles.linkRow} accessibilityRole="link">
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Privacy Policy
+          </Text>
+          <Ionicons name="open-outline" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable onPress={() => openLink(LEGAL_URLS.terms)} style={styles.linkRow} accessibilityRole="link">
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Terms of Use
+          </Text>
+          <Ionicons name="open-outline" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <Pressable
+          onPress={() => openLink(`mailto:${LEGAL_URLS.supportEmail}`)}
+          style={styles.linkRow}
+          accessibilityRole="link">
+          <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans }}>
+            Contact support ({LEGAL_URLS.supportEmail})
+          </Text>
+          <Ionicons name="mail-outline" size={18} color={theme.colors.mutedForeground} />
+        </Pressable>
       </View>
 
       <Pressable
@@ -374,6 +475,45 @@ export function SettingsScreen() {
           {accounts.length > 1 ? t('settings.signOutThis') : t('settings.signOut')}
         </Text>
       </Pressable>
+
+      <Pressable
+        onPress={() => setConfirmDelete(true)}
+        disabled={deleting}
+        accessibilityRole="button"
+        style={[
+          styles.signOutCard,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.destructive,
+            borderRadius: theme.radii.card,
+            opacity: deleting ? 0.6 : 1,
+          },
+        ]}>
+        <Text
+          style={{
+            color: theme.colors.destructive,
+            fontFamily: theme.typography.sans,
+            fontSize: theme.typography.body,
+            textAlign: 'center',
+          }}>
+          {deleting ? 'Deleting account…' : 'Delete account'}
+        </Text>
+      </Pressable>
+      {deleteError ? (
+        <Text style={{ color: theme.colors.destructive, textAlign: 'center', marginTop: 8 }}>
+          {deleteError}
+        </Text>
+      ) : null}
+
+      <ConfirmDialog
+        visible={confirmDelete}
+        title="Delete your account?"
+        message="This permanently deletes your account, profile, messages you sent, statuses, profile cards and business listings. This cannot be undone."
+        confirmLabel="Delete account"
+        destructive
+        onConfirm={() => void handleDeleteAccount()}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </ScrollView>
   );
 }

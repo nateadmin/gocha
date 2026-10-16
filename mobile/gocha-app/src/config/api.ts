@@ -22,6 +22,11 @@ export const API_PATHS = {
   authSwitch: '/api/auth/switch',
   deviceToken: '/api/auth/device-token',
   me: '/api/me',
+  accountDelete: '/api/account/delete',
+  acceptTerms: '/api/profile/accept-terms',
+  aiConsent: '/api/profile/ai-consent',
+  blocks: '/api/blocks',
+  reports: '/api/reports',
   onboarding: '/api/profile/onboarding',
   profileUpdate: '/api/profile/update',
   contact: '/api/profile/contact',
@@ -55,4 +60,10 @@ export const API_PATHS = {
   profileCards: '/api/profile-cards',
   publicProfileCard: (slug: string) => `/api/c/${encodeURIComponent(slug)}`,
   userProfileCards: (userId: number) => `/api/users/${userId}/profile-cards`,
+} as const;
+
+export const LEGAL_URLS = {
+  privacy: 'https://gocha.ai/privacy',
+  terms: 'https://gocha.ai/terms',
+  supportEmail: 'support@gocha.ai',
 } as const;

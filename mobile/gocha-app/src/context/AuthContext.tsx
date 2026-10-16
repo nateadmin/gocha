@@ -12,7 +12,9 @@ import {
 import { clearAllStoredAccounts, readStoredAccounts } from '../accounts/accountStore';
 import {
   ApiError,
+  acceptTerms as apiAcceptTerms,
   completeOnboarding,
+  deleteAccount as apiDeleteAccount,
   fetchCurrentUser,
   getActiveDeviceToken,
   issueDeviceToken,
@@ -24,6 +26,7 @@ import {
   resetAppMetaCache,
   resetCsrfPrimed,
   setActiveDeviceToken,
+  updateAiConsent as apiUpdateAiConsent,
   updateLanguage as apiUpdateLanguage,
   updateProfile as apiUpdateProfile,
   uploadAvatar,
@@ -57,6 +60,11 @@ type AuthContextValue = {
     options?: { channel?: 'email' | 'phone' },
   ) => Promise<{ resendAvailableInSeconds: number }>;
   signInWithReviewPassword: (email: string, password: string) => Promise<void>;
+  /** Permanently deletes the signed-in account, then signs out of it. */
+  deleteAccount: () => Promise<'auth' | 'switched'>;
+  /** Records the Terms agreement and/or the AI choice from the consent screen. */
+  completeConsent: (input: { acceptTerms: boolean; aiEnabled: boolean | null }) => Promise<void>;
+  setAiFeaturesEnabled: (enabled: boolean) => Promise<void>;
   finishOnboarding: (input: {
     displayName: string;
     username?: string;
@@ -95,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     activeAccountId,
     adoptActiveAccount,
     removeAccount,
+    forgetAccount,
     patchAccountDeviceToken,
     registerAccount,
     switchAccount,
@@ -453,6 +462,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [accounts, removeAccount, refresh, switchAccount, user]);
 
+  const deleteAccount = useCallback(async (): Promise<'auth' | 'switched'> => {
+    if (!user) {
+      return 'auth';
+    }
+
+    // Throws on failure so the caller can show the error and keep the account.
+    await apiDeleteAccount();
+
+    signingOutRef.current = true;
+    let reloadAfterDelete = false;
+    try {
+      const deletedUserId = user.id;
+      const remaining = accounts.filter((entry) => entry.userId !== deletedUserId);
+
+      if (remaining.length > 0 && (await switchAccount(remaining[0].userId))) {
+        // switchAccount already set the new active account and token; only drop
+        // the deleted one from the saved list (removeAccount would reapply a
+        // stale active account and its revoked token).
+        forgetAccount(deletedUserId);
+        await refresh({ background: false });
+        return 'switched';
+      }
+
+      clearAllStoredAccounts();
+      setActiveDeviceToken(null);
+      resetAppMetaCache();
+      resetCsrfPrimed();
+      setUser(null);
+      removeAccount(deletedUserId);
+      reloadAfterDelete = isWebClient();
+      return 'auth';
+    } finally {
+      signingOutRef.current = false;
+      if (reloadAfterDelete) {
+        window.location.replace('/');
+      }
+    }
+  }, [accounts, forgetAccount, refresh, removeAccount, switchAccount, user]);
+
+  const completeConsent = useCallback(
+    async (input: { acceptTerms: boolean; aiEnabled: boolean | null }) => {
+      let nextUser: AuthUser | null = null;
+      if (input.acceptTerms) {
+        nextUser = await apiAcceptTerms();
+      }
+      if (input.aiEnabled !== null) {
+        nextUser = await apiUpdateAiConsent(input.aiEnabled);
+      }
+      if (nextUser) {
+        setUser(nextUser);
+        syncUserToStoredAccount(nextUser);
+      }
+    },
+    [syncUserToStoredAccount],
+  );
+
+  const setAiFeaturesEnabled = useCallback(
+    async (enabled: boolean) => {
+      const nextUser = await apiUpdateAiConsent(enabled);
+      setUser(nextUser);
+      syncUserToStoredAccount(nextUser);
+    },
+    [syncUserToStoredAccount],
+  );
+
   const value = useMemo(
     () => ({
       user,
@@ -468,6 +542,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       uploadProfileAvatar,
       updateLanguage,
       signOut,
+      deleteAccount,
+      completeConsent,
+      setAiFeaturesEnabled,
     }),
     [
       user,
@@ -483,6 +560,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       uploadProfileAvatar,
       updateLanguage,
       signOut,
+      deleteAccount,
+      completeConsent,
+      setAiFeaturesEnabled,
     ],
   );
 
@@ -497,18 +577,31 @@ export function useAuth(): AuthContextValue {
   return context;
 }
 
+export type AppPhase = 'auth' | 'onboarding' | 'consent' | 'main';
+
+/**
+ * Terms agreement (guideline 1.2) and the AI data-sharing choice (5.1.2) are
+ * asked once after sign-in. An API that predates these fields omits them, so
+ * only an explicit `false` gates the app.
+ */
+export function needsConsent(user: AuthUser): boolean {
+  return user.termsAccepted === false || user.aiConsentDecided === false;
+}
+
 export function useAuthGate(): {
   user: AuthUser | null;
   loading: boolean;
-  appPhase: 'auth' | 'onboarding' | 'main';
+  appPhase: AppPhase;
 } {
   const { user, loading } = useAuth();
 
-  const appPhase = !user
+  const appPhase: AppPhase = !user
     ? 'auth'
     : user.needsOnboarding
       ? 'onboarding'
-      : 'main';
+      : needsConsent(user)
+        ? 'consent'
+        : 'main';
 
   return {
     user,

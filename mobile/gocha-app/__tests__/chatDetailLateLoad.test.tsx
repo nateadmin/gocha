@@ -14,6 +14,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('../src/components/app', () => ({
   Avatar: () => null,
+  ConfirmDialog: () => null,
   HeaderOverflowMenu: () => null,
   UniversalLoader: () => null,
 }));

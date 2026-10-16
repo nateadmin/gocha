@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, Text, View, StyleSheet, Platform } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -179,7 +179,7 @@ export function ChatInfoScreen() {
             </View>
             <Text style={{ color: theme.colors.mutedForeground, fontSize: 12, marginTop: 6 }}>Message</Text>
           </Pressable>
-          {chat.isGroup || chat.isBroadcast ? null : (
+          {chat.isGroup || chat.isBroadcast || Platform.OS !== 'web' ? null : (
             <Pressable onPress={() => navigation.navigate('CallsTab')} style={styles.action}>
               <View style={[styles.actionCircle, { borderColor: theme.colors.border }]}>
                 <Ionicons name="call-outline" size={22} color={theme.colors.cardForeground} />

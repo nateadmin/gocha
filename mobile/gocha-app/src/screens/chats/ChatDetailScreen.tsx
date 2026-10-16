@@ -14,7 +14,15 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Avatar, HeaderOverflowMenu, UniversalLoader, type DropdownMenuItem } from '../../components/app';
+import {
+  Avatar,
+  ConfirmDialog,
+  HeaderOverflowMenu,
+  UniversalLoader,
+  type DropdownMenuItem,
+} from '../../components/app';
+import { reportContent, type ReportReason } from '../../api/client';
+import { formatApiError } from '../../api/formatApiError';
 import {
   ActionSheet,
   ChatComposer,
@@ -68,6 +76,10 @@ export function ChatDetailScreen() {
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   const [postKind, setPostKind] = useState<GroupPostKind | null>(null);
   const [openFailed, setOpenFailed] = useState(false);
+  const [reportTarget, setReportTarget] = useState<
+    { messageId?: number; conversationId?: number; userId?: number } | null
+  >(null);
+  const [reportNotice, setReportNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(chatApi.getChatDraft(chatId));
@@ -192,6 +204,39 @@ export function ChatDetailScreen() {
     );
   }
 
+  // Only chats that exist on the server can be reported (not the local order assistant).
+  const serverChatId = /^\d+$/.test(chat.id) ? Number(chat.id) : null;
+
+  async function submitReport(reason: ReportReason) {
+    const target = reportTarget;
+    setReportTarget(null);
+    if (!target) {
+      return;
+    }
+    try {
+      const message = await reportContent({ reason, ...target });
+      setReportNotice(message);
+    } catch (err) {
+      setReportNotice(formatApiError(err, 'Could not send your report. Please try again.'));
+    }
+  }
+
+  const reportReasonItems: ActionSheetItem[] = (
+    [
+      ['spam', 'Spam'],
+      ['harassment', 'Harassment or bullying'],
+      ['hate', 'Hate speech'],
+      ['sexual', 'Sexual content'],
+      ['violence', 'Violence or threats'],
+      ['scam', 'Scam or fraud'],
+      ['other', 'Something else'],
+    ] as const
+  ).map(([reason, label]) => ({
+    id: `report-${reason}`,
+    label,
+    onPress: () => void submitReport(reason),
+  }));
+
   const visibleMessages = searchOpen && searchQuery.trim()
     ? messages.filter((message) =>
         (message.text ?? '').toLowerCase().includes(searchQuery.trim().toLowerCase()),
@@ -309,6 +354,17 @@ export function ChatDetailScreen() {
       icon: 'timer-outline',
       onPress: () => setDisappearPickerOpen(true),
     },
+    ...(serverChatId !== null
+      ? [
+          {
+            id: 'report',
+            label: 'Report',
+            icon: 'flag-outline',
+            onPress: () =>
+              setReportTarget({ conversationId: serverChatId, userId: chat.otherUserId }),
+          },
+        ]
+      : []),
     {
       id: 'block',
       label: chat.blocked ? 'Unblock' : 'Block',
@@ -366,6 +422,32 @@ export function ChatDetailScreen() {
               onPress: () =>
                 chatApi.starMessage(route.params.chatId, messageMenu.id),
             },
+        ...(!messageMenu.isOutgoing && Number.isFinite(Number(messageMenu.id))
+          ? [
+              {
+                id: 'report-message',
+                label: 'Report message',
+                destructive: true,
+                onPress: () => setReportTarget({ messageId: Number(messageMenu.id) }),
+              },
+            ]
+          : []),
+        // In groups, block the person who sent this message.
+        ...(chat.isGroup && !messageMenu.isOutgoing && messageMenu.senderUserId
+          ? [
+              {
+                id: 'block-sender',
+                label: `Block ${messageMenu.senderName ?? 'sender'}`,
+                destructive: true,
+                onPress: () => {
+                  const senderUserId = messageMenu.senderUserId as number;
+                  chatApi.blockSender(chat.id, senderUserId).catch((err: unknown) => {
+                    setReportNotice(formatApiError(err, 'Could not block this person.'));
+                  });
+                },
+              },
+            ]
+          : []),
         {
           id: 'delete-me',
           label: 'Delete for me',
@@ -560,6 +642,26 @@ export function ChatDetailScreen() {
         </ScrollView>
       ) : null}
 
+      {chat.blocked && chat.otherUserId ? (
+        <View
+          style={[
+            styles.blockedBar,
+            {
+              backgroundColor: theme.colors.card,
+              borderTopColor: theme.colors.border,
+              paddingBottom: insets.bottom + 12,
+            },
+          ]}>
+          <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.typography.sans, flex: 1 }}>
+            You blocked this contact. Unblock to send messages.
+          </Text>
+          <Pressable onPress={() => chatApi.unblockChat(chat.id)} accessibilityRole="button" hitSlop={8}>
+            <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans, fontWeight: '600' }}>
+              Unblock
+            </Text>
+          </Pressable>
+        </View>
+      ) : (
       <ChatComposer
         value={draft}
         onChangeText={setDraft}
@@ -577,6 +679,7 @@ export function ChatDetailScreen() {
         replyLabel={replyTo?.text ?? replyTo?.stickerKey}
         onCancelReply={() => setReplyTo(null)}
       />
+      )}
 
       <ActionSheet
         visible={postMenuOpen}
@@ -621,6 +724,32 @@ export function ChatDetailScreen() {
         onClose={() => setMessageMenu(null)}
       />
 
+      <ActionSheet
+        visible={reportTarget !== null}
+        title="Why are you reporting this?"
+        items={reportReasonItems}
+        onClose={() => setReportTarget(null)}
+      />
+
+      <ConfirmDialog
+        visible={reportNotice !== null}
+        title="Report"
+        message={
+          chat.otherUserId && !chat.blocked
+            ? `${reportNotice ?? ''} You can also block this person so they can't message you.`
+            : (reportNotice ?? '')
+        }
+        confirmLabel={chat.otherUserId && !chat.blocked ? 'Block' : 'OK'}
+        destructive={Boolean(chat.otherUserId && !chat.blocked)}
+        onConfirm={() => {
+          if (chat.otherUserId && !chat.blocked) {
+            chatApi.blockChat(chat.id);
+          }
+          setReportNotice(null);
+        }}
+        onCancel={() => setReportNotice(null)}
+      />
+
       <DurationPickerSheet
         visible={mutePickerOpen}
         title="Mute notifications"
@@ -651,6 +780,14 @@ export function ChatDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  blockedBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   root: { flex: 1, width: '100%', maxWidth: '100%', overflow: 'hidden' },
   header: {
     flexDirection: 'row',

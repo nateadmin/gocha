@@ -17,6 +17,8 @@ import { fetchAppMeta, type AccountChannel } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
+import { PHONE_SIGN_IN_SUPPORTED } from '../../auth/phoneSupport';
+import { MEDIA_PICKING_SUPPORTED } from '../../chat/pickMedia';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
@@ -185,7 +187,7 @@ export function ProfileSettingsScreen() {
           Edit profile
         </Text>
 
-        <Pressable onPress={pickAvatar} style={styles.avatarRow}>
+        <Pressable onPress={pickAvatar} disabled={!MEDIA_PICKING_SUPPORTED} style={styles.avatarRow}>
           {pendingAvatar && avatarPreview ? (
             <Image source={{ uri: avatarPreview }} style={styles.avatar} />
           ) : (
@@ -198,9 +200,11 @@ export function ProfileSettingsScreen() {
               style={styles.avatar}
             />
           )}
-          <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>
-            Change photo
-          </Text>
+          {MEDIA_PICKING_SUPPORTED ? (
+            <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans }}>
+              Change photo
+            </Text>
+          ) : null}
         </Pressable>
 
         <BrandInput
@@ -249,7 +253,7 @@ export function ProfileSettingsScreen() {
         <Text style={{ color: theme.colors.cardForeground, fontFamily: theme.typography.sans, fontSize: 16 }}>
           {user?.phone ?? 'Not added'}
         </Text>
-        {(!user?.emailVerified || !user?.phoneVerified) ? (
+        {(!user?.emailVerified || (!user?.phoneVerified && PHONE_SIGN_IN_SUPPORTED)) ? (
           <>
             <BrandInput
               placeholder={!user?.emailVerified ? 'Add email' : 'Add phone with country code'}

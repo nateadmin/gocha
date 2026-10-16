@@ -14,7 +14,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { CtaButton } from '../brand';
 import { AddressAutocompleteField } from '../places/AddressAutocompleteField';
 import { isSelectedPlace } from '../../places/addressPlaces';
-import { pickImage, type PickedMedia } from '../../chat/pickMedia';
+import { MEDIA_PICKING_SUPPORTED, pickImage, type PickedMedia } from '../../chat/pickMedia';
 import { SettingsToggleRow } from '../app';
 import { useGochaTheme } from '../../theme';
 
@@ -159,9 +159,11 @@ export function GroupPostComposer({ kind, onClose, onSubmit }: Props) {
                     setLocationPlaceId(place.placeId);
                   }}
                 />
-                <Pressable onPress={choosePhoto} style={[styles.input, { borderColor: theme.colors.border }]}>
-                  <Text style={{ color: theme.colors.primary }}>{image ? image.fileName : 'Photo'}</Text>
-                </Pressable>
+                {MEDIA_PICKING_SUPPORTED ? (
+                  <Pressable onPress={choosePhoto} style={[styles.input, { borderColor: theme.colors.border }]}>
+                    <Text style={{ color: theme.colors.primary }}>{image ? image.fileName : 'Photo'}</Text>
+                  </Pressable>
+                ) : null}
                 {image ? (
                   <Image source={{ uri: image.uri }} style={styles.preview} resizeMode="cover" />
                 ) : null}

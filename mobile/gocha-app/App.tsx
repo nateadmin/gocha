@@ -13,6 +13,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { appNavigationRef } from './src/navigation/rootNavigation';
 import { shouldKeepSignedInOnBack } from './src/navigation/sessionBackPolicy';
 import type { AppStackParamList } from './src/navigation/types';
+import { ConsentScreen } from './src/screens/auth/ConsentScreen';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
 import { PublicProfileCardScreen } from './src/screens/chats/PublicProfileCardScreen';
 import { StatusComposerScreen } from './src/screens/status/StatusComposerScreen';
@@ -62,7 +63,7 @@ function SessionBackGuard() {
     if (!isWebClient()) {
       return;
     }
-    const staySignedIn = appPhase === 'main' || appPhase === 'onboarding';
+    const staySignedIn = appPhase !== 'auth';
     if (!staySignedIn) {
       return;
     }
@@ -92,6 +93,9 @@ function MainSwitch() {
   }
   if (appPhase === 'onboarding') {
     return <OnboardingScreen />;
+  }
+  if (appPhase === 'consent') {
+    return <ConsentScreen />;
   }
   return <RootNavigator />;
 }

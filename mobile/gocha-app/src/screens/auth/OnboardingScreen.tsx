@@ -13,6 +13,7 @@ import { fetchAppMeta, type AccountChannel } from '../../api/client';
 import { formatApiError } from '../../api/formatApiError';
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
+import { PHONE_SIGN_IN_SUPPORTED } from '../../auth/phoneSupport';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
@@ -78,6 +79,8 @@ export function OnboardingScreen() {
   }
 
   const optionalChannel: AccountChannel = user?.primaryLoginChannel === 'phone' ? 'email' : 'phone';
+  // Adding a phone needs browser-based verification; native skips it.
+  const showOptionalContact = optionalChannel === 'email' || PHONE_SIGN_IN_SUPPORTED;
 
   async function requestOptionalLink(identifier: string): Promise<void> {
     await requestAuthCode(identifier, 'link', { channel: optionalChannel });
@@ -253,7 +256,7 @@ export function OnboardingScreen() {
               keyboardType="number-pad"
               autoComplete="one-time-code"
             />
-          ) : (
+          ) : showOptionalContact ? (
             <BrandInput
               placeholder={optionalChannel === 'email' ? 'Email (optional)' : 'Phone (optional)'}
               value={optionalContact}
@@ -262,7 +265,7 @@ export function OnboardingScreen() {
               keyboardType={optionalChannel === 'email' ? 'email-address' : 'phone-pad'}
               autoComplete={optionalChannel === 'email' ? 'email' : 'tel'}
             />
-          )}
+          ) : null}
 
           <View
             style={[
@@ -284,7 +287,7 @@ export function OnboardingScreen() {
             When off, global search will not return your profile by name or email.
           </BrandText>
 
-          {optionalChannel === 'phone' ? <RecaptchaSlot /> : null}
+          {optionalChannel === 'phone' && showOptionalContact ? <RecaptchaSlot /> : null}
 
           {error ? (
             <BrandText style={{ color: theme.colors.destructive }}>{error}</BrandText>
@@ -295,7 +298,7 @@ export function OnboardingScreen() {
             loading={loading}
             onPress={handleSubmit}
           />
-          {optionalChannel === 'phone' ? <RecaptchaLegalNote /> : null}
+          {optionalChannel === 'phone' && showOptionalContact ? <RecaptchaLegalNote /> : null}
           {optionalContact.trim() || linkStep ? (
             <Pressable onPress={() => { void handleSkipOptional(); }}>
               <BrandText muted style={{ textAlign: 'center' }}>

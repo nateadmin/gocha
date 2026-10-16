@@ -4,6 +4,9 @@ export type PickedMedia = {
   mimeType: string;
 };
 
+/** Native has no image/file picker linked yet, so pick buttons are hidden. */
+export const MEDIA_PICKING_SUPPORTED = false;
+
 export async function pickCameraPhoto(): Promise<PickedMedia | null> {
   return null;
 }

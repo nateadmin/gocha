@@ -1,9 +1,9 @@
 export function shouldKeepSignedInOnBack(input: {
-  appPhase: 'auth' | 'onboarding' | 'main';
+  appPhase: 'auth' | 'onboarding' | 'consent' | 'main';
   canGoBack: boolean;
 }): boolean {
   if (input.canGoBack) {
     return false;
   }
-  return input.appPhase === 'main' || input.appPhase === 'onboarding';
+  return input.appPhase !== 'auth';
 }

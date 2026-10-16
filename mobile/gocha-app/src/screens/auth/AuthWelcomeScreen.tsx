@@ -6,6 +6,7 @@ import { CtaButton } from '../../components/brand/CtaButton';
 import { BrandButton } from '../../components/brand/BrandButton';
 import { ScreenContainer } from '../../components/app/ScreenContainer';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { PHONE_SIGN_IN_SUPPORTED } from '../../auth/phoneSupport';
 
 type Props = {
   onSignIn: () => void;
@@ -23,9 +24,13 @@ export function AuthWelcomeScreen({ onSignIn, onSignUp }: Props) {
         <BrandText muted style={styles.subtitle}>
           {t('auth.tagline')}
         </BrandText>
-        <BrandText muted style={styles.note}>
-          {t('auth.signInNote')}
-        </BrandText>
+        {PHONE_SIGN_IN_SUPPORTED ? (
+          <BrandText muted style={styles.note}>
+            {t('auth.signInNote')}
+          </BrandText>
+        ) : (
+          <View style={styles.noteSpacer} />
+        )}
 
         <View style={styles.actions}>
           <CtaButton label={t('auth.signUp')} onPress={onSignUp} />
@@ -56,6 +61,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
     fontSize: 13,
+  },
+  noteSpacer: {
+    marginBottom: 24,
   },
   actions: {
     width: '100%',

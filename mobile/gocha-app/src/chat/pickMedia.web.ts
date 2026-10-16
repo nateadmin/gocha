@@ -32,6 +32,8 @@ function pickFile(accept: string, capture?: boolean): Promise<PickedMedia | null
   });
 }
 
+export const MEDIA_PICKING_SUPPORTED = true;
+
 export async function pickCameraPhoto(): Promise<PickedMedia | null> {
   return pickFile('image/*', true);
 }

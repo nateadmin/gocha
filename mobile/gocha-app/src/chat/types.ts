@@ -87,6 +87,7 @@ export type ChatMessage = {
   starred?: boolean;
   selfDestructSec?: number;
   senderName?: string;
+  senderUserId?: number;
   senderAvatarLabel?: string;
   post?: MessagePost;
 };

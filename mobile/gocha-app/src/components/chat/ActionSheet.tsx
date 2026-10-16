@@ -1,5 +1,7 @@
 import { Modal, Pressable, View, Text, StyleSheet, ScrollView } from 'react-native';
 
+import { useAfterModalDismiss } from '../app/useAfterModalDismiss';
+
 import { useGochaTheme } from '../../theme';
 
 export type ActionSheetItem = {
@@ -18,10 +20,16 @@ type Props = {
 };
 
 export function ActionSheet({ visible, title, items, onClose }: Props) {
+  const { runAfterDismiss, onDismiss } = useAfterModalDismiss();
   const { theme } = useGochaTheme();
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      onDismiss={onDismiss}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <View
           style={[
@@ -50,7 +58,7 @@ export function ActionSheet({ visible, title, items, onClose }: Props) {
                 key={item.id}
                 onPress={() => {
                   onClose();
-                  item.onPress();
+                  runAfterDismiss(item.onPress);
                 }}
                 style={styles.row}>
                 <Text

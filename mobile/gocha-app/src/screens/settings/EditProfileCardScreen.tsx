@@ -8,6 +8,7 @@ import {
   View,
   StyleSheet,
 } from 'react-native';
+import { MEDIA_PICKING_SUPPORTED } from '../../chat/pickMedia';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -221,7 +222,7 @@ export function EditProfileCardScreen() {
         {cardId ? title || 'Edit profile' : 'New profile'}
       </Text>
 
-      <Pressable onPress={pickPhoto} style={styles.photoWrap}>
+      <Pressable onPress={pickPhoto} disabled={!MEDIA_PICKING_SUPPORTED} style={styles.photoWrap}>
         {photoUrl ? (
           <Image source={{ uri: photoUrl }} style={styles.photo} />
         ) : (
@@ -229,7 +230,9 @@ export function EditProfileCardScreen() {
             <Ionicons name="camera-outline" size={28} color={theme.colors.mutedForeground} />
           </View>
         )}
-        <Text style={{ color: theme.colors.primary, marginTop: 8 }}>Add photo</Text>
+        {MEDIA_PICKING_SUPPORTED ? (
+          <Text style={{ color: theme.colors.primary, marginTop: 8 }}>Add photo</Text>
+        ) : null}
       </Pressable>
 
       <FieldLabel label="Title" />
