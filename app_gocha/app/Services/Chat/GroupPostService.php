@@ -8,6 +8,7 @@ use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\MessageResponse;
 use App\Models\User;
+use App\Models\UserBlock;
 use App\Support\MessageType;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,8 @@ class GroupPostService
             ConversationParticipant::query()
                 ->where('conversation_id', $conversation->id)
                 ->where('user_id', '!=', $sender->id)
+                // Blocked people (either direction) do not get unread bumps.
+                ->whereNotIn('user_id', UserBlock::hiddenUserIdsFor((int) $sender->id))
                 ->increment('unread_count');
 
             ConversationParticipant::query()

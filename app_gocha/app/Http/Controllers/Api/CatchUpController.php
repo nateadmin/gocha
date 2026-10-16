@@ -12,6 +12,18 @@ class CatchUpController extends Controller
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
+
+        // Summaries are AI output; users who turned AI off get none (guideline 5.1.2).
+        if (! $user->allowsAiProcessing()) {
+            return response()->json([
+                'briefing' => '',
+                'generatedAt' => null,
+                'attention' => [],
+                'conversations' => [],
+                'aiFeaturesEnabled' => false,
+            ]);
+        }
+
         $briefs = CatchUpBrief::query()
             ->where('user_id', $user->id)
             ->with(['conversation.participants', 'conversation.participantRows'])

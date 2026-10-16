@@ -17,6 +17,21 @@ return [
         'sms_per_phone_per_day' => 8,
     ],
 
+    // App Store guideline 1.2: user content safety. Terms are masked in
+    // messages and statuses; reports email the alerts address.
+    'moderation' => [
+        'blocked_terms' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env(
+                'GOCHA_MODERATION_BLOCKED_TERMS',
+                // Unambiguous English terms only: words like "retard" (French),
+                // "fag" or "pussy" (cat) have innocent meanings and are left out.
+                'fuck*,motherfuck*,shit,shits,shitty,bullshit,cunt*,bitch*,asshole*,'
+                .'nigger*,nigga*,faggot*,slut*,whore*,dickhead*,kike*',
+            )),
+        ))),
+    ],
+
     'review_login' => [
         'email' => env('GOCHA_REVIEW_LOGIN_EMAIL'),
         'password' => env('GOCHA_REVIEW_LOGIN_PASSWORD'),

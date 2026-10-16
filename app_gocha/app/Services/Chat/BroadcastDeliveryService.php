@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\User;
+use App\Models\UserBlock;
 use App\Support\ConversationType;
 use App\Support\MessageType;
 use Illuminate\Support\Facades\DB;
@@ -20,9 +21,11 @@ class BroadcastDeliveryService
 
         $broadcast->loadMissing('participants');
         $preview = $this->previewFor($source);
+        // A block in either direction stops broadcast copies too.
+        $hidden = UserBlock::hiddenUserIdsFor((int) $sender->id);
 
         foreach ($broadcast->participants as $recipient) {
-            if ((int) $recipient->id === (int) $sender->id) {
+            if ((int) $recipient->id === (int) $sender->id || in_array((int) $recipient->id, $hidden, true)) {
                 continue;
             }
 
@@ -59,7 +62,7 @@ class BroadcastDeliveryService
 
     public function sendDirect(User $from, User $to, string $body): ?Message
     {
-        if ((int) $from->id === (int) $to->id) {
+        if ((int) $from->id === (int) $to->id || UserBlock::existsBetween((int) $from->id, (int) $to->id)) {
             return null;
         }
 

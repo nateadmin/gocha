@@ -72,6 +72,12 @@ class MessageTranslationService
             ];
         }
 
+        // Message text only goes to OpenAI when both the reader and the sender
+        // have opted in to AI features (App Store guideline 5.1.2).
+        if (! $viewer->allowsAiProcessing() || ! $this->senderAllowsAi($message)) {
+            return $original;
+        }
+
         if ($budget !== null && ! $budget->consume()) {
             return $original;
         }
@@ -100,6 +106,13 @@ class MessageTranslationService
             'isTranslated' => ! $same,
             'sourceLanguage' => $source,
         ];
+    }
+
+    private function senderAllowsAi(Message $message): bool
+    {
+        $sender = $message->relationLoaded('sender') ? $message->sender : $message->sender()->first();
+
+        return $sender instanceof User && $sender->allowsAiProcessing();
     }
 
     /**

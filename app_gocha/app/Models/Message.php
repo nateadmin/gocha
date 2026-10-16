@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Safety\ContentFilter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,6 +26,21 @@ class Message extends Model
         'read_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
+
+
+    protected static function booted(): void
+    {
+        // Mask objectionable words in user-written text before it is stored.
+        static::saving(function (self $model) {
+            if ($model->isDirty('body') && is_string($model->body)) {
+                $model->body = app(ContentFilter::class)->clean($model->body);
+            }
+            // Group posts keep their visible text (titles, poll options) here.
+            if ($model->isDirty('metadata') && is_array($model->metadata)) {
+                $model->metadata = app(ContentFilter::class)->cleanArray($model->metadata);
+            }
+        });
+    }
 
     public function conversation(): BelongsTo
     {

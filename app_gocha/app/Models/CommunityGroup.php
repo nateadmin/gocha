@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Safety\ContentFilter;
 use App\Support\GroupPrivacy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,6 +34,19 @@ class CommunityGroup extends Model
         'latitude' => 'float',
         'longitude' => 'float',
     ];
+
+
+    protected static function booted(): void
+    {
+        // Mask objectionable words in text other people can see.
+        static::saving(function (self $model) {
+            foreach (['name', 'description'] as $column) {
+                if ($model->isDirty($column) && is_string($model->{$column})) {
+                    $model->{$column} = app(ContentFilter::class)->clean($model->{$column});
+                }
+            }
+        });
+    }
 
     public function owner(): BelongsTo
     {

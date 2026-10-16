@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Safety\ContentFilter;
 use App\Support\StatusType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,17 @@ class StatusItem extends Model
         'expires_at' => 'datetime',
         'duration_ms' => 'integer',
     ];
+
+
+    protected static function booted(): void
+    {
+        // Mask objectionable words in user-written text before it is stored.
+        static::saving(function (self $model) {
+            if ($model->isDirty('body') && is_string($model->body)) {
+                $model->body = app(ContentFilter::class)->clean($model->body);
+            }
+        });
+    }
 
     public function user(): BelongsTo
     {
