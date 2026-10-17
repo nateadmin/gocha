@@ -132,6 +132,30 @@ class SafetyHardeningTest extends TestCase
         $this->assertNull($group['isBlocked']);
     }
 
+    public function test_global_search_hides_blocked_people_and_their_messages(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create(['name' => 'Bob Pineapple', 'username' => 'bobpine', 'discoverable' => true]);
+        $dave = User::factory()->create(['name' => 'Dave Pineapple', 'username' => 'davepine', 'discoverable' => true]);
+        $conversationId = $this->startDm($alice, $bob);
+        $this->actingAs($bob)->postJson("/api/conversations/{$conversationId}/messages", [
+            'text' => 'pineapple pizza tonight?',
+        ])->assertCreated();
+
+        $before = $this->actingAs($alice)->getJson('/api/search?q=pineapple')->assertOk();
+        $this->assertCount(1, $before->json('contacts'));
+        $this->assertCount(1, $before->json('messages'));
+        $this->assertCount(1, $before->json('people'));
+
+        $this->block($alice, $bob);
+        $this->block($dave, $alice);
+
+        $after = $this->actingAs($alice)->getJson('/api/search?q=pineapple')->assertOk();
+        $this->assertCount(0, $after->json('contacts'));
+        $this->assertCount(0, $after->json('messages'));
+        $this->assertCount(0, $after->json('people'));
+    }
+
     public function test_message_report_always_targets_the_sender(): void
     {
         $alice = User::factory()->create();

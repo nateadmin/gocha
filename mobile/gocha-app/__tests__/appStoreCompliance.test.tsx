@@ -21,6 +21,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import type { AuthUser } from '../src/api/client';
 import { needsConsent } from '../src/context/AuthContext';
 import { ConsentScreen } from '../src/screens/auth/ConsentScreen';
+import { OnboardingScreen } from '../src/screens/auth/OnboardingScreen';
 import { ThemeProvider } from '../src/theme';
 import { PHONE_SIGN_IN_SUPPORTED } from '../src/auth/phoneSupport';
 import { MEDIA_PICKING_SUPPORTED } from '../src/chat/pickMedia';
@@ -145,6 +146,23 @@ describe('API calls', () => {
     await reportContent({ reason: 'spam', messageId: 12 });
     expect(lastCall()).toMatchObject({ method: 'POST', body: { reason: 'spam', messageId: 12 } });
     expect(lastCall().url).toContain('/api/reports');
+  });
+});
+
+describe('native onboarding', () => {
+  test('does not offer an avatar picker that cannot work on a phone', () => {
+    mockAuth.user = user({ displayName: 'Ada', email: 'ada@example.com', primaryLoginChannel: 'email', avatarUrl: null });
+    let tree!: ReactTestRenderer.ReactTestRenderer;
+    ReactTestRenderer.act(() => {
+      tree = ReactTestRenderer.create(
+        <ThemeProvider>
+          <OnboardingScreen />
+        </ThemeProvider>,
+      );
+    });
+    expect(textOf(tree)).not.toContain('Add avatar');
+    expect(textOf(tree)).toContain('character icon');
+    ReactTestRenderer.act(() => tree.unmount());
   });
 });
 

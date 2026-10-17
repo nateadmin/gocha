@@ -14,6 +14,7 @@ import { formatApiError } from '../../api/formatApiError';
 import { normalizeIdentifier } from '../../auth/accountChannel';
 import { confirmPhoneSms, sendPhoneSms } from '../../auth/phoneFirebase';
 import { PHONE_SIGN_IN_SUPPORTED } from '../../auth/phoneSupport';
+import { MEDIA_PICKING_SUPPORTED } from '../../chat/pickMedia';
 import { ProfileAvatar, SettingsToggleRow } from '../../components/app';
 import { RecaptchaLegalNote } from '../../components/auth/RecaptchaLegalNote';
 import { RecaptchaSlot } from '../../components/auth/RecaptchaSlot';
@@ -204,7 +205,7 @@ export function OnboardingScreen() {
               : 'Tell people who you are on Gocha.'}
           </BrandText>
 
-          <Pressable onPress={pickAvatar} style={styles.avatarRow}>
+          <Pressable onPress={pickAvatar} disabled={!MEDIA_PICKING_SUPPORTED} style={styles.avatarRow}>
             {pendingAvatar && avatarPreview ? (
               <Image source={{ uri: avatarPreview }} style={styles.avatar} />
             ) : (
@@ -217,10 +218,15 @@ export function OnboardingScreen() {
                 style={styles.avatar}
               />
             )}
-            <BrandText style={{ color: theme.colors.primary }}>Add avatar (optional)</BrandText>
+            {/* Photo picking is web-only until a native picker is linked. */}
+            {MEDIA_PICKING_SUPPORTED ? (
+              <BrandText style={{ color: theme.colors.primary }}>Add avatar (optional)</BrandText>
+            ) : null}
           </Pressable>
           <BrandText muted>
-            Skip avatar and we generate a character icon for you.
+            {MEDIA_PICKING_SUPPORTED
+              ? 'Skip avatar and we generate a character icon for you.'
+              : "We'll create a character icon for you. You can change it later on app.gocha.ai."}
           </BrandText>
 
           <BrandInput

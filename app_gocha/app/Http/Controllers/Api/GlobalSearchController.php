@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Models\UserBlock;
 use App\Services\Profile\DiscoverableUserSearch;
 use App\Support\ConversationType;
 use Illuminate\Http\JsonResponse;
@@ -28,11 +29,14 @@ class GlobalSearchController extends Controller
         $needle = $validated['q'];
         $needleLower = mb_strtolower($needle);
 
-        $contacts = $this->searchContacts($user, $needle, $needleLower);
+        // People blocked in either direction never appear in search.
+        $hidden = UserBlock::hiddenUserIdsFor((int) $user->id);
+
+        $contacts = $this->searchContacts($user, $needle, $needleLower, $hidden);
         $contactUserIds = $contacts->pluck('userId')->all();
 
-        $messages = $this->searchMessages($user, $needle);
-        $people = $this->searchDiscoverablePeople($user, $needle, $contactUserIds);
+        $messages = $this->searchMessages($user, $needle, $hidden);
+        $people = $this->searchDiscoverablePeople($user, $needle, array_merge($contactUserIds, $hidden));
 
         return response()->json([
             'contacts' => $contacts->values(),
@@ -42,7 +46,10 @@ class GlobalSearchController extends Controller
     }
 
     /** @return Collection<int, array<string, mixed>> */
-    private function searchContacts(User $user, string $needle, string $needleLower): Collection
+    /**
+     * @param  array<int, int>  $hidden
+     */
+    private function searchContacts(User $user, string $needle, string $needleLower, array $hidden): Collection
     {
         return Conversation::query()
             ->where('type', ConversationType::DM)
@@ -58,6 +65,7 @@ class GlobalSearchController extends Controller
                 return ['conversation' => $conversation, 'other' => $other];
             })
             ->filter()
+            ->reject(fn (array $row) => in_array((int) $row['other']->id, $hidden, true))
             ->filter(function (array $row) use ($needle, $needleLower) {
                 $other = $row['other'];
 
@@ -87,11 +95,15 @@ class GlobalSearchController extends Controller
     }
 
     /** @return Collection<int, array<string, mixed>> */
-    private function searchMessages(User $user, string $needle): Collection
+    /**
+     * @param  array<int, int>  $hidden
+     */
+    private function searchMessages(User $user, string $needle, array $hidden): Collection
     {
         return Message::query()
             ->whereIn('type', ['text', 'emoji'])
             ->where('body', 'like', '%'.$needle.'%')
+            ->when($hidden !== [], fn ($query) => $query->whereNotIn('sender_user_id', $hidden))
             ->whereHas('conversation', function ($query) use ($user) {
                 $query->listedFor($user);
             })
