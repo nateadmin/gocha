@@ -37,6 +37,8 @@ type AccountsContextValue = {
   switchAccount: (userId: number) => Promise<boolean>;
   adoptActiveAccount: (userId: number) => void;
   removeAccount: (userId: number) => void;
+  /** Drops an account from the saved list only; the active account and token are untouched. */
+  forgetAccount: (userId: number) => void;
   unlinkAccount: (userId: number) => Promise<void>;
   persistAccountLink: (counterpartDeviceToken: string) => Promise<void>;
   completeAddAccount: () => void;
@@ -82,6 +84,14 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     writeStoredAccounts(next);
     setAccounts(next);
     return next;
+  }, []);
+
+  const forgetAccount = useCallback((userId: number) => {
+    setAccounts((prev) => {
+      const next = prev.filter((entry) => entry.userId !== userId);
+      writeStoredAccounts(next);
+      return next;
+    });
   }, []);
 
   const registerAccount = useCallback((account: StoredAccount) => {
@@ -232,6 +242,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       switchAccount,
       adoptActiveAccount,
       removeAccount,
+      forgetAccount,
       unlinkAccount,
       persistAccountLink,
       completeAddAccount,
@@ -240,6 +251,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       syncAccountProfile,
     }),
     [
+      forgetAccount,
       accounts,
       activeAccountId,
       isAddingAccount,

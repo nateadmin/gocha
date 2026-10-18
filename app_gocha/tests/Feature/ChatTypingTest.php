@@ -48,6 +48,8 @@ class ChatTypingTest extends TestCase
             'participantUserId' => $bob->id,
         ])->json('conversation.id');
 
+        // actingAs() persists for the test; sign out to make a guest request.
+        $this->app['auth']->forgetGuards();
         $this->postJson("/api/conversations/{$conversationId}/typing", [
             'typing' => true,
         ])->assertUnauthorized();

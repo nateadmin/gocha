@@ -7,6 +7,7 @@ use App\Models\ConversationParticipant;
 use App\Models\StatusItem;
 use App\Models\StatusView;
 use App\Models\User;
+use App\Models\UserBlock;
 use App\Support\ConversationType;
 use App\Support\StatusType;
 use Illuminate\Http\UploadedFile;
@@ -29,9 +30,13 @@ class StatusService
             return collect();
         }
 
+        // A block in either direction hides statuses both ways.
+        $hidden = UserBlock::hiddenUserIdsFor((int) $user->id);
+
         return ConversationParticipant::query()
             ->whereIn('conversation_id', $conversationIds)
             ->where('user_id', '!=', $user->id)
+            ->when($hidden !== [], fn ($query) => $query->whereNotIn('user_id', $hidden))
             ->pluck('user_id')
             ->unique()
             ->values();
@@ -57,6 +62,9 @@ class StatusService
         foreach ($ids as $id) {
             $empty[$id] = ['hasStatus' => false, 'unseen' => false];
         }
+
+        $hidden = UserBlock::hiddenUserIdsFor((int) $viewer->id);
+        $ids = $ids->reject(fn (int $id) => in_array($id, $hidden, true))->values();
 
         if ($ids->isEmpty()) {
             return $empty;

@@ -66,7 +66,7 @@ import {
   postTextMessage,
   signalChatTyping,
 } from './conversationApi';
-import type { GroupPostInput } from '../api/client';
+import { ApiError, blockUser, unblockUser, type GroupPostInput } from '../api/client';
 import { formatActivityLabel, formatClockTime } from '../utils/formatDateTime';
 import { sendGochaAiMessage } from './gochaAiApi';
 import { isOrderAssistantChat, ORDER_ASSISTANT_DEFAULT_NAME } from './orderAssistant';
@@ -112,6 +112,8 @@ type ChatContextValue = {
   favoriteChat: (chatId: string) => void;
   unfavoriteChat: (chatId: string) => void;
   blockChat: (chatId: string) => void;
+  /** Blocks one person (e.g. a group member) and reloads the chat without their messages. */
+  blockSender: (chatId: string, userId: number) => Promise<void>;
   unblockChat: (chatId: string) => void;
   lockChat: (chatId: string) => void;
   unlockChat: (chatId: string) => void;
@@ -716,8 +718,35 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
   const favoriteChat = useCallback((chatId: string) => updateChat(chatId, { favorite: true }), [updateChat]);
   const unfavoriteChat = useCallback((chatId: string) => updateChat(chatId, { favorite: false }), [updateChat]);
-  const blockChat = useCallback((chatId: string) => updateChat(chatId, { blocked: true }), [updateChat]);
-  const unblockChat = useCallback((chatId: string) => updateChat(chatId, { blocked: false }), [updateChat]);
+  const setChatBlocked = useCallback(
+    (chatId: string, blocked: boolean) => {
+      updateChat(chatId, { blocked });
+      const otherUserId = chatsRef.current.find((chat) => chat.id === chatId)?.otherUserId;
+      if (!otherUserId) {
+        return;
+      }
+      // Blocking is enforced by the server for direct chats; undo the local
+      // change if the request fails so the screen matches reality.
+      (blocked ? blockUser(otherUserId) : unblockUser(otherUserId)).catch(() => {
+        updateChat(chatId, { blocked: !blocked });
+      });
+    },
+    [updateChat],
+  );
+  const blockChat = useCallback((chatId: string) => setChatBlocked(chatId, true), [setChatBlocked]);
+  const blockSender = useCallback(
+    async (chatId: string, userId: number) => {
+      await blockUser(userId);
+      // The server stops returning their messages; drop the ones already shown.
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: (prev[chatId] ?? []).filter((message) => message.senderUserId !== userId),
+      }));
+      await refreshMessagesForChat(chatId);
+    },
+    [refreshMessagesForChat],
+  );
+  const unblockChat = useCallback((chatId: string) => setChatBlocked(chatId, false), [setChatBlocked]);
   const lockChat = useCallback((chatId: string) => updateChat(chatId, { locked: true }), [updateChat]);
   const unlockChat = useCallback((chatId: string) => updateChat(chatId, { locked: false }), [updateChat]);
   const hideChat = useCallback((chatId: string) => updateChat(chatId, { hidden: true }), [updateChat]);
@@ -1049,7 +1078,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             unreadCount: 0,
           });
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           setMessages((prev) => {
             const remaining = (prev[chatId] ?? []).filter(
               (message) => message.id !== optimistic.id,
@@ -1059,6 +1088,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             });
             return { ...prev, [chatId]: remaining };
           });
+          // The server refuses messages between blocked people; show the blocked state.
+          if (error instanceof ApiError && error.body.code === 'USER_BLOCKED') {
+            updateChat(chatId, { blocked: true });
+          }
         });
     },
     [appendMessage, updateChat],
@@ -1082,6 +1115,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           replyToId,
         });
 
+        const aiOffReply = 'Gocha AI is off. Turn on AI features in Settings to chat with Gocha AI.';
+        if (user?.aiFeaturesEnabled === false) {
+          // Nothing is sent to the AI provider without the user's opt-in.
+          appendMessage(chatId, {
+            id: `ai-off-${Date.now()}`,
+            type: 'text',
+            text: aiOffReply,
+            sentAt: formatTimeLabel(),
+            sentAtMs: Date.now(),
+            isOutgoing: false,
+          });
+          return;
+        }
+
         const priorMessages = messagesRef.current[chatId] ?? [];
         setAssistantTypingForChat(chatId, true);
         void sendGochaAiMessage(trimmed, priorMessages)
@@ -1095,11 +1142,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               isOutgoing: false,
             });
           })
-          .catch(() => {
+          .catch((error: unknown) => {
+            const consentMissing =
+              error instanceof ApiError && error.body.code === 'AI_CONSENT_REQUIRED';
             appendMessage(chatId, {
               id: `ai-err-${Date.now()}`,
               type: 'text',
-              text: 'Sorry, I could not respond right now. Please try again.',
+              text: consentMissing
+                ? aiOffReply
+                : 'Sorry, I could not respond right now. Please try again.',
               sentAt: formatTimeLabel(),
               sentAtMs: Date.now(),
               isOutgoing: false,
@@ -1142,7 +1193,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         () => postTextMessage(chatId, trimmed, user?.id),
       );
     },
-    [appendMessage, deliverMessage, setAssistantTypingForChat, signalComposerTyping, user?.id],
+    [appendMessage, deliverMessage, setAssistantTypingForChat, signalComposerTyping, user?.aiFeaturesEnabled, user?.id],
   );
 
   const sendEmojiMessage = useCallback(
@@ -1396,6 +1447,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       favoriteChat,
       unfavoriteChat,
       blockChat,
+      blockSender,
       unblockChat,
       lockChat,
       unlockChat,
@@ -1491,6 +1543,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       favoriteChat,
       unfavoriteChat,
       blockChat,
+      blockSender,
       unblockChat,
       lockChat,
       unlockChat,

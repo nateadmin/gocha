@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BusinessListing;
+use App\Models\CatchUpBrief;
 use App\Models\User;
+use App\Models\UserBlock;
 use App\Services\Business\BusinessListingService;
 use App\Services\Profile\CharacterAvatarService;
 use App\Services\Profile\DiscoverableUserSearch;
@@ -248,13 +250,59 @@ class ProfileController extends Controller
 
         $needle = $validated['q'];
 
+        $hidden = UserBlock::hiddenUserIdsFor($request->user()->id);
+
         $results = $this->discoverableUserSearch
             ->search($request->user(), $needle)
+            ->reject(fn (User $user) => in_array($user->id, $hidden, true))
             ->map(fn (User $user) => $user->toPublicProfilePayload())
             ->values();
 
         return response()->json([
             'results' => $results,
+        ]);
+    }
+
+    /** Records agreement to the Terms of Use (App Store guideline 1.2). */
+    public function acceptTerms(Request $request): JsonResponse
+    {
+        $request->validate([
+            'accepted' => ['required', 'accepted'],
+        ]);
+
+        $user = $request->user();
+        if ($user->terms_accepted_at === null) {
+            $user->forceFill(['terms_accepted_at' => now()])->save();
+        }
+
+        return response()->json([
+            'user' => $user->fresh()->toAuthPayload(),
+        ]);
+    }
+
+    /**
+     * Opt in or out of sending message text to the AI provider (OpenAI) for
+     * translation, Catch Up summaries and Gocha AI (App Store guideline 5.1.2).
+     */
+    public function updateAiConsent(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $user->forceFill([
+            'ai_features_enabled' => (bool) $validated['enabled'],
+            'ai_consent_decided_at' => now(),
+        ])->save();
+
+        if (! $validated['enabled']) {
+            // Turning AI off also removes the summaries it already produced.
+            CatchUpBrief::query()->where('user_id', $user->id)->delete();
+        }
+
+        return response()->json([
+            'user' => $user->fresh()->toAuthPayload(),
         ]);
     }
 

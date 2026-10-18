@@ -13,7 +13,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { filesFromClipboardData, pickedMediaFromImageFile } from '../../chat/clipboardImage';
 import type { PickedMedia } from '../../chat/pickMedia';
-import { pickCameraPhoto, pickDocument } from '../../chat/pickMedia';
+import { MEDIA_PICKING_SUPPORTED, pickCameraPhoto, pickDocument } from '../../chat/pickMedia';
+import { VOICE_RECORDING_SUPPORTED } from '../../chat/voiceRecording';
 import type { RecordedVoice } from '../../chat/voiceRecording';
 import { EmojiStickerPickerPanel } from './EmojiStickerPickerPanel';
 import { VoiceRecorderBar } from './VoiceRecorderBar';
@@ -333,13 +334,15 @@ export function ChatComposer({
               <Ionicons name="add-circle-outline" size={22} color={theme.colors.primary} />
             </Pressable>
           ) : null}
-          <Pressable
-            hitSlop={6}
-            style={[styles.inlineAction, webActionStyle]}
-            accessibilityLabel="Attach file"
-            onPress={handleFilePress}>
-            <Ionicons name="attach" size={22} color={theme.colors.primary} />
-          </Pressable>
+          {MEDIA_PICKING_SUPPORTED ? (
+            <Pressable
+              hitSlop={6}
+              style={[styles.inlineAction, webActionStyle]}
+              accessibilityLabel="Attach file"
+              onPress={handleFilePress}>
+              <Ionicons name="attach" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ) : null}
           <View style={styles.inputWrap}>
             <TextInput
               value={value}
@@ -394,13 +397,15 @@ export function ChatComposer({
               ]}
             />
           </View>
-          <Pressable
-            hitSlop={6}
-            style={[styles.inlineAction, webActionStyle]}
-            accessibilityLabel="Camera"
-            onPress={handleCameraPress}>
-            <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
-          </Pressable>
+          {MEDIA_PICKING_SUPPORTED ? (
+            <Pressable
+              hitSlop={6}
+              style={[styles.inlineAction, webActionStyle]}
+              accessibilityLabel="Camera"
+              onPress={handleCameraPress}>
+              <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ) : null}
         </View>
 
         {canSend ? (
@@ -417,7 +422,7 @@ export function ChatComposer({
               <Ionicons name="send" size={22} color={theme.colors.primary} />
             </Pressable>
           )
-        ) : (
+        ) : VOICE_RECORDING_SUPPORTED ? (
           <Pressable
             hitSlop={8}
             style={[styles.outsideAction, webActionStyle]}
@@ -425,6 +430,10 @@ export function ChatComposer({
             onPress={() => setPanel('voice')}>
             <Ionicons name="mic-outline" size={24} color={theme.colors.primary} />
           </Pressable>
+        ) : (
+          <View style={[styles.outsideAction, { opacity: 0.4 }]} accessibilityLabel="Send message">
+            <Ionicons name="send" size={22} color={theme.colors.primary} />
+          </View>
         )}
       </View>
     </View>

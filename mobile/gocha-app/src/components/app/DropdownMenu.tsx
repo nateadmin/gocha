@@ -2,6 +2,7 @@ import { Modal, Pressable, ScrollView, Text, View, StyleSheet } from 'react-nati
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useGochaTheme } from '../../theme';
+import { useAfterModalDismiss } from './useAfterModalDismiss';
 
 export type DropdownMenuItem = {
   id: string;
@@ -27,11 +28,16 @@ export function DropdownMenu({
   onClose,
 }: Props) {
   const { theme } = useGochaTheme();
+  const { runAfterDismiss, onDismiss } = useAfterModalDismiss();
 
-  if (!visible) return null;
-
+  // Stays mounted while hidden so iOS can report onDismiss after closing.
   return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
+    <Modal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onRequestClose={onClose}
+      onDismiss={onDismiss}>
       <View style={styles.overlay}>
         <Pressable
           style={[styles.backdrop, { backgroundColor: theme.overlayMenu.backdropColor }]}
@@ -58,7 +64,7 @@ export function DropdownMenu({
                 key={item.id}
                 onPress={() => {
                   onClose();
-                  item.onPress();
+                  runAfterDismiss(item.onPress);
                 }}
                 style={[
                   styles.row,
@@ -96,7 +102,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   menu: {
     position: 'absolute',

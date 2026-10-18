@@ -57,7 +57,8 @@ export function mapConversationRecord(
     archived: existing?.archived ?? false,
     muted: existing?.muted ?? false,
     muteUntil: existing?.muteUntil ?? null,
-    blocked: existing?.blocked ?? false,
+    // The server knows about blocks for direct chats; local state covers groups.
+    blocked: record.isBlocked ?? existing?.blocked ?? false,
     locked: existing?.locked ?? false,
     hidden: existing?.hidden ?? false,
     favorite: existing?.favorite ?? false,

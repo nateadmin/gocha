@@ -247,8 +247,20 @@ export function CatchUpScreen() {
             fontSize: 14,
             lineHeight: 20,
           }}>
-          No conversation summaries yet.
+          {user?.aiFeaturesEnabled === false
+            ? 'Catch Up summarizes your chats with AI. Turn on AI features in Settings to use it.'
+            : 'No conversation summaries yet.'}
         </Text>
+      ) : null}
+      {empty && user?.aiFeaturesEnabled === false ? (
+        <Pressable
+          onPress={() => navigation.navigate('SettingsTab', { screen: 'SettingsHome' })}
+          accessibilityRole="button"
+          style={{ marginTop: 12 }}>
+          <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.sans, fontWeight: '600' }}>
+            Open Settings
+          </Text>
+        </Pressable>
       ) : null}
       {payload.conversations.map((brief) => (
         <Pressable

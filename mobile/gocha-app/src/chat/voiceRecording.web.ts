@@ -2,6 +2,8 @@ import type { RecordedVoice, VoiceRecordingControls } from './voiceRecording';
 
 export type { RecordedVoice, VoiceRecordingControls };
 
+export const VOICE_RECORDING_SUPPORTED = true;
+
 export async function createVoiceRecording(): Promise<VoiceRecordingControls | null> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
     return null;

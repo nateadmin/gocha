@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Safety\ContentFilter;
 use App\Support\AccountChannel;
 use App\Support\BusinessListingStatus;
 use App\Support\ProfileMode;
@@ -39,6 +40,9 @@ class User extends Authenticatable
         'active_business_listing_id',
         'business_chat_name',
         'business_chat_website',
+        'terms_accepted_at',
+        'ai_features_enabled',
+        'ai_consent_decided_at',
     ];
 
     protected $hidden = [
@@ -54,7 +58,23 @@ class User extends Authenticatable
         'discoverable' => 'boolean',
         'is_admin' => 'boolean',
         'password' => 'hashed',
+        'terms_accepted_at' => 'datetime',
+        'ai_features_enabled' => 'boolean',
+        'ai_consent_decided_at' => 'datetime',
     ];
+
+
+    protected static function booted(): void
+    {
+        // Mask objectionable words in text other people can see.
+        static::saving(function (self $model) {
+            foreach (['name', 'bio', 'status', 'business_chat_name'] as $column) {
+                if ($model->isDirty($column) && is_string($model->{$column})) {
+                    $model->{$column} = app(ContentFilter::class)->clean($model->{$column});
+                }
+            }
+        });
+    }
 
     public function ownedBusinessListings(): HasMany
     {
@@ -84,6 +104,12 @@ class User extends Authenticatable
     public function statusItems(): HasMany
     {
         return $this->hasMany(StatusItem::class);
+    }
+
+    /** Whether this user agreed to send their content to the AI provider (OpenAI). */
+    public function allowsAiProcessing(): bool
+    {
+        return (bool) $this->ai_features_enabled;
     }
 
     public function needsOnboarding(): bool
@@ -179,6 +205,9 @@ class User extends Authenticatable
             'businessChatWebsite' => $this->business_chat_website,
             'activeBusinessListingId' => $this->active_business_listing_id,
             'activeBusinessListing' => $activeListing?->toSummaryPayload(),
+            'termsAccepted' => $this->terms_accepted_at !== null,
+            'aiFeaturesEnabled' => (bool) $this->ai_features_enabled,
+            'aiConsentDecided' => $this->ai_consent_decided_at !== null,
         ];
     }
 

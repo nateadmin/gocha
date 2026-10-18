@@ -34,8 +34,8 @@ class MessageTranslationTest extends TestCase
     {
         Http::fake();
 
-        $alice = User::factory()->create(['language' => 'en']);
-        $bob = User::factory()->create(['language' => 'he']);
+        $alice = User::factory()->aiEnabled()->create(['language' => 'en']);
+        $bob = User::factory()->aiEnabled()->create(['language' => 'he']);
         $conversationId = $this->startConversation($alice, $bob);
 
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
@@ -58,8 +58,8 @@ class MessageTranslationTest extends TestCase
             ]), 200),
         ]);
 
-        $alice = User::factory()->create(['language' => 'he']);
-        $bob = User::factory()->create(['language' => 'en']);
+        $alice = User::factory()->aiEnabled()->create(['language' => 'he']);
+        $bob = User::factory()->aiEnabled()->create(['language' => 'en']);
         $conversationId = $this->startConversation($alice, $bob);
 
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
@@ -86,8 +86,8 @@ class MessageTranslationTest extends TestCase
     {
         Http::fake();
 
-        $alice = User::factory()->create(['language' => 'he']);
-        $bob = User::factory()->create(['language' => 'he']);
+        $alice = User::factory()->aiEnabled()->create(['language' => 'he']);
+        $bob = User::factory()->aiEnabled()->create(['language' => 'he']);
         $conversationId = $this->startConversation($alice, $bob);
 
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
@@ -117,10 +117,10 @@ class MessageTranslationTest extends TestCase
                 ]), 200),
         ]);
 
-        $alice = User::factory()->create(['language' => 'he']);
-        $bob = User::factory()->create(['language' => 'en']);
-        $carol = User::factory()->create(['language' => 'he']);
-        $dana = User::factory()->create(['language' => 'es']);
+        $alice = User::factory()->aiEnabled()->create(['language' => 'he']);
+        $bob = User::factory()->aiEnabled()->create(['language' => 'en']);
+        $carol = User::factory()->aiEnabled()->create(['language' => 'he']);
+        $dana = User::factory()->aiEnabled()->create(['language' => 'es']);
 
         $conversationId = (int) $this->actingAs($alice)->postJson('/api/conversations', [
             'type' => 'group',
@@ -170,8 +170,8 @@ class MessageTranslationTest extends TestCase
             'https://api.openai.com/v1/chat/completions' => Http::response(['error' => 'nope'], 500),
         ]);
 
-        $alice = User::factory()->create(['language' => 'he']);
-        $bob = User::factory()->create(['language' => 'en']);
+        $alice = User::factory()->aiEnabled()->create(['language' => 'he']);
+        $bob = User::factory()->aiEnabled()->create(['language' => 'en']);
         $conversationId = $this->startConversation($alice, $bob);
 
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
@@ -193,8 +193,8 @@ class MessageTranslationTest extends TestCase
      */
     private function pair(): array
     {
-        $alice = User::factory()->create(['language' => 'en']);
-        $bob = User::factory()->create(['language' => 'en']);
+        $alice = User::factory()->aiEnabled()->create(['language' => 'en']);
+        $bob = User::factory()->aiEnabled()->create(['language' => 'en']);
 
         return [$alice, $bob, $this->startConversation($alice, $bob)];
     }

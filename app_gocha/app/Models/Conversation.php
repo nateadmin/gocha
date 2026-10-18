@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Safety\ContentFilter;
 use App\Support\ConversationType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,20 @@ class Conversation extends Model
     protected $casts = [
         'last_message_at' => 'datetime',
     ];
+
+
+    protected static function booted(): void
+    {
+        // Mask objectionable words in user-written text before it is stored.
+        static::saving(function (self $model) {
+            if ($model->isDirty('last_message_body') && is_string($model->last_message_body)) {
+                $model->last_message_body = app(ContentFilter::class)->clean($model->last_message_body);
+            }
+            if ($model->isDirty('name') && is_string($model->name)) {
+                $model->name = app(ContentFilter::class)->clean($model->name);
+            }
+        });
+    }
 
     public function participants(): BelongsToMany
     {

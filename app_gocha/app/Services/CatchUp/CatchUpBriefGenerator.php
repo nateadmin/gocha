@@ -120,6 +120,12 @@ class CatchUpBriefGenerator
             return false;
         }
 
+        // Summaries send chat text to OpenAI, so they need the reader's opt-in
+        // and only include messages from senders who opted in (guideline 5.1.2).
+        if (! $user->allowsAiProcessing()) {
+            return false;
+        }
+
         $limit = (int) config('gocha.catch_up.max_messages_per_conversation', 20);
         $messages = Message::query()
             ->where('conversation_id', $conversation->id)
@@ -128,6 +134,8 @@ class CatchUpBriefGenerator
             ->limit($limit)
             ->get()
             ->reverse()
+            ->filter(fn (Message $message) => (int) $message->sender_user_id === (int) $user->id
+                || ($message->sender?->allowsAiProcessing() ?? false))
             ->values();
 
         if ($messages->isEmpty()) {

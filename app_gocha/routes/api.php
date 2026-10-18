@@ -1,6 +1,8 @@
 <?php
 
 use App\Services\Auth\FirebasePhoneAuthService;
+use App\Http\Controllers\Api\AccountDeletionController;
+use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\AccountLinkController;
 use App\Http\Controllers\Api\Admin\AdminBusinessListingController;
 use App\Http\Controllers\Api\Admin\AdminVerificationController;
@@ -91,6 +93,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/accounts/unlink', [AccountLinkController::class, 'destroy']);
 
     Route::get('/me', [ProfileController::class, 'me']);
+    Route::post('/account/delete', [AccountDeletionController::class, 'destroy'])
+        ->middleware('throttle:5,1');
+    Route::post('/profile/accept-terms', [ProfileController::class, 'acceptTerms']);
+    Route::post('/profile/ai-consent', [ProfileController::class, 'updateAiConsent']);
+    Route::get('/blocks', [SafetyController::class, 'blocks']);
+    Route::post('/blocks', [SafetyController::class, 'block']);
+    Route::delete('/blocks/{user}', [SafetyController::class, 'unblock']);
+    Route::post('/reports', [SafetyController::class, 'report'])
+        ->middleware('throttle:20,1');
     Route::post('/profile/onboarding', [ProfileController::class, 'completeOnboarding']);
     Route::post('/profile/update', [ProfileController::class, 'updateProfile']);
     Route::post('/profile/contact', [ProfileController::class, 'updateContact']);
@@ -169,6 +180,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/verifications/business/{businessListing}', [VerificationController::class, 'submitBusinessListing']);
 
     Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('/reports', [SafetyController::class, 'adminReports']);
+        Route::post('/reports/{contentReport}/resolve', [SafetyController::class, 'resolveReport']);
         Route::get('/business-listings', [AdminBusinessListingController::class, 'index']);
         Route::post('/business-listings/{businessListing}/approve', [AdminBusinessListingController::class, 'approve']);
         Route::post('/business-listings/{businessListing}/reject', [AdminBusinessListingController::class, 'reject']);

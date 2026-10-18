@@ -25,6 +25,13 @@ class GochaAiController extends Controller
             'history.*.content' => ['required_with:history', 'string', 'max:4000'],
         ]);
 
+        if (! $request->user()->allowsAiProcessing()) {
+            return response()->json([
+                'code' => 'AI_CONSENT_REQUIRED',
+                'message' => 'Turn on AI features in Settings to chat with Gocha AI.',
+            ], 403);
+        }
+
         $correlationId = 'gocha-ai-'.Str::uuid()->toString();
 
         try {

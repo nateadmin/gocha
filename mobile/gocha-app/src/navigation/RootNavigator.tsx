@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
@@ -66,7 +67,8 @@ export function RootNavigator() {
           tabBarStyle: discoverTabBarStyle(route),
         })}
       />
-      <Tab.Screen name="CallsTab" component={CallsScreen} />
+      {/* Calls is still a placeholder; keep it off the store builds. */}
+      {Platform.OS === 'web' ? <Tab.Screen name="CallsTab" component={CallsScreen} /> : null}
       <Tab.Screen name="SettingsTab" component={SettingsStackNavigator} />
     </Tab.Navigator>
   );

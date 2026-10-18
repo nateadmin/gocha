@@ -23,8 +23,8 @@ class CatchUpTest extends TestCase
             ]), 200),
         ]);
 
-        $alice = User::factory()->create(['name' => 'Alice Example']);
-        $bob = User::factory()->create(['name' => 'Bob Example']);
+        $alice = User::factory()->aiEnabled()->create(['name' => 'Alice Example']);
+        $bob = User::factory()->aiEnabled()->create(['name' => 'Bob Example']);
         $conversationId = $this->startConversation($alice, $bob);
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
             'text' => 'Are we still on for Friday dinner?',
@@ -67,8 +67,8 @@ class CatchUpTest extends TestCase
     {
         Http::fake();
 
-        $alice = User::factory()->create();
-        $bob = User::factory()->create();
+        $alice = User::factory()->aiEnabled()->create();
+        $bob = User::factory()->aiEnabled()->create();
         $this->startConversation($alice, $bob);
 
         $this->artisan('gocha:catch-up-generate')->assertSuccessful();
@@ -93,8 +93,8 @@ class CatchUpTest extends TestCase
             ], 200),
         ]);
 
-        $alice = User::factory()->create();
-        $bob = User::factory()->create();
+        $alice = User::factory()->aiEnabled()->create();
+        $bob = User::factory()->aiEnabled()->create();
         $conversationId = $this->startConversation($alice, $bob);
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
             'text' => 'Hello',
@@ -107,8 +107,8 @@ class CatchUpTest extends TestCase
 
     public function test_job_skips_conversation_when_source_message_is_unchanged(): void
     {
-        $alice = User::factory()->create();
-        $bob = User::factory()->create();
+        $alice = User::factory()->aiEnabled()->create();
+        $bob = User::factory()->aiEnabled()->create();
         $conversationId = $this->startConversation($alice, $bob);
         $this->actingAs($alice)->postJson("/api/conversations/{$conversationId}/messages", [
             'text' => 'First note',

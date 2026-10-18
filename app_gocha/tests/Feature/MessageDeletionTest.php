@@ -98,6 +98,8 @@ class MessageDeletionTest extends TestCase
             'text' => 'Protected',
         ])->json('message.id');
 
+        // actingAs() persists for the test; sign out to make a guest request.
+        $this->app['auth']->forgetGuards();
         $this->postJson("/api/conversations/{$conversationId}/messages/{$messageId}/delete", [
             'scope' => 'me',
         ])->assertUnauthorized();

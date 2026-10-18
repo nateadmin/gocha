@@ -1,10 +1,11 @@
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import type { LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { hydrateStoredAccounts, isStoredAccountsHydrated } from './src/accounts/accountStore';
 import { BootstrapErrorBoundary } from './src/components/app/BootstrapErrorBoundary';
 import { AccountsProvider, useAccounts } from './src/context/AccountsContext';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
@@ -12,6 +13,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { appNavigationRef } from './src/navigation/rootNavigation';
 import { shouldKeepSignedInOnBack } from './src/navigation/sessionBackPolicy';
 import type { AppStackParamList } from './src/navigation/types';
+import { ConsentScreen } from './src/screens/auth/ConsentScreen';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
 import { PublicProfileCardScreen } from './src/screens/chats/PublicProfileCardScreen';
 import { StatusComposerScreen } from './src/screens/status/StatusComposerScreen';
@@ -22,6 +24,7 @@ import { LanguageProvider } from './src/i18n/LanguageContext';
 import { ChatProvider } from './src/chat/ChatContext';
 import { ThemeProvider, useGochaTheme } from './src/theme';
 import { useBrandFonts } from './src/theme/fonts';
+import { isWebClient } from './src/utils/isWebClient';
 
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
@@ -56,10 +59,11 @@ function SessionBackGuard() {
   }, [appPhase]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    // React Native defines `window` but has no history or DOM events.
+    if (!isWebClient()) {
       return;
     }
-    const staySignedIn = appPhase === 'main' || appPhase === 'onboarding';
+    const staySignedIn = appPhase !== 'auth';
     if (!staySignedIn) {
       return;
     }
@@ -89,6 +93,9 @@ function MainSwitch() {
   }
   if (appPhase === 'onboarding') {
     return <OnboardingScreen />;
+  }
+  if (appPhase === 'consent') {
+    return <ConsentScreen />;
   }
   return <RootNavigator />;
 }
@@ -144,7 +151,35 @@ function AppShell() {
   );
 }
 
+function useStoredAccountsReady(): boolean {
+  const [ready, setReady] = useState(isStoredAccountsHydrated);
+
+  useEffect(() => {
+    if (ready) {
+      return;
+    }
+    let active = true;
+    void hydrateStoredAccounts().then(() => {
+      if (active) {
+        setReady(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [ready]);
+
+  return ready;
+}
+
 function App() {
+  // Native reads the saved session from disk before AccountsProvider reads it,
+  // so a restart keeps the user signed in. Web is ready immediately.
+  const storageReady = useStoredAccountsReady();
+  if (!storageReady) {
+    return null;
+  }
+
   return (
     <BootstrapErrorBoundary>
       <SafeAreaProvider>

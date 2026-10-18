@@ -26,7 +26,7 @@ import { formatApiError } from '../../api/formatApiError';
 import { LoadingShell } from '../../components/app';
 import { CtaButton } from '../../components/brand/CtaButton';
 import { StatusVideo } from '../../components/status/StatusVideo';
-import { pickImage, pickVideo, type PickedMedia } from '../../chat/pickMedia';
+import { MEDIA_PICKING_SUPPORTED, pickImage, pickVideo, type PickedMedia } from '../../chat/pickMedia';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { AppStackParamList } from '../../navigation/types';
@@ -244,6 +244,8 @@ export function StatusComposerScreen() {
               {t('status.text')}
             </Text>
           </Pressable>
+          {MEDIA_PICKING_SUPPORTED ? (
+          <>
           <Pressable onPress={() => void chooseImage()} style={styles.tool}>
             <Ionicons name="image-outline" size={20} color={mode === 'text' ? '#fff' : theme.colors.cardForeground} />
             <Text style={[styles.toolLabel, { color: mode === 'text' ? '#fff' : theme.colors.cardForeground }]}>
@@ -256,6 +258,8 @@ export function StatusComposerScreen() {
               {t('status.video')}
             </Text>
           </Pressable>
+          </>
+          ) : null}
           {mode === 'text' ? (
             <Pressable onPress={() => setBackground((value) => nextBackground(value))} style={styles.tool}>
               <Ionicons name="color-palette-outline" size={20} color="#fff" />

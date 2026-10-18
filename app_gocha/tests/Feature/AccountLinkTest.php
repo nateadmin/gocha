@@ -208,6 +208,8 @@ class AccountLinkTest extends TestCase
             ->assertJsonPath('code', 'ACCOUNT_ALREADY_SIGNED_IN')
             ->assertJsonPath('message', 'This account is already logged in with phone.');
     }
+
+    public function test_cannot_link_an_account_to_itself(): void
     {
         $alice = User::factory()->create();
         $token = app(DeviceTokenService::class)->issue($alice)->plainTextToken;

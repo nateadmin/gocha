@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\User;
+use App\Models\UserBlock;
 use App\Services\Chat\BroadcastDeliveryService;
 use App\Services\Chat\ChatMediaMessageService;
 use App\Services\Chat\ChatTypingService;
@@ -126,6 +127,10 @@ class ConversationController extends Controller
             ]);
         }
 
+        if (UserBlock::existsBetween($user->id, $otherUserId)) {
+            return $this->blockedResponse();
+        }
+
         $otherUser = User::query()->findOrFail($otherUserId);
 
         $conversation = DB::transaction(function () use ($user, $otherUser) {
@@ -160,7 +165,9 @@ class ConversationController extends Controller
         $this->markIncomingMessagesDelivered($user, $conversation);
 
         $budget = new TranslationBudget;
+        $blocked = $this->blockedUserIdsFor($user);
         $messages = $this->visibleMessagesQuery($conversation, $user)
+            ->when($blocked !== [], fn ($query) => $query->whereNotIn('sender_user_id', $blocked))
             ->with(['responses.user', 'sender'])
             ->orderBy('created_at')
             ->limit(200)
@@ -175,6 +182,10 @@ class ConversationController extends Controller
     {
         $user = $request->user();
         $this->authorizeParticipant($user, $conversation);
+
+        if ($this->isBlockedDirectConversation($conversation, $user)) {
+            return $this->blockedResponse();
+        }
 
         $type = (string) $request->input('type', MessageType::TEXT);
         if (MessageType::isInteractive($type)) {
@@ -218,6 +229,8 @@ class ConversationController extends Controller
                 ConversationParticipant::query()
                     ->where('conversation_id', $conversation->id)
                     ->where('user_id', '!=', $user->id)
+                    // Blocked people (either direction) do not get unread bumps.
+                    ->whereNotIn('user_id', UserBlock::hiddenUserIdsFor((int) $user->id))
                     ->increment('unread_count');
             }
 
@@ -411,6 +424,10 @@ class ConversationController extends Controller
             ], 422);
         }
 
+        if (UserBlock::existsBetween((int) $user->id, $memberId)) {
+            return $this->blockedResponse();
+        }
+
         $exists = ConversationParticipant::query()
             ->where('conversation_id', $conversation->id)
             ->where('user_id', $memberId)
@@ -480,9 +497,11 @@ class ConversationController extends Controller
             ], 422);
         }
 
+        // People blocked in either direction are left out of new groups and broadcasts.
+        $hidden = UserBlock::hiddenUserIdsFor((int) $user->id);
         $memberIds = collect($validated['participantUserIds'] ?? [])
             ->map(fn ($id) => (int) $id)
-            ->reject(fn (int $id) => $id === (int) $user->id)
+            ->reject(fn (int $id) => $id === (int) $user->id || in_array($id, $hidden, true))
             ->unique()
             ->values();
 
@@ -576,6 +595,42 @@ class ConversationController extends Controller
     /**
      * @param  array<int, array{hasStatus: bool, unseen: bool}>  $statusFlags
      */
+    /** @var array<int, array<int, int>> */
+    private array $blockedUserIds = [];
+
+    /**
+     * Users the viewer has blocked, cached for the request.
+     *
+     * @return array<int, int>
+     */
+    private function blockedUserIdsFor(User $viewer): array
+    {
+        return $this->blockedUserIds[$viewer->id] ??= UserBlock::query()
+            ->where('blocker_user_id', $viewer->id)
+            ->pluck('blocked_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    private function isBlockedDirectConversation(Conversation $conversation, User $user): bool
+    {
+        if (! $conversation->isDirectMessage()) {
+            return false;
+        }
+
+        $other = $conversation->otherParticipant($user);
+
+        return $other !== null && UserBlock::existsBetween($user->id, $other->id);
+    }
+
+    private function blockedResponse(): JsonResponse
+    {
+        return response()->json([
+            'code' => 'USER_BLOCKED',
+            'message' => 'You can\'t message this person.',
+        ], 403);
+    }
+
     private function toConversationPayload(Conversation $conversation, User $viewer, array $statusFlags = []): array
     {
         $isGroup = $conversation->isGroup();
@@ -587,14 +642,23 @@ class ConversationController extends Controller
         $displayName = $conversation->displayNameFor($viewer);
         $preview = $conversation->last_message_body ?? 'No messages yet';
         if ($preview !== 'No messages yet' && $conversation->last_message_sender_user_id !== $viewer->id) {
+            // Never preview text from someone the viewer has blocked.
+            $blocked = $this->blockedUserIdsFor($viewer);
             $lastIncoming = $conversation->relationLoaded('messages')
-                ? $conversation->messages->where('sender_user_id', '!=', $viewer->id)->sortByDesc('id')->first()
+                ? $conversation->messages
+                    ->where('sender_user_id', '!=', $viewer->id)
+                    ->whereNotIn('sender_user_id', $blocked)
+                    ->sortByDesc('id')
+                    ->first()
                 : $conversation->messages()
                     ->where('sender_user_id', '!=', $viewer->id)
+                    ->when($blocked !== [], fn ($query) => $query->whereNotIn('sender_user_id', $blocked))
                     ->orderByDesc('id')
                     ->first();
             if ($lastIncoming) {
                 $preview = $this->translations->decorateCached($lastIncoming, $viewer)['text'];
+            } elseif (in_array((int) $conversation->last_message_sender_user_id, $blocked, true)) {
+                $preview = 'No messages yet';
             }
         }
         if (
@@ -613,6 +677,8 @@ class ConversationController extends Controller
             'avatarLabel' => $this->avatarLabel($displayName),
             'avatarColor' => $this->avatarColor($other?->id ?? $conversation->id),
             'otherUserId' => $other?->id,
+            // Only direct chats have a server-side block state; groups keep the app's own flag.
+            'isBlocked' => $other === null ? null : in_array($other->id, $this->blockedUserIdsFor($viewer), true),
             'preview' => $preview,
             'lastActivityAt' => $lastActivityAt,
             'unreadCount' => (int) ($participantRow?->unread_count ?? 0),

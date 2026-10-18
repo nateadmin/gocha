@@ -21,7 +21,7 @@ class GochaAiTest extends TestCase
             ], 200),
         ]);
 
-        $user = User::factory()->create(['name' => 'Alice Example']);
+        $user = User::factory()->aiEnabled()->create(['name' => 'Alice Example']);
 
         $this->actingAs($user)->postJson('/api/gocha-ai/chat', [
             'message' => 'What should I cook tonight?',
@@ -52,7 +52,7 @@ class GochaAiTest extends TestCase
 
     public function test_chat_validates_message(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->aiEnabled()->create();
 
         $this->actingAs($user)->postJson('/api/gocha-ai/chat', [
             'message' => '',

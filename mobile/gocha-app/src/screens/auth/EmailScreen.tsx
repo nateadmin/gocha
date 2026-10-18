@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View, StyleSheet } from 'react-native';
 
+import { PHONE_SIGN_IN_SUPPORTED } from '../../auth/phoneSupport';
 import {
   ApiError,
   fetchAppMeta,
@@ -42,7 +43,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
-  const [phoneEnabled, setPhoneEnabled] = useState(true);
+  const [phoneEnabled, setPhoneEnabled] = useState(PHONE_SIGN_IN_SUPPORTED);
   const [reviewLoginEmail, setReviewLoginEmail] = useState<string | null>(null);
 
   const isSignUp = mode === 'signup';
@@ -66,11 +67,14 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
   useEffect(() => {
     void fetchAppMeta()
       .then((meta) => {
-        setPhoneEnabled(meta.account.phoneSignInEnabled || meta.auth.phoneSignInEnabled);
+        setPhoneEnabled(
+          PHONE_SIGN_IN_SUPPORTED &&
+            (meta.account.phoneSignInEnabled || meta.auth.phoneSignInEnabled),
+        );
         setReviewLoginEmail(meta.auth.reviewLoginEmail ?? null);
       })
       .catch(() => {
-        setPhoneEnabled(true);
+        setPhoneEnabled(PHONE_SIGN_IN_SUPPORTED);
         setReviewLoginEmail(null);
       });
   }, []);
@@ -150,12 +154,17 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
             {showPasswordField
               ? 'Enter the review email and password. A sign-in code is not required.'
               : isSignUp
-                ? 'Use email or phone. The other is optional later.'
+                ? PHONE_SIGN_IN_SUPPORTED
+                  ? 'Use email or phone. The other is optional later.'
+                  : 'Use your email to create your account.'
                 : isAddingAccount
                   ? 'Sign in to the other Gocha account. It will stay linked so you can switch.'
-                  : 'Use the email or phone on your Gocha account.'}
+                  : PHONE_SIGN_IN_SUPPORTED
+                    ? 'Use the email or phone on your Gocha account.'
+                    : 'Use the email on your Gocha account.'}
           </BrandText>
 
+          {PHONE_SIGN_IN_SUPPORTED ? (
           <View style={styles.channelRow}>
             <Pressable
               onPress={() => {
@@ -203,6 +212,7 @@ export function EmailScreen({ mode, onCodeSent, onSwitchMode, onBack }: Props) {
               </BrandText>
             </Pressable>
           </View>
+          ) : null}
 
           <BrandInput
             key={channel === 'email' ? 'email-identifier' : 'phone-identifier'}

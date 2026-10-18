@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, Share } from 'react-native';
 
 export async function copyText(text: string): Promise<boolean> {
   const value = text.trim();
@@ -12,6 +12,17 @@ export async function copyText(text: string): Promise<boolean> {
       return true;
     } catch {
       return fallbackCopy(value);
+    }
+  }
+
+  if (Platform.OS !== 'web') {
+    // React Native ships no clipboard module; the share sheet offers Copy
+    // on iOS and Android.
+    try {
+      const result = await Share.share({ message: value });
+      return result.action !== Share.dismissedAction;
+    } catch {
+      return false;
     }
   }
 

@@ -8,6 +8,7 @@ import {
   View,
   StyleSheet,
 } from 'react-native';
+import { MEDIA_PICKING_SUPPORTED } from '../../chat/pickMedia';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -496,9 +497,12 @@ export function BusinessListingFormScreen() {
         style={[styles.input, { color: theme.colors.cardForeground, borderColor: theme.colors.border }]}
       />
 
+      {/* Image pickers are web-only for now; native shows existing images. */}
+      {MEDIA_PICKING_SUPPORTED || logoPreview ? (
+      <>
       <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Business logo (optional)</Text>
       <Pressable
-        onPress={readOnly ? undefined : () => pickImage('logo')}
+        onPress={readOnly || !MEDIA_PICKING_SUPPORTED ? undefined : () => pickImage('logo')}
         style={[
           styles.logoBox,
           { borderColor: theme.colors.border, backgroundColor: theme.colors.muted },
@@ -512,10 +516,14 @@ export function BusinessListingFormScreen() {
           </View>
         )}
       </Pressable>
+      </>
+      ) : null}
 
+      {MEDIA_PICKING_SUPPORTED || coverPreview ? (
+      <>
       <Text style={[styles.label, { color: theme.colors.mutedForeground }]}>Cover photo (optional)</Text>
       <Pressable
-        onPress={readOnly ? undefined : () => pickImage('cover')}
+        onPress={readOnly || !MEDIA_PICKING_SUPPORTED ? undefined : () => pickImage('cover')}
         style={[
           styles.coverBox,
           { borderColor: theme.colors.border, backgroundColor: theme.colors.muted },
@@ -529,6 +537,8 @@ export function BusinessListingFormScreen() {
           </View>
         )}
       </Pressable>
+      </>
+      ) : null}
 
       {error ? <Text style={{ color: theme.colors.destructive, marginBottom: 8 }}>{error}</Text> : null}
       {message ? <Text style={{ color: theme.colors.primary, marginBottom: 12 }}>{message}</Text> : null}
