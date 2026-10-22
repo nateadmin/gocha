@@ -2,7 +2,7 @@
 
 Gocha is a mobile-first super-app: messaging, AI Catch Up, local communities (Around Me), business commerce, and integrations (e.g. Rydit). See `PRODUCT_ROADMAP.md` for phased builds.
 
-Development rules live in the personal-playbook repo.
+Development rules live in the personal-playbook skills (`ship-and-deploy`, `security`, `cloud-agent-sessions`) at `~/.cursor/skills/personal-playbook`.
 
 ## Repo layout
 
@@ -29,7 +29,7 @@ Host: Contabo VPS vmi2918811 (212.47.68.106). Shared with Rydit; see rydit repo 
 
 Deploy target: `/var/www/html/gocha` (`app_gocha` contents at repo root on server).
 
-SSH: key-only via Infisical secret `CONTABO_PRIVATE_SSH_KEY` (user `root` today; migrate to deploy user per personal-playbook edge-protection when gocha app deploys).
+SSH: key-only via Infisical secret `CONTABO_PRIVATE_SSH_KEY` (user `root` today; migrate to a deploy user per the `security` skill edge-protection clause when gocha app deploys).
 
 ## Infisical
 
@@ -121,7 +121,7 @@ Infisical API host: `https://app.infisical.com` (not `api.infisical.com`).
 
 ## Smoke checks
 
-Agents: do not report a deploy job complete until every post-deploy URL below returns 2xx. See ship-live-and-test in personal-playbook.
+Agents: do not report a deploy job complete until every post-deploy URL below returns 2xx. See the `ship-and-deploy` skill.
 
 ### Pre-deploy
 
