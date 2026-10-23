@@ -34,7 +34,7 @@ Bundle ID `com.gochaapp`. Version `1.0.0`, build number from `store/version.json
 - [ ] Menus close when you tap outside them.
 
 ## Before submitting for App Review (not needed for TestFlight)
-- [ ] Real signed-in screenshots: iPhone 6.9" (1320×2868) or 6.5" (1284×2778), plus iPad 13" (2064×2752) if iPad stays enabled.
-- [ ] Decide iPad: the project currently supports iPhone and iPad (`TARGETED_DEVICE_FAMILY = 1,2`). iPhone-only means no iPad screenshots or iPad review.
+- [ ] Real signed-in screenshots: iPhone 6.9" (1320×2868) or 6.5" (1284×2778).
+- [x] iPhone only (`TARGETED_DEVICE_FAMILY = 1`): no iPad screenshots or iPad review needed.
 - [ ] Add chats, a group and a status to the review account.
 - [ ] Description and keywords: `metadata/en-US/` (already match the iOS build).
