@@ -1,21 +1,28 @@
-Gocha is your mobile-first super app for messaging, AI-powered catch-up, and local discovery.
+Gocha is your super app for messaging, AI-powered catch-up, and local discovery.
 
-Chat with people and businesses in one inbox. Pin important threads, filter unread chats, and stay organized with lists and labels.
+CHAT WITH PEOPLE AND BUSINESSES
+Message friends, groups, and businesses in one inbox. Pin important threads, filter unread chats, mark favorites, and stay organized with lists and labels. Send broadcasts, emoji and stickers, and set disappearing messages.
 
-Gocha AI is your built-in assistant for planning, writing, and everyday questions.
+GOCHA AI
+Your built-in assistant helps you plan, write, and get things done without leaving the app.
 
-Catch Up uses AI to summarize what matters across your conversations so you can reply faster.
+CATCH UP
+AI briefings summarize what matters across your conversations so you can reply faster.
 
+DISCOVER
+Find nearby groups and local businesses. Request to join community groups and explore business listings.
+
+STATUSES
+Share text updates that disappear after 24 hours, and see who viewed them.
+
+PROFILE CARDS
+Create professional, match, and custom profile cards. They stay private until you approve access.
+
+YOUR PRIVACY AND SAFETY
 AI features are off until you turn them on. When on, the text of your messages is sent to our AI provider, OpenAI, for translation, summaries, and Gocha AI replies. You can turn them off any time in Settings.
+Report messages, statuses, or people, block anyone, and delete your account any time from Settings.
 
-Discover nearby groups and local businesses. Explore menus, offers, and community posts.
-
-Share 24-hour text statuses.
-
-Create profile cards you control for professional and personal use.
-
-Sign in with email, switch accounts, and choose your language.
-
-Stay safe: report messages or people, block anyone, and delete your account any time from Settings.
+ACCOUNT
+Sign in with email, switch between accounts, and choose your language.
 
 Gocha is also available on the web at https://app.gocha.ai.

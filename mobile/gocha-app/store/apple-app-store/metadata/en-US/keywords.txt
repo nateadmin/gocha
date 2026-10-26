@@ -1,1 +1,1 @@
-messaging,chat,groups,business,ai,assistant,catch up,discover,status,social
+chat,messenger,groups,business,ai assistant,summary,catch up,local,community,status,profile,social
